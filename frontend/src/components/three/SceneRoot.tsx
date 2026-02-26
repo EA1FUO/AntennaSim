@@ -36,6 +36,24 @@ export function SceneRoot({
     []
   );
 
+  // Compute antenna centroid in Three.js coordinates for pattern positioning.
+  // NEC2: X=east, Y=north, Z=up → Three.js: X=east, Y=up, Z=south(=-north)
+  const antennaCentroid = useMemo((): [number, number, number] => {
+    if (wires.length === 0) return [0, 0, 0];
+    let sumX = 0;
+    let sumY = 0;
+    let sumZ = 0;
+    for (const w of wires) {
+      // Average of both endpoints for each wire
+      sumX += (w.x1 + w.x2) / 2;
+      sumY += (w.y1 + w.y2) / 2;
+      sumZ += (w.z1 + w.z2) / 2;
+    }
+    const n = wires.length;
+    // NEC2 → Three.js coordinate swap: [necX, necZ, -necY]
+    return [sumX / n, sumZ / n, -sumY / n];
+  }, [wires]);
+
   return (
     <Canvas
       gl={glConfig}
@@ -75,9 +93,14 @@ export function SceneRoot({
             <FeedpointMarker key={i} position={fp.position} />
           ))}
 
-        {/* 3D Radiation Pattern */}
+        {/* 3D Radiation Pattern — centered on antenna */}
         {viewToggles.pattern && patternData && (
-          <RadiationPattern3D pattern={patternData} scale={5} opacity={0.65} />
+          <RadiationPattern3D
+            pattern={patternData}
+            scale={5}
+            opacity={0.65}
+            center={antennaCentroid}
+          />
         )}
 
         {/* Camera */}

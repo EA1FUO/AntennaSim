@@ -23,6 +23,8 @@ interface RadiationPattern3DProps {
   opacity?: number;
   /** Whether to show wireframe overlay */
   wireframe?: boolean;
+  /** Center position in Three.js coordinates [x, y, z] (antenna centroid) */
+  center?: [number, number, number];
 }
 
 /** Perceptual colormap for gain: blue → cyan → green → yellow → red */
@@ -52,6 +54,7 @@ export function RadiationPattern3D({
   scale = 5,
   opacity = 0.65,
   wireframe = false,
+  center = [0, 0, 0],
 }: RadiationPattern3DProps) {
   const geometry = useMemo(() => {
     const {
@@ -158,7 +161,7 @@ export function RadiationPattern3D({
   }
 
   return (
-    <group>
+    <group position={center}>
       {/* Solid surface */}
       {!wireframe && (
         <mesh geometry={geometry}>

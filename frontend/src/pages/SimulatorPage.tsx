@@ -173,7 +173,7 @@ export function SimulatorPage() {
 
           {/* Color scale legend (when pattern is visible) */}
           {viewToggles.pattern && patternData && (
-            <div className="absolute bottom-2 left-2 z-10">
+            <div className="absolute bottom-2 right-2 z-10">
               <ColorScale minLabel="Min" maxLabel="Max" unit="dBi" />
             </div>
           )}
