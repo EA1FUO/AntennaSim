@@ -14,6 +14,7 @@ from fastapi import Request, HTTPException
 
 import redis.asyncio as redis
 
+from src.config import settings
 from src.simulation.cache import get_redis
 
 logger = logging.getLogger("antsim.rate_limiter")
@@ -41,7 +42,11 @@ async def check_rate_limit(request: Request) -> None:
 
     Uses Redis sorted sets with timestamps as scores for a sliding window.
     Falls back to allowing requests if Redis is unavailable.
+    Bypassed entirely in development mode.
     """
+    if settings.is_dev:
+        return
+
     r = await get_redis()
     if r is None:
         # No Redis = no rate limiting (acceptable for dev)
