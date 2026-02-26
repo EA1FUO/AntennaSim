@@ -25,6 +25,12 @@ export interface ViewToggles {
   labels: boolean;
   compass: boolean;
   scale: boolean;
+  /** V2: Show current distribution colors on wires */
+  current: boolean;
+  /** V2: Show ground reflection ghost */
+  reflection: boolean;
+  /** V2: Show volumetric gain shells instead of surface */
+  volumetric: boolean;
 }
 
 /** Camera preset names */

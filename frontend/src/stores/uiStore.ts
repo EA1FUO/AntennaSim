@@ -7,7 +7,7 @@ import type { ViewToggles, CameraPreset } from "../components/three/types";
 import type { S1PFile } from "../utils/s1p-parser";
 
 export type Theme = "dark" | "light";
-export type ResultsTab = "swr" | "impedance" | "pattern" | "gain";
+export type ResultsTab = "swr" | "impedance" | "pattern" | "gain" | "smith";
 export type MobileTab = "antenna" | "results";
 
 interface UIState {
@@ -54,6 +54,9 @@ export const useUIStore = create<UIState>((set) => ({
     labels: false,
     compass: true,
     scale: false,
+    current: false,
+    reflection: false,
+    volumetric: false,
   },
   activePreset: "isometric" as CameraPreset,
   resultsTab: "swr",

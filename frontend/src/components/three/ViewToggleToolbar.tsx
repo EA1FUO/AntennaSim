@@ -13,8 +13,10 @@ export function ViewToggleToolbar({ toggles, onToggle }: ViewToggleToolbarProps)
     { key: "grid", label: "Grid" },
     { key: "wires", label: "Wires" },
     { key: "pattern", label: "Pattern" },
+    { key: "volumetric", label: "Shells" },
+    { key: "current", label: "Current" },
+    { key: "reflection", label: "Mirror" },
     { key: "compass", label: "Compass" },
-    { key: "labels", label: "Labels" },
   ];
 
   return (

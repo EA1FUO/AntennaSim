@@ -21,6 +21,7 @@ import { WireTable } from "../components/editors/WireTable";
 import { WirePropertiesPanel } from "../components/editors/WirePropertiesPanel";
 import { GroundEditor } from "../components/editors/GroundEditor";
 import { ResultsPanel } from "../components/results/ResultsTabs";
+import { PatternFrequencySlider } from "../components/results/PatternFrequencySlider";
 import { ColorScale } from "../components/ui/ColorScale";
 import { Button } from "../components/ui/Button";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
@@ -59,6 +60,7 @@ export function EditorPage() {
 
   // Simulation store
   const simStatus = useSimulationStore((s) => s.status);
+  const simResult = useSimulationStore((s) => s.result);
   const simError = useSimulationStore((s) => s.error);
   const simulateAdvanced = useSimulationStore((s) => s.simulateAdvanced);
   const selectedFreqResult = useSimulationStore((s) =>
@@ -143,6 +145,7 @@ export function EditorPage() {
   const isLoading = simStatus === "loading";
   const canRun = wires.length > 0 && excitations.length > 0;
   const patternData = selectedFreqResult?.pattern ?? null;
+  const currentData = selectedFreqResult?.currents ?? null;
   const totalSegments = getTotalSegments();
 
   return (
@@ -158,7 +161,7 @@ export function EditorPage() {
 
         {/* === CENTER: 3D VIEWPORT === */}
         <main className="flex-1 relative min-w-0">
-          <EditorScene viewToggles={viewToggles} patternData={patternData} />
+          <EditorScene viewToggles={viewToggles} patternData={patternData} currents={currentData} />
 
           {/* Overlays */}
           <CameraPresetsOverlay
@@ -181,9 +184,16 @@ export function EditorPage() {
           </div>
 
           {/* Color scale */}
-          {viewToggles.pattern && patternData && (
+          {(viewToggles.pattern || viewToggles.volumetric) && patternData && (
             <div className="absolute bottom-2 right-2 z-10">
               <ColorScale minLabel="Min" maxLabel="Max" unit="dBi" />
+            </div>
+          )}
+
+          {/* Pattern frequency slider */}
+          {simStatus === "success" && simResult && simResult.frequency_data.length > 1 && (
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 w-56 hidden lg:block">
+              <PatternFrequencySlider />
             </div>
           )}
 

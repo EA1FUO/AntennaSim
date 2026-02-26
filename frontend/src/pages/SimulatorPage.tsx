@@ -24,6 +24,7 @@ import { Button } from "../components/ui/Button";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { ColorScale } from "../components/ui/ColorScale";
 import { ResultsPanel } from "../components/results/ResultsTabs";
+import { PatternFrequencySlider } from "../components/results/PatternFrequencySlider";
 import { SWRChart } from "../components/results/SWRChart";
 import { formatSwr, formatGain, formatImpedance, swrColorClass } from "../utils/units";
 import type { AntennaTemplate } from "../templates/types";
@@ -97,6 +98,7 @@ export function SimulatorPage() {
 
   // Pattern data for 3D viewport
   const patternData = selectedFreqResult?.pattern ?? null;
+  const currents = selectedFreqResult?.currents ?? null;
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -171,6 +173,7 @@ export function SimulatorPage() {
             feedpoints={feedpoints}
             viewToggles={viewToggles}
             patternData={patternData}
+            currents={currents}
           />
 
           {/* Overlays */}
@@ -181,9 +184,16 @@ export function SimulatorPage() {
           <ViewToggleToolbar toggles={viewToggles} onToggle={handleToggle} />
 
           {/* Color scale legend (when pattern is visible) */}
-          {viewToggles.pattern && patternData && (
+          {(viewToggles.pattern || viewToggles.volumetric) && patternData && (
             <div className="absolute bottom-2 right-2 z-10">
               <ColorScale minLabel="Min" maxLabel="Max" unit="dBi" />
+            </div>
+          )}
+
+          {/* Pattern frequency slider */}
+          {simStatus === "success" && result && result.frequency_data.length > 1 && (
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 w-64 hidden lg:block">
+              <PatternFrequencySlider />
             </div>
           )}
 

@@ -9,8 +9,11 @@ import { FeedpointMarker } from "./FeedpointMarker";
 import { CameraControls } from "./CameraControls";
 import { PostProcessing } from "./PostProcessing";
 import { RadiationPattern3D } from "./RadiationPattern3D";
+import { VolumetricShells } from "./VolumetricShells";
+import { GroundReflection } from "./GroundReflection";
+import { CurrentDistribution3D } from "./CurrentDistribution3D";
 import type { WireData, FeedpointData, ViewToggles } from "./types";
-import type { PatternData } from "../../api/nec";
+import type { PatternData, SegmentCurrent } from "../../api/nec";
 import { useUIStore } from "../../stores/uiStore";
 
 interface SceneRootProps {
@@ -19,6 +22,8 @@ interface SceneRootProps {
   viewToggles: ViewToggles;
   /** Radiation pattern data to render as 3D mesh */
   patternData?: PatternData | null;
+  /** V2: Current distribution data */
+  currents?: SegmentCurrent[] | null;
 }
 
 export function SceneRoot({
@@ -26,6 +31,7 @@ export function SceneRoot({
   feedpoints,
   viewToggles,
   patternData,
+  currents,
 }: SceneRootProps) {
   const theme = useUIStore((s) => s.theme);
   const sceneBg = theme === "dark" ? "#0A0A0F" : "#E8E8ED";
@@ -98,14 +104,31 @@ export function SceneRoot({
             <FeedpointMarker key={i} position={fp.position} />
           ))}
 
-        {/* 3D Radiation Pattern — centered on antenna */}
-        {viewToggles.pattern && patternData && (
+        {/* 3D Radiation Pattern — surface mode */}
+        {viewToggles.pattern && !viewToggles.volumetric && patternData && (
           <RadiationPattern3D
             pattern={patternData}
             scale={5}
             opacity={0.65}
             center={antennaCentroid}
           />
+        )}
+
+        {/* Volumetric pattern shells — alternative to surface */}
+        {viewToggles.volumetric && patternData && (
+          <VolumetricShells
+            pattern={patternData}
+            scale={5}
+            center={antennaCentroid}
+          />
+        )}
+
+        {/* Ground Reflection (ghost mirror) */}
+        {viewToggles.reflection && <GroundReflection wires={wires} />}
+
+        {/* Current Distribution overlay */}
+        {viewToggles.current && currents && currents.length > 0 && (
+          <CurrentDistribution3D currents={currents} />
         )}
 
         {/* Camera */}

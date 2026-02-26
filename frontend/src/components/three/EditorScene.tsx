@@ -19,14 +19,18 @@ import { CameraControls } from "./CameraControls";
 import { PostProcessing } from "./PostProcessing";
 import { EditorAntennaModel } from "./EditorAntennaModel";
 import { RadiationPattern3D } from "./RadiationPattern3D";
+import { VolumetricShells } from "./VolumetricShells";
+import { GroundReflection } from "./GroundReflection";
+import { CurrentDistribution3D } from "./CurrentDistribution3D";
 import type { ViewToggles } from "./types";
-import type { PatternData } from "../../api/nec";
+import type { PatternData, SegmentCurrent } from "../../api/nec";
 import { useUIStore } from "../../stores/uiStore";
 import { useEditorStore, snap } from "../../stores/editorStore";
 
 interface EditorSceneProps {
   viewToggles: ViewToggles;
   patternData?: PatternData | null;
+  currents?: SegmentCurrent[] | null;
 }
 
 /** Ground plane for raycasting (XZ plane at y=0 in Three.js = z=0 in NEC2) */
@@ -63,6 +67,7 @@ function GhostWire({ start, end }: { start: Vector3; end: Vector3 }) {
 function EditorSceneContent({
   viewToggles,
   patternData,
+  currents,
 }: EditorSceneProps) {
   const theme = useUIStore((s) => s.theme);
 
@@ -293,8 +298,8 @@ function EditorSceneContent({
         <GhostWire start={ghostWire.start} end={ghostWire.end} />
       )}
 
-      {/* Radiation pattern */}
-      {viewToggles.pattern && patternData && (
+      {/* Radiation pattern — surface mode */}
+      {viewToggles.pattern && !viewToggles.volumetric && patternData && (
         <RadiationPattern3D
           pattern={patternData}
           scale={5}
@@ -303,13 +308,32 @@ function EditorSceneContent({
         />
       )}
 
+      {/* Volumetric pattern shells */}
+      {viewToggles.volumetric && patternData && (
+        <VolumetricShells
+          pattern={patternData}
+          scale={5}
+          center={antennaCentroid}
+        />
+      )}
+
+      {/* Ground reflection ghost */}
+      {viewToggles.reflection && (
+        <GroundReflection wires={wireDataList} />
+      )}
+
+      {/* Current distribution overlay */}
+      {viewToggles.current && currents && currents.length > 0 && (
+        <CurrentDistribution3D currents={currents} />
+      )}
+
       <CameraControls />
       <PostProcessing />
     </>
   );
 }
 
-export function EditorScene({ viewToggles, patternData }: EditorSceneProps) {
+export function EditorScene({ viewToggles, patternData, currents }: EditorSceneProps) {
   const theme = useUIStore((s) => s.theme);
   const sceneBg = theme === "dark" ? "#0A0A0F" : "#E8E8ED";
 
@@ -330,7 +354,7 @@ export function EditorScene({ viewToggles, patternData }: EditorSceneProps) {
       style={{ background: sceneBg }}
     >
       <Suspense fallback={null}>
-        <EditorSceneContent viewToggles={viewToggles} patternData={patternData} />
+        <EditorSceneContent viewToggles={viewToggles} patternData={patternData} currents={currents} />
       </Suspense>
     </Canvas>
   );

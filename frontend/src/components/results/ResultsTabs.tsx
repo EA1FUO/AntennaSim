@@ -9,6 +9,7 @@ import { SWRChart } from "./SWRChart";
 import { ImpedanceChart } from "./ImpedanceChart";
 import { GainTable } from "./GainTable";
 import { PatternPolar } from "./PatternPolar";
+import { SmithChart } from "./SmithChart";
 import { useSimulationStore } from "../../stores/simulationStore";
 import { useUIStore, type ResultsTab } from "../../stores/uiStore";
 import { formatSwr, formatImpedance, formatGain, swrColorClass } from "../../utils/units";
@@ -17,6 +18,7 @@ import { parseS1P } from "../../utils/s1p-parser";
 const TABS = [
   { key: "swr", label: "SWR" },
   { key: "impedance", label: "Z" },
+  { key: "smith", label: "Smith" },
   { key: "pattern", label: "Pattern" },
   { key: "gain", label: "Gain" },
 ];
@@ -200,6 +202,19 @@ export function ResultsPanel() {
                     Impedance vs Frequency
                   </h4>
                   <ImpedanceChart data={result.frequency_data} />
+                </div>
+              )}
+
+              {resultsTab === "smith" && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-medium text-text-secondary">
+                    Smith Chart
+                  </h4>
+                  <SmithChart
+                    data={result.frequency_data}
+                    selectedIndex={selectedFreqIndex}
+                    onFrequencyClick={handleFreqClick}
+                  />
                 </div>
               )}
 
