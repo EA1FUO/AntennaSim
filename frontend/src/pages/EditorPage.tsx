@@ -24,6 +24,7 @@ import { ResultsPanel } from "../components/results/ResultsTabs";
 import { PatternFrequencySlider } from "../components/results/PatternFrequencySlider";
 import { CompareOverlay } from "../components/results/CompareOverlay";
 import { ImportExportPanel } from "../components/editors/ImportExportPanel";
+import { OptimizerPanel } from "../components/editors/OptimizerPanel";
 import { ColorScale } from "../components/ui/ColorScale";
 import { Button } from "../components/ui/Button";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
@@ -229,10 +230,13 @@ export function EditorPage() {
             <WirePropertiesPanel />
           </div>
 
-          {/* Import/Export + Compare */}
-          <div className="border-b border-border overflow-y-auto shrink-0 p-2 space-y-2">
+          {/* Import/Export + Compare + Optimizer */}
+          <div className="border-b border-border overflow-y-auto max-h-64 shrink-0 p-2 space-y-2">
             <ImportExportPanel />
             <CompareOverlay />
+            <div className="border-t border-border pt-2">
+              <OptimizerPanel />
+            </div>
           </div>
 
           {/* Bottom: Frequency, Ground, Run button */}

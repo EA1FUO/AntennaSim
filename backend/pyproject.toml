@@ -10,6 +10,7 @@ dependencies = [
     "pydantic-settings>=2.6.0",
     "redis>=5.2.0",
     "httpx>=0.28.0",
+    "scipy>=1.14.0",
 ]
 
 [project.optional-dependencies]
