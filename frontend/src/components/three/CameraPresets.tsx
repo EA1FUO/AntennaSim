@@ -1,6 +1,3 @@
-import { useThree } from "@react-three/fiber";
-import { useCallback } from "react";
-import { Vector3 } from "three";
 import type { CameraPreset } from "./types";
 
 const PRESETS: Record<CameraPreset, { position: [number, number, number]; target: [number, number, number] }> = {

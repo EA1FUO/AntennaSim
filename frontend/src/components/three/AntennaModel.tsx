@@ -18,7 +18,6 @@ export function AntennaModel({ wire }: AntennaModelProps) {
     const start = new Vector3(wire.x1, wire.z1, -wire.y1);
     const end = new Vector3(wire.x2, wire.z2, -wire.y2);
 
-    const wireLength = start.distanceTo(end);
     // Visual radius: enough to see, but proportional
     const visualRadius = Math.max(wire.radius * 50, 0.03);
 

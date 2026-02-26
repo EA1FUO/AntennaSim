@@ -6,6 +6,7 @@
  */
 
 import type { WireData, FeedpointData } from "../components/three/types";
+export type { FeedpointData } from "../components/three/types";
 
 /** Ground type enum matching backend GroundConfig */
 export type GroundType =

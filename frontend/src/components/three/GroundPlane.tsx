@@ -1,5 +1,4 @@
 import { Grid } from "@react-three/drei";
-import { useMemo } from "react";
 
 /**
  * Ground plane visualization with grid at z=0.

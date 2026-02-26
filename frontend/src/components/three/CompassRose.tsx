@@ -69,9 +69,7 @@ export function CompassRose() {
             <bufferGeometry>
               <bufferAttribute
                 attach="attributes-position"
-                count={2}
-                array={new Float32Array([x1, 0.02, z1, x2, 0.02, z2])}
-                itemSize={3}
+                args={[new Float32Array([x1, 0.02, z1, x2, 0.02, z2]), 3]}
               />
             </bufferGeometry>
             <lineBasicMaterial color="#2A2A35" transparent opacity={0.6} />
