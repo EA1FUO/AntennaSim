@@ -9,15 +9,38 @@ import { verticalTemplate } from "./vertical";
 import { efhwTemplate } from "./efhw";
 import { yagiTemplate } from "./yagi";
 import { quadTemplate } from "./quad";
+import { moxonTemplate } from "./moxon";
+import { jPoleTemplate } from "./j-pole";
+import { slimJimTemplate } from "./slim-jim";
+import { deltaLoopTemplate } from "./delta-loop";
+import { g5rvTemplate } from "./g5rv";
+import { logPeriodicTemplate } from "./log-periodic";
+import { hexBeamTemplate } from "./hex-beam";
+import { fanDipoleTemplate } from "./fan-dipole";
+import { offCenterFedTemplate } from "./off-center-fed";
 
 /** All available templates, in display order */
 export const templates: AntennaTemplate[] = [
+  // Wire antennas
   dipoleTemplate,
   invertedVTemplate,
+  offCenterFedTemplate,
+  // Verticals
   verticalTemplate,
+  jPoleTemplate,
+  slimJimTemplate,
+  // End-fed / multiband
   efhwTemplate,
-  yagiTemplate,
+  g5rvTemplate,
+  fanDipoleTemplate,
+  // Loops
+  deltaLoopTemplate,
   quadTemplate,
+  // Directional
+  yagiTemplate,
+  moxonTemplate,
+  hexBeamTemplate,
+  logPeriodicTemplate,
 ];
 
 /** Map from template ID to template */
