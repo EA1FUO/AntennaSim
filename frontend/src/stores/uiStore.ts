@@ -4,6 +4,7 @@
 
 import { create } from "zustand";
 import type { ViewToggles, CameraPreset } from "../components/three/types";
+import type { S1PFile } from "../utils/s1p-parser";
 
 export type Theme = "dark" | "light";
 export type ResultsTab = "swr" | "impedance" | "pattern" | "gain";
@@ -24,6 +25,8 @@ interface UIState {
   resultsTab: ResultsTab;
   /** Active mobile bottom sheet tab */
   mobileTab: MobileTab;
+  /** Imported .s1p file for SWR overlay */
+  s1pFile: S1PFile | null;
 
   // Actions
   setTheme: (theme: Theme) => void;
@@ -37,6 +40,7 @@ interface UIState {
   setActivePreset: (preset: CameraPreset | null) => void;
   setResultsTab: (tab: ResultsTab) => void;
   setMobileTab: (tab: MobileTab) => void;
+  setS1PFile: (file: S1PFile | null) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -54,6 +58,7 @@ export const useUIStore = create<UIState>((set) => ({
   activePreset: "isometric" as CameraPreset,
   resultsTab: "swr",
   mobileTab: "antenna",
+  s1pFile: null,
 
   setTheme: (theme) => set({ theme }),
   toggleTheme: () =>
@@ -72,4 +77,5 @@ export const useUIStore = create<UIState>((set) => ({
   setActivePreset: (preset) => set({ activePreset: preset }),
   setResultsTab: (tab) => set({ resultsTab: tab }),
   setMobileTab: (tab) => set({ mobileTab: tab }),
+  setS1PFile: (file) => set({ s1pFile: file }),
 }));

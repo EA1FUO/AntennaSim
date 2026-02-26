@@ -6,15 +6,15 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "#0A0A0F",
+        background: "var(--color-background)",
         surface: {
-          DEFAULT: "#13131A",
-          hover: "#1A1A24",
+          DEFAULT: "var(--color-surface)",
+          hover: "var(--color-surface-hover)",
         },
-        border: "#2A2A35",
+        border: "var(--color-border)",
         text: {
-          primary: "#E8E8ED",
-          secondary: "#8888A0",
+          primary: "var(--color-text-primary)",
+          secondary: "var(--color-text-secondary)",
         },
         accent: {
           DEFAULT: "#3B82F6",

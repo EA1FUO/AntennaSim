@@ -11,6 +11,7 @@ import { PostProcessing } from "./PostProcessing";
 import { RadiationPattern3D } from "./RadiationPattern3D";
 import type { WireData, FeedpointData, ViewToggles } from "./types";
 import type { PatternData } from "../../api/nec";
+import { useUIStore } from "../../stores/uiStore";
 
 interface SceneRootProps {
   wires: WireData[];
@@ -26,6 +27,10 @@ export function SceneRoot({
   viewToggles,
   patternData,
 }: SceneRootProps) {
+  const theme = useUIStore((s) => s.theme);
+  const sceneBg = theme === "dark" ? "#0A0A0F" : "#E8E8ED";
+  const fogColor = theme === "dark" ? "#0A0A0F" : "#E8E8ED";
+
   const glConfig = useMemo(
     () => ({
       antialias: true,
@@ -58,19 +63,19 @@ export function SceneRoot({
     <Canvas
       gl={glConfig}
       camera={{ position: [15, 12, 15], fov: 50, near: 0.1, far: 500 }}
-      style={{ background: "#0A0A0F" }}
+      style={{ background: sceneBg }}
     >
       <Suspense fallback={null}>
         {/* Lighting */}
-        <ambientLight intensity={0.3} />
+        <ambientLight intensity={theme === "dark" ? 0.3 : 0.5} />
         <directionalLight
           position={[20, 30, 10]}
-          intensity={0.7}
+          intensity={theme === "dark" ? 0.7 : 0.8}
           castShadow={false}
         />
 
         {/* Fog for depth perception */}
-        <fog attach="fog" args={["#0A0A0F", 60, 200]} />
+        <fog attach="fog" args={[fogColor, 60, 200]} />
 
         {/* Ground */}
         {viewToggles.grid && <GroundPlane />}

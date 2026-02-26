@@ -3,16 +3,24 @@
 @tailwind utilities;
 
 @layer base {
+  /* Light theme (default) */
   :root {
-    --color-background: #0a0a0f;
-    --color-surface: #13131a;
-    --color-surface-hover: #1a1a24;
-    --color-border: #2a2a35;
-    --color-text-primary: #e8e8ed;
-    --color-text-secondary: #8888a0;
-    --color-accent: #3b82f6;
-    --color-accent-hover: #2563eb;
-    --color-accent-glow: rgba(59, 130, 246, 0.2);
+    --color-background: #F5F5F7;
+    --color-surface: #FFFFFF;
+    --color-surface-hover: #F0F0F3;
+    --color-border: #D4D4D8;
+    --color-text-primary: #18181B;
+    --color-text-secondary: #71717A;
+  }
+
+  /* Dark theme */
+  .dark {
+    --color-background: #0A0A0F;
+    --color-surface: #13131A;
+    --color-surface-hover: #1A1A24;
+    --color-border: #2A2A35;
+    --color-text-primary: #E8E8ED;
+    --color-text-secondary: #8888A0;
   }
 
   * {

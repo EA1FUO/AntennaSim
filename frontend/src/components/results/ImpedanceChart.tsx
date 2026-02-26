@@ -17,6 +17,7 @@ import {
   Legend,
 } from "recharts";
 import type { FrequencyResult } from "../../api/nec";
+import { useChartTheme } from "../../hooks/useChartTheme";
 
 interface ImpedanceChartProps {
   data: FrequencyResult[];
@@ -57,6 +58,8 @@ export function ImpedanceChart({ data }: ImpedanceChartProps) {
     };
   }, [chartData]);
 
+  const ct = useChartTheme();
+
   if (data.length === 0) return null;
 
   return (
@@ -68,7 +71,7 @@ export function ImpedanceChart({ data }: ImpedanceChartProps) {
         >
           <CartesianGrid
             strokeDasharray="3 3"
-            stroke="#2A2A35"
+            stroke={ct.grid}
             strokeOpacity={0.5}
           />
 
@@ -76,15 +79,15 @@ export function ImpedanceChart({ data }: ImpedanceChartProps) {
             dataKey="freq"
             type="number"
             domain={[freqRange.min, freqRange.max]}
-            tick={{ fill: "#8888A0", fontSize: 10, fontFamily: "JetBrains Mono, monospace" }}
+            tick={{ fill: ct.tick, fontSize: 10, fontFamily: "JetBrains Mono, monospace" }}
             tickFormatter={(v: number) => v.toFixed(1)}
-            stroke="#2A2A35"
+            stroke={ct.axis}
           />
 
           <YAxis
             domain={[yBounds.min, yBounds.max]}
-            tick={{ fill: "#8888A0", fontSize: 10, fontFamily: "JetBrains Mono, monospace" }}
-            stroke="#2A2A35"
+            tick={{ fill: ct.tick, fontSize: 10, fontFamily: "JetBrains Mono, monospace" }}
+            stroke={ct.axis}
             tickFormatter={(v: number) => `${v}`}
           />
 
@@ -98,31 +101,31 @@ export function ImpedanceChart({ data }: ImpedanceChartProps) {
           />
 
           {/* Zero reactance reference */}
-          <ReferenceLine y={0} stroke="#2A2A35" strokeOpacity={0.6} />
+          <ReferenceLine y={0} stroke={ct.axis} strokeOpacity={0.6} />
 
           <Tooltip
             contentStyle={{
-              backgroundColor: "#13131A",
-              border: "1px solid #2A2A35",
+              backgroundColor: ct.tooltipBg,
+              border: `1px solid ${ct.tooltipBorder}`,
               borderRadius: "6px",
               fontSize: "11px",
               fontFamily: "JetBrains Mono, monospace",
             }}
-            labelStyle={{ color: "#8888A0" }}
+            labelStyle={{ color: ct.tooltipLabel }}
             labelFormatter={(v: number) => `${v.toFixed(3)} MHz`}
             formatter={(value: number, name: string) => {
               const label = name === "r" ? "R" : "X";
               const unit = "\u03A9";
               return [`${value.toFixed(1)} ${unit}`, label];
             }}
-            cursor={{ stroke: "#3B82F6", strokeWidth: 1 }}
+            cursor={{ stroke: ct.cursor, strokeWidth: 1 }}
           />
 
           <Legend
             iconType="line"
             wrapperStyle={{ fontSize: "10px", fontFamily: "JetBrains Mono, monospace" }}
             formatter={(value: string) => (
-              <span style={{ color: "#8888A0" }}>
+              <span style={{ color: ct.tick }}>
                 {value === "r" ? "R (\u03A9)" : "X (\u03A9)"}
               </span>
             )}

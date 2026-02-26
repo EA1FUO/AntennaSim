@@ -3,7 +3,7 @@
  * Used in the right panel on desktop and results sheet on mobile.
  */
 
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { Tabs } from "../ui/Tabs";
 import { SWRChart } from "./SWRChart";
 import { ImpedanceChart } from "./ImpedanceChart";
@@ -12,6 +12,7 @@ import { PatternPolar } from "./PatternPolar";
 import { useSimulationStore } from "../../stores/simulationStore";
 import { useUIStore, type ResultsTab } from "../../stores/uiStore";
 import { formatSwr, formatImpedance, formatGain, swrColorClass } from "../../utils/units";
+import { parseS1P } from "../../utils/s1p-parser";
 
 const TABS = [
   { key: "swr", label: "SWR" },
@@ -32,6 +33,10 @@ export function ResultsPanel() {
 
   const resultsTab = useUIStore((s) => s.resultsTab);
   const setResultsTab = useUIStore((s) => s.setResultsTab);
+  const s1pFile = useUIStore((s) => s.s1pFile);
+  const setS1PFile = useUIStore((s) => s.setS1PFile);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleTabChange = useCallback(
     (key: string) => setResultsTab(key as ResultsTab),
@@ -43,17 +48,62 @@ export function ResultsPanel() {
     [setSelectedFreqIndex]
   );
 
+  const handleS1PImport = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleS1PFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = parseS1P(reader.result as string, file.name);
+          setS1PFile(parsed);
+        } catch {
+          // Silently fail — could add toast later
+        }
+      };
+      reader.readAsText(file);
+      // Reset input so re-importing the same file triggers change
+      e.target.value = "";
+    },
+    [setS1PFile]
+  );
+
+  const handleS1PClear = useCallback(() => {
+    setS1PFile(null);
+  }, [setS1PFile]);
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      {/* Hidden file input for .s1p import */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".s1p,.S1P"
+        className="hidden"
+        onChange={handleS1PFileChange}
+      />
+
       <Tabs tabs={TABS} activeKey={resultsTab} onChange={handleTabChange} />
 
       <div className="flex-1 overflow-y-auto p-3">
         {/* Idle state */}
         {status === "idle" && (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex flex-col items-center justify-center h-full gap-3">
             <p className="text-sm text-text-secondary text-center px-4">
               Run a simulation to see results here.
             </p>
+            {resultsTab === "swr" && (
+              <button
+                onClick={handleS1PImport}
+                className="text-xs px-3 py-1.5 rounded border border-border text-text-secondary hover:text-text-primary hover:border-accent/50 transition-colors"
+              >
+                Import .s1p
+              </button>
+            )}
           </div>
         )}
 
@@ -112,13 +162,34 @@ export function ResultsPanel() {
             <div className="border-t border-border pt-3">
               {resultsTab === "swr" && (
                 <div className="space-y-2">
-                  <h4 className="text-xs font-medium text-text-secondary">
-                    SWR vs Frequency
-                  </h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-medium text-text-secondary">
+                      SWR vs Frequency
+                    </h4>
+                    <div className="flex items-center gap-1.5">
+                      {s1pFile && (
+                        <button
+                          onClick={handleS1PClear}
+                          className="text-[10px] text-text-secondary hover:text-swr-bad transition-colors"
+                          title="Remove .s1p overlay"
+                        >
+                          {s1pFile.filename} x
+                        </button>
+                      )}
+                      <button
+                        onClick={handleS1PImport}
+                        className="text-[10px] px-1.5 py-0.5 rounded border border-border text-text-secondary hover:text-text-primary hover:border-accent/50 transition-colors"
+                        title="Import .s1p file from NanoVNA"
+                      >
+                        .s1p
+                      </button>
+                    </div>
+                  </div>
                   <SWRChart
                     data={result.frequency_data}
                     onFrequencyClick={handleFreqClick}
                     selectedIndex={selectedFreqIndex}
+                    s1pData={s1pFile?.data}
                   />
                 </div>
               )}

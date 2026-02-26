@@ -6,12 +6,18 @@ import type { AntennaTemplate } from "./types";
 import { dipoleTemplate } from "./dipole";
 import { invertedVTemplate } from "./inverted-v";
 import { verticalTemplate } from "./vertical";
+import { efhwTemplate } from "./efhw";
+import { yagiTemplate } from "./yagi";
+import { quadTemplate } from "./quad";
 
 /** All available templates, in display order */
 export const templates: AntennaTemplate[] = [
   dipoleTemplate,
   invertedVTemplate,
   verticalTemplate,
+  efhwTemplate,
+  yagiTemplate,
+  quadTemplate,
 ];
 
 /** Map from template ID to template */

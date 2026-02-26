@@ -1,5 +1,5 @@
 /**
- * Top navigation bar — logo, nav links, theme toggle.
+ * Top navigation bar — logo, nav links, theme toggle, unit toggle.
  */
 
 import { useCallback } from "react";
@@ -8,10 +8,16 @@ import { useUIStore } from "../../stores/uiStore";
 export function Navbar() {
   const theme = useUIStore((s) => s.theme);
   const toggleTheme = useUIStore((s) => s.toggleTheme);
+  const imperial = useUIStore((s) => s.imperial);
+  const toggleUnits = useUIStore((s) => s.toggleUnits);
 
   const handleThemeToggle = useCallback(() => {
     toggleTheme();
   }, [toggleTheme]);
+
+  const handleUnitToggle = useCallback(() => {
+    toggleUnits();
+  }, [toggleUnits]);
 
   return (
     <header className="flex items-center justify-between px-4 h-11 border-b border-border bg-surface shrink-0">
@@ -44,6 +50,16 @@ export function Navbar() {
       </div>
 
       <div className="flex items-center gap-2">
+        {/* Unit toggle */}
+        <button
+          onClick={handleUnitToggle}
+          className="px-1.5 py-0.5 rounded-md text-[11px] font-mono text-text-secondary
+            hover:text-text-primary hover:bg-surface-hover transition-colors border border-border"
+          title={`Switch to ${imperial ? "metric" : "imperial"} units`}
+        >
+          {imperial ? "ft" : "m"}
+        </button>
+
         {/* Theme toggle */}
         <button
           onClick={handleThemeToggle}

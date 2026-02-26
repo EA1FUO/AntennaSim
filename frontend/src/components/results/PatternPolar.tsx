@@ -6,6 +6,7 @@
 
 import { useMemo } from "react";
 import type { PatternData } from "../../api/nec";
+import { useChartTheme } from "../../hooks/useChartTheme";
 
 interface PatternPolarProps {
   pattern: PatternData;
@@ -97,6 +98,7 @@ function polarToXY(
 }
 
 export function PatternPolar({ pattern, mode, size = 200 }: PatternPolarProps) {
+  const ct = useChartTheme();
   const cut = useMemo(() => extractCut(pattern, mode), [pattern, mode]);
 
   const { minGain, maxGain } = useMemo(() => {
@@ -156,7 +158,7 @@ export function PatternPolar({ pattern, mode, size = 200 }: PatternPolarProps) {
           cy={cy}
           r={plotRadius * r}
           fill="none"
-          stroke="#2A2A35"
+          stroke={ct.grid}
           strokeWidth={0.5}
           strokeOpacity={0.6}
         />
@@ -172,7 +174,7 @@ export function PatternPolar({ pattern, mode, size = 200 }: PatternPolarProps) {
             y1={cy}
             x2={x}
             y2={y}
-            stroke="#2A2A35"
+            stroke={ct.grid}
             strokeWidth={0.5}
             strokeOpacity={0.4}
           />
@@ -193,7 +195,7 @@ export function PatternPolar({ pattern, mode, size = 200 }: PatternPolarProps) {
             y={y}
             textAnchor="middle"
             dominantBaseline="central"
-            fill="#8888A0"
+            fill={ct.tick}
             fontSize={9}
             fontFamily="JetBrains Mono, monospace"
           >
@@ -210,7 +212,7 @@ export function PatternPolar({ pattern, mode, size = 200 }: PatternPolarProps) {
             key={r}
             x={cx + 2}
             y={cy - plotRadius * r - 2}
-            fill="#8888A0"
+            fill={ct.tick}
             fontSize={7}
             fontFamily="JetBrains Mono, monospace"
           >
@@ -234,7 +236,7 @@ export function PatternPolar({ pattern, mode, size = 200 }: PatternPolarProps) {
         x={cx}
         y={size - 4}
         textAnchor="middle"
-        fill="#8888A0"
+        fill={ct.tick}
         fontSize={8}
         fontFamily="JetBrains Mono, monospace"
       >
