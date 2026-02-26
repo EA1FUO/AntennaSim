@@ -3,6 +3,7 @@
  */
 
 import { useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import { useUIStore } from "../../stores/uiStore";
 
 export function Navbar() {
@@ -14,6 +15,8 @@ export function Navbar() {
   const handleThemeToggle = useCallback(() => {
     toggleTheme();
   }, [toggleTheme]);
+
+  const location = useLocation();
 
   const handleUnitToggle = useCallback(() => {
     toggleUnits();
@@ -36,13 +39,31 @@ export function Navbar() {
         <nav className="hidden md:flex items-center gap-4 text-sm">
           <a
             href="/"
-            className="text-text-primary hover:text-accent transition-colors font-medium"
+            className={`hover:text-accent transition-colors ${
+              location.pathname === "/"
+                ? "text-text-primary font-medium"
+                : "text-text-secondary"
+            }`}
           >
             Simulator
           </a>
           <a
+            href="/editor"
+            className={`hover:text-accent transition-colors ${
+              location.pathname === "/editor"
+                ? "text-accent font-medium"
+                : "text-text-secondary"
+            }`}
+          >
+            Editor
+          </a>
+          <a
             href="/about"
-            className="text-text-secondary hover:text-accent transition-colors"
+            className={`hover:text-accent transition-colors ${
+              location.pathname === "/about"
+                ? "text-text-primary font-medium"
+                : "text-text-secondary"
+            }`}
           >
             About
           </a>
