@@ -91,6 +91,8 @@ interface EditorState {
   deleteWires: (tags: number[]) => void;
   /** Delete all selected wires */
   deleteSelected: () => void;
+  /** Move an entire wire by a delta in NEC2 coordinates */
+  moveWire: (tag: number, dx: number, dy: number, dz: number) => void;
   /** Split a wire at its midpoint into two wires */
   splitWire: (tag: number) => void;
   /** Clear all wires */
@@ -251,6 +253,29 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         updates.x2 !== undefined || updates.y2 !== undefined || updates.z2 !== undefined) {
       updated.segments = computeSegments(updated, state.designFrequencyMhz);
     }
+
+    const newWires = [...state.wires];
+    newWires[idx] = updated;
+    set({ ...pushUndo(state), wires: newWires });
+  },
+
+  moveWire: (tag, dx, dy, dz) => {
+    const state = get();
+    const idx = state.wires.findIndex((w) => w.tag === tag);
+    if (idx === -1) return;
+    if (dx === 0 && dy === 0 && dz === 0) return;
+
+    const wire = state.wires[idx]!;
+    const updated: EditorWire = {
+      ...wire,
+      x1: wire.x1 + dx,
+      y1: wire.y1 + dy,
+      z1: wire.z1 + dz,
+      x2: wire.x2 + dx,
+      y2: wire.y2 + dy,
+      z2: wire.z2 + dz,
+    };
+    // No need to recompute segments — length is unchanged
 
     const newWires = [...state.wires];
     newWires[idx] = updated;

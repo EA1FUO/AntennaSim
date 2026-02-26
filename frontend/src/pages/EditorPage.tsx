@@ -82,8 +82,18 @@ export function EditorPage() {
   const activePreset = useUIStore((s) => s.activePreset);
   const setActivePreset = useUIStore((s) => s.setActivePreset);
 
+  // Right panel tab state: editor tools vs simulation results
+  const [rightPanelTab, setRightPanelTab] = useState<"editor" | "results">("editor");
+
   // Mobile tab state (local to editor)
   const [mobileTab, setMobileTab] = useState<MobileEditorTab>("wires");
+
+  // Auto-switch to results tab when simulation completes
+  useEffect(() => {
+    if (simStatus === "success") {
+      setRightPanelTab("results");
+    }
+  }, [simStatus]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -223,27 +233,50 @@ export function EditorPage() {
 
         {/* === RIGHT PANEL (desktop only) === */}
         <aside className="hidden lg:flex flex-col w-80 xl:w-96 border-l border-border bg-surface overflow-hidden shrink-0">
-          {/* Top: Wire table (resizable later) */}
-          <div className="flex-1 min-h-0 border-b border-border overflow-hidden flex flex-col">
-            <WireTable />
+          {/* Tab switcher: Editor vs Results */}
+          <div className="p-2 border-b border-border shrink-0">
+            <SegmentedControl
+              segments={[
+                { key: "editor", label: "Editor" },
+                { key: "results", label: "Results" },
+              ]}
+              activeKey={rightPanelTab}
+              onChange={(key) => setRightPanelTab(key as "editor" | "results")}
+            />
           </div>
 
-          {/* Middle: Properties panel */}
-          <div className="h-52 border-b border-border overflow-y-auto shrink-0">
-            <WirePropertiesPanel />
-          </div>
+          {rightPanelTab === "editor" ? (
+            <>
+              {/* Wire table */}
+              <div className="flex-1 min-h-0 border-b border-border overflow-hidden flex flex-col">
+                <WireTable />
+              </div>
 
-          {/* Import/Export + Compare + Optimizer */}
-          <div className="border-b border-border overflow-y-auto max-h-64 shrink-0 p-2 space-y-2">
-            <ImportExportPanel />
-            <CompareOverlay />
-            <div className="border-t border-border pt-2">
-              <OptimizerPanel />
+              {/* Properties panel */}
+              <div className="h-48 border-b border-border overflow-y-auto shrink-0">
+                <WirePropertiesPanel />
+              </div>
+
+              {/* Import/Export + Compare + Optimizer */}
+              <div className="border-b border-border overflow-y-auto max-h-52 shrink-0 p-2 space-y-2">
+                <ImportExportPanel />
+                <CompareOverlay />
+                <div className="border-t border-border pt-2">
+                  <OptimizerPanel />
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Results panel — same as the simulator's */
+            <div className="flex-1 overflow-hidden flex flex-col">
+              <ErrorBoundary label="Results">
+                <ResultsPanel />
+              </ErrorBoundary>
             </div>
-          </div>
+          )}
 
-          {/* Bottom: Frequency, Ground, Run button */}
-          <div className="p-2 space-y-2 shrink-0">
+          {/* Bottom: Frequency, Ground, Run button (always visible) */}
+          <div className="p-2 space-y-2 shrink-0 border-t border-border">
             {/* Design frequency */}
             <div className="flex items-center gap-2">
               <label className="text-[10px] text-text-secondary shrink-0">

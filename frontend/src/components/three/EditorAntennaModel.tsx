@@ -4,7 +4,8 @@
  * Extends AntennaModel with:
  * - Click-to-select (raycasting)
  * - Selection highlight (white glow outline)
- * - Endpoint spheres for move mode
+ * - Endpoint spheres for move mode (drag individual endpoint)
+ * - Wire body drag for move mode (translate entire wire)
  * - Feedpoint marker overlay
  */
 
@@ -32,6 +33,11 @@ interface EditorAntennaModelProps {
     endpoint: "start" | "end",
     event: ThreeEvent<PointerEvent>
   ) => void;
+  /** Drag start on the wire body (whole-wire move) */
+  onWireDragStart?: (
+    tag: number,
+    event: ThreeEvent<PointerEvent>
+  ) => void;
 }
 
 const SELECTED_COLOR = "#FFFFFF";
@@ -44,6 +50,7 @@ export function EditorAntennaModel({
   mode,
   onWireClick,
   onEndpointDragStart,
+  onWireDragStart,
 }: EditorAntennaModelProps) {
   const { geometry, material, start, end } = useMemo(() => {
     // NEC2: X=east, Y=north, Z=up -> Three.js: X=east, Y=up, Z=south
@@ -120,6 +127,17 @@ export function EditorAntennaModel({
     [wire.tag, onWireClick]
   );
 
+  /** Wire body drag — starts a whole-wire move */
+  const handleWirePointerDown = useCallback(
+    (event: ThreeEvent<PointerEvent>) => {
+      if (mode === "move" && isSelected && onWireDragStart) {
+        event.stopPropagation();
+        onWireDragStart(wire.tag, event);
+      }
+    },
+    [mode, isSelected, wire.tag, onWireDragStart]
+  );
+
   const capRadius = Math.max(wire.radius * 60, 0.04);
   const endpointRadius = mode === "move" ? capRadius * 2.5 : capRadius;
   const endpointColor = mode === "move" && isSelected ? "#10B981" : getWireColor(wire.tag);
@@ -131,8 +149,13 @@ export function EditorAntennaModel({
         <mesh geometry={outlineGeometry} material={outlineMaterial} />
       )}
 
-      {/* Wire tube */}
-      <mesh geometry={geometry} material={material} onClick={handleClick} />
+      {/* Wire tube — clickable for selection, draggable for whole-wire move */}
+      <mesh
+        geometry={geometry}
+        material={material}
+        onClick={handleClick}
+        onPointerDown={handleWirePointerDown}
+      />
 
       {/* Endpoint spheres */}
       <mesh

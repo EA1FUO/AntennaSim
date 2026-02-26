@@ -7,6 +7,8 @@
  * - Compass, axes
  * - Click handlers for add/select/move modes
  * - Ghost wire preview when in add mode
+ * - Endpoint drag (move individual endpoints)
+ * - Whole-wire drag (translate entire wire)
  */
 
 import { Canvas, useThree, ThreeEvent } from "@react-three/fiber";
@@ -63,6 +65,11 @@ function GhostWire({ start, end }: { start: Vector3; end: Vector3 }) {
   );
 }
 
+/** Drag target: either an endpoint or the entire wire */
+type DragTarget =
+  | { type: "endpoint"; tag: number; endpoint: "start" | "end" }
+  | { type: "wire"; tag: number; offsetX: number; offsetY: number; offsetZ: number };
+
 /** Inner scene content — needs access to useThree */
 function EditorSceneContent({
   viewToggles,
@@ -80,23 +87,17 @@ function EditorSceneContent({
   const deselectAll = useEditorStore((s) => s.deselectAll);
   const addWire = useEditorStore((s) => s.addWire);
   const updateWire = useEditorStore((s) => s.updateWire);
+  const moveWire = useEditorStore((s) => s.moveWire);
   const toggleSelection = useEditorStore((s) => s.toggleSelection);
 
   // Add mode state: first click sets start point, second click sets end
-  const [addStart, setAddStart] = useState<[number, number, number] | null>(
-    null
-  );
+  const [addStart, setAddStart] = useState<[number, number, number] | null>(null);
   // Ghost wire preview position
-  const [ghostEnd, setGhostEnd] = useState<[number, number, number] | null>(
-    null
-  );
+  const [ghostEnd, setGhostEnd] = useState<[number, number, number] | null>(null);
 
-  // Move mode state
+  // Drag state — when non-null, orbit controls are disabled
   const [isDragging, setIsDragging] = useState(false);
-  const dragRef = useRef<{
-    tag: number;
-    endpoint: "start" | "end";
-  } | null>(null);
+  const dragRef = useRef<DragTarget | null>(null);
 
   const { raycaster } = useThree();
 
@@ -108,7 +109,7 @@ function EditorSceneContent({
       const hit = ray.intersectPlane(GROUND_PLANE, intersection);
       if (!hit) return null;
 
-      // Three.js [x, y, z] -> NEC2 [x, -z, y] (inverse of the NEC->Three transform)
+      // Three.js [x, y, z] -> NEC2 [x, -z, y]
       const necX = snap(intersection.x, snapSize);
       const necY = snap(-intersection.z, snapSize);
       const necZ = snap(intersection.y, snapSize);
@@ -130,10 +131,8 @@ function EditorSceneContent({
         if (!pos) return;
 
         if (!addStart) {
-          // First click: set start
           setAddStart(pos);
         } else {
-          // Second click: create wire
           addWire({
             x1: addStart[0],
             y1: addStart[1],
@@ -151,7 +150,7 @@ function EditorSceneContent({
     [mode, addStart, deselectAll, addWire, raycastToGround]
   );
 
-  /** Handle mouse move for ghost wire preview */
+  /** Handle mouse move for ghost wire preview and drag operations */
   const handlePointerMove = useCallback(
     (event: ThreeEvent<PointerEvent>) => {
       if (mode === "add" && addStart) {
@@ -159,19 +158,33 @@ function EditorSceneContent({
         if (pos) setGhostEnd(pos);
       }
 
-      // Move mode dragging
+      // Drag operations
       if (isDragging && dragRef.current) {
         const pos = raycastToGround(event);
         if (!pos) return;
-        const { tag, endpoint } = dragRef.current;
-        if (endpoint === "start") {
-          updateWire(tag, { x1: pos[0], y1: pos[1], z1: pos[2] });
-        } else {
-          updateWire(tag, { x2: pos[0], y2: pos[1], z2: pos[2] });
+        const target = dragRef.current;
+
+        if (target.type === "endpoint") {
+          const { tag, endpoint } = target;
+          if (endpoint === "start") {
+            updateWire(tag, { x1: pos[0], y1: pos[1], z1: pos[2] });
+          } else {
+            updateWire(tag, { x2: pos[0], y2: pos[1], z2: pos[2] });
+          }
+        } else if (target.type === "wire") {
+          // Whole-wire move: apply offset from grab point
+          const dx = pos[0] - target.offsetX;
+          const dy = pos[1] - target.offsetY;
+          const dz = pos[2] - target.offsetZ;
+          moveWire(target.tag, dx, dy, dz);
+          // Update offset to current position for next delta
+          target.offsetX = pos[0];
+          target.offsetY = pos[1];
+          target.offsetZ = pos[2];
         }
       }
     },
-    [mode, addStart, isDragging, raycastToGround, updateWire]
+    [mode, addStart, isDragging, raycastToGround, updateWire, moveWire]
   );
 
   const handlePointerUp = useCallback(() => {
@@ -195,15 +208,35 @@ function EditorSceneContent({
     [mode, selectWire, toggleSelection]
   );
 
-  /** Handle endpoint drag start (move mode) */
+  /** Handle endpoint drag start (move mode — endpoint only) */
   const handleEndpointDragStart = useCallback(
     (tag: number, endpoint: "start" | "end", _event: ThreeEvent<PointerEvent>) => {
       if (mode === "move") {
         setIsDragging(true);
-        dragRef.current = { tag, endpoint };
+        dragRef.current = { type: "endpoint", tag, endpoint };
       }
     },
     [mode]
+  );
+
+  /** Handle wire body drag start (move mode — whole wire) */
+  const handleWireDragStart = useCallback(
+    (tag: number, event: ThreeEvent<PointerEvent>) => {
+      if (mode === "move") {
+        event.stopPropagation();
+        const pos = raycastToGround(event);
+        if (!pos) return;
+        setIsDragging(true);
+        dragRef.current = {
+          type: "wire",
+          tag,
+          offsetX: pos[0],
+          offsetY: pos[1],
+          offsetZ: pos[2],
+        };
+      }
+    },
+    [mode, raycastToGround]
   );
 
   // Convert wires to WireData format
@@ -245,7 +278,6 @@ function EditorSceneContent({
   // Ghost wire for add mode preview
   const ghostWire = useMemo(() => {
     if (mode !== "add" || !addStart || !ghostEnd) return null;
-    // Convert NEC2 to Three.js
     return {
       start: new Vector3(addStart[0], addStart[2], -addStart[1]),
       end: new Vector3(ghostEnd[0], ghostEnd[2], -ghostEnd[1]),
@@ -290,6 +322,7 @@ function EditorSceneContent({
             mode={mode}
             onWireClick={handleWireClick}
             onEndpointDragStart={handleEndpointDragStart}
+            onWireDragStart={handleWireDragStart}
           />
         ))}
 
@@ -327,7 +360,8 @@ function EditorSceneContent({
         <CurrentDistribution3D currents={currents} />
       )}
 
-      <CameraControls />
+      {/* Camera controls — disabled during drag to prevent orbit while moving wires */}
+      <CameraControls enabled={!isDragging} />
       <PostProcessing />
     </>
   );
