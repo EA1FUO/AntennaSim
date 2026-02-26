@@ -8,15 +8,24 @@ import { AntennaModel } from "./AntennaModel";
 import { FeedpointMarker } from "./FeedpointMarker";
 import { CameraControls } from "./CameraControls";
 import { PostProcessing } from "./PostProcessing";
+import { RadiationPattern3D } from "./RadiationPattern3D";
 import type { WireData, FeedpointData, ViewToggles } from "./types";
+import type { PatternData } from "../../api/nec";
 
 interface SceneRootProps {
   wires: WireData[];
   feedpoints: FeedpointData[];
   viewToggles: ViewToggles;
+  /** Radiation pattern data to render as 3D mesh */
+  patternData?: PatternData | null;
 }
 
-export function SceneRoot({ wires, feedpoints, viewToggles }: SceneRootProps) {
+export function SceneRoot({
+  wires,
+  feedpoints,
+  viewToggles,
+  patternData,
+}: SceneRootProps) {
   const glConfig = useMemo(
     () => ({
       antialias: true,
@@ -65,6 +74,11 @@ export function SceneRoot({ wires, feedpoints, viewToggles }: SceneRootProps) {
           feedpoints.map((fp, i) => (
             <FeedpointMarker key={i} position={fp.position} />
           ))}
+
+        {/* 3D Radiation Pattern */}
+        {viewToggles.pattern && patternData && (
+          <RadiationPattern3D pattern={patternData} scale={5} opacity={0.65} />
+        )}
 
         {/* Camera */}
         <CameraControls />
