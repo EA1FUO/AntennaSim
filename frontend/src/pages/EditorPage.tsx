@@ -22,6 +22,8 @@ import { WirePropertiesPanel } from "../components/editors/WirePropertiesPanel";
 import { GroundEditor } from "../components/editors/GroundEditor";
 import { ResultsPanel } from "../components/results/ResultsTabs";
 import { PatternFrequencySlider } from "../components/results/PatternFrequencySlider";
+import { CompareOverlay } from "../components/results/CompareOverlay";
+import { ImportExportPanel } from "../components/editors/ImportExportPanel";
 import { ColorScale } from "../components/ui/ColorScale";
 import { Button } from "../components/ui/Button";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
@@ -223,8 +225,14 @@ export function EditorPage() {
           </div>
 
           {/* Middle: Properties panel */}
-          <div className="h-64 border-b border-border overflow-y-auto shrink-0">
+          <div className="h-52 border-b border-border overflow-y-auto shrink-0">
             <WirePropertiesPanel />
+          </div>
+
+          {/* Import/Export + Compare */}
+          <div className="border-b border-border overflow-y-auto shrink-0 p-2 space-y-2">
+            <ImportExportPanel />
+            <CompareOverlay />
           </div>
 
           {/* Bottom: Frequency, Ground, Run button */}
