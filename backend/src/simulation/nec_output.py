@@ -8,6 +8,7 @@ from src.models.results import (
     Impedance,
     PatternData,
     FrequencyResult,
+    SegmentCurrent,
 )
 
 logger = logging.getLogger("antsim.nec_output")
@@ -53,6 +54,19 @@ _POWER_RADIATED_RE = re.compile(
 )
 _POWER_INPUT_RE = re.compile(
     r"INPUT\s+POWER\s*=\s*(" + _NUM + r")\s*WATTS", re.IGNORECASE
+)
+
+# Current distribution section header
+_CURRENT_HEADER_RE = re.compile(r"CURRENTS AND LOCATION")
+
+# Current data line:
+# SEG  TAG  X  Y  Z  LENGTH  REAL  IMAG  MAG  PHASE
+_CURRENT_LINE_RE = re.compile(
+    r"\s*(\d+)\s+(\d+)\s+"                            # seg, tag
+    r"(" + _NUM + r")\s+(" + _NUM + r")\s+(" + _NUM + r")\s+"  # x, y, z
+    r"(" + _NUM + r")\s+"                               # length
+    r"(" + _NUM + r")\s+(" + _NUM + r")\s+"             # real, imag
+    r"(" + _NUM + r")\s+(" + _NUM + r")"                # magnitude, phase
 )
 
 
@@ -186,6 +200,7 @@ def parse_nec_output(
     theta_step: float,
     phi_start: float,
     phi_step: float,
+    compute_currents: bool = False,
 ) -> list[FrequencyResult]:
     """Parse the complete nec2c stdout into a list of FrequencyResult."""
     results: list[FrequencyResult] = []
@@ -196,8 +211,10 @@ def parse_nec_output(
     current_pattern_data: list[tuple[float, float, float]] = []
     current_power_radiated: float | None = None
     current_power_input: float | None = None
+    current_currents: list[SegmentCurrent] = []
     in_input_params = False
     in_pattern_section = False
+    in_current_section = False
     skip_header_lines = 0
 
     for line in lines:
@@ -210,6 +227,7 @@ def parse_nec_output(
                     current_freq, current_impedance, current_pattern_data,
                     n_theta, n_phi, theta_start, theta_step, phi_start, phi_step,
                     current_power_radiated, current_power_input,
+                    current_currents if compute_currents else None,
                 )
                 results.append(result)
 
@@ -218,14 +236,17 @@ def parse_nec_output(
             current_pattern_data = []
             current_power_radiated = None
             current_power_input = None
+            current_currents = []
             in_input_params = False
             in_pattern_section = False
+            in_current_section = False
             continue
 
         # Check for antenna input parameters section
         if _INPUT_PARAMS_RE.search(line):
             in_input_params = True
             in_pattern_section = False
+            in_current_section = False
             skip_header_lines = 2  # Skip the 2 header lines after the section title
             continue
 
@@ -245,10 +266,51 @@ def parse_nec_output(
             if line.strip() == "":
                 continue
 
+        # Check for current distribution section
+        if compute_currents and _CURRENT_HEADER_RE.search(line):
+            in_current_section = True
+            in_pattern_section = False
+            in_input_params = False
+            skip_header_lines = 3  # Skip column header lines
+            continue
+
+        # Parse current data
+        if in_current_section:
+            if skip_header_lines > 0:
+                skip_header_lines -= 1
+                continue
+            cur_match = _CURRENT_LINE_RE.search(line)
+            if cur_match:
+                seg_num = int(cur_match.group(1))
+                tag_num = int(cur_match.group(2))
+                cx = float(cur_match.group(3))
+                cy = float(cur_match.group(4))
+                cz = float(cur_match.group(5))
+                # group(6) is segment length, skip
+                c_real = float(cur_match.group(7))
+                c_imag = float(cur_match.group(8))
+                c_mag = float(cur_match.group(9))
+                c_phase = float(cur_match.group(10))
+                current_currents.append(SegmentCurrent(
+                    tag=tag_num,
+                    segment=seg_num,
+                    x=round(cx, 6),
+                    y=round(cy, 6),
+                    z=round(cz, 6),
+                    current_real=round(c_real, 8),
+                    current_imag=round(c_imag, 8),
+                    current_magnitude=round(c_mag, 8),
+                    current_phase_deg=round(c_phase, 2),
+                ))
+                continue
+            if line.strip() == "":
+                in_current_section = False
+
         # Check for radiation pattern section
         if _PATTERN_HEADER_RE.search(line):
             in_pattern_section = True
             in_input_params = False
+            in_current_section = False
             skip_header_lines = 3  # Skip header lines (column headers)
             continue
 
@@ -285,6 +347,7 @@ def parse_nec_output(
             current_freq, current_impedance, current_pattern_data,
             n_theta, n_phi, theta_start, theta_step, phi_start, phi_step,
             current_power_radiated, current_power_input,
+            current_currents if compute_currents else None,
         )
         results.append(result)
 
@@ -303,6 +366,7 @@ def _build_frequency_result(
     phi_step: float,
     power_radiated: float | None = None,
     power_input: float | None = None,
+    currents: list[SegmentCurrent] | None = None,
 ) -> FrequencyResult:
     """Build a FrequencyResult from parsed data."""
     swr = compute_swr(impedance.real, impedance.imag)
@@ -377,4 +441,5 @@ def _build_frequency_result(
         beamwidth_h_deg=beamwidth_h,
         efficiency_percent=efficiency,
         pattern=pattern,
+        currents=currents if currents else None,
     )

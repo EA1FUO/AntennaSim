@@ -1,6 +1,9 @@
 /**
  * NEC2 simulation API endpoint.
  * Calls POST /api/v1/simulate on the backend.
+ *
+ * V1: Basic wires + single excitation
+ * V2: Loads, transmission lines, multiple excitations, current distribution
  */
 
 import { api } from "./client";
@@ -39,6 +42,44 @@ export interface PatternData {
   gain_dbi: number[][];
 }
 
+/** V2: Per-segment current data */
+export interface SegmentCurrent {
+  tag: number;
+  segment: number;
+  x: number;
+  y: number;
+  z: number;
+  current_real: number;
+  current_imag: number;
+  current_magnitude: number;
+  current_phase_deg: number;
+}
+
+/** V2: Lumped load definition */
+export interface LumpedLoad {
+  load_type: number; // 0=series RLC, 1=parallel RLC, 4=fixed Z, 5=conductivity
+  wire_tag: number;
+  segment_start: number;
+  segment_end: number;
+  param1: number; // R (Ohms) or conductivity (S/m)
+  param2: number; // L (H) or X (Ohms)
+  param3: number; // C (F) or 0
+}
+
+/** V2: Transmission line definition */
+export interface TransmissionLine {
+  wire_tag1: number;
+  segment1: number;
+  wire_tag2: number;
+  segment2: number;
+  impedance: number; // Z0
+  length: number; // 0 = auto
+  shunt_admittance_real1?: number;
+  shunt_admittance_imag1?: number;
+  shunt_admittance_real2?: number;
+  shunt_admittance_imag2?: number;
+}
+
 /** Simulation result for a single frequency */
 export interface FrequencyResult {
   frequency_mhz: number;
@@ -52,6 +93,7 @@ export interface FrequencyResult {
   beamwidth_h_deg: number | null;
   efficiency_percent: number | null;
   pattern: PatternData | null;
+  currents: SegmentCurrent[] | null;
 }
 
 /** Complete simulation response */
@@ -65,44 +107,41 @@ export interface SimulationResult {
   warnings: string[];
 }
 
-/** Build and send simulation request to backend */
+/** Build ground payload for the backend */
+function buildGroundPayload(ground: GroundConfig): Record<string, unknown> {
+  if (ground.type === "free_space") {
+    return { ground_type: "free_space" };
+  } else if (ground.type === "perfect") {
+    return { ground_type: "perfect" };
+  } else if (ground.type === "custom") {
+    return {
+      ground_type: "custom",
+      dielectric_constant: ground.custom_permittivity ?? 13,
+      conductivity: ground.custom_conductivity ?? 0.005,
+    };
+  } else {
+    const params = GROUND_PARAMS[ground.type] ?? GROUND_PARAMS.average!;
+    return {
+      ground_type: ground.type,
+      dielectric_constant: params.permittivity,
+      conductivity: params.conductivity,
+    };
+  }
+}
+
+/** V1: Basic simulation with single excitation */
 export async function runSimulation(
   wires: WireGeometry[],
   excitation: Excitation,
   ground: GroundConfig,
   frequency: FrequencyRange
 ): Promise<SimulationResult> {
-  // Build ground config for backend
-  let groundPayload: Record<string, unknown>;
-  if (ground.type === "free_space") {
-    groundPayload = { type: "free_space" };
-  } else if (ground.type === "perfect") {
-    groundPayload = { type: "perfect" };
-  } else if (ground.type === "custom") {
-    groundPayload = {
-      type: "custom",
-      custom_permittivity: ground.custom_permittivity ?? 13,
-      custom_conductivity: ground.custom_conductivity ?? 0.005,
-    };
-  } else {
-    const params = GROUND_PARAMS[ground.type] ?? GROUND_PARAMS.average!;
-    groundPayload = {
-      type: ground.type,
-      custom_permittivity: params.permittivity,
-      custom_conductivity: params.conductivity,
-    };
-  }
-
   const body = {
     wires: wires.map((w) => ({
       tag: w.tag,
       segments: w.segments,
-      x1: w.x1,
-      y1: w.y1,
-      z1: w.z1,
-      x2: w.x2,
-      y2: w.y2,
-      z2: w.z2,
+      x1: w.x1, y1: w.y1, z1: w.z1,
+      x2: w.x2, y2: w.y2, z2: w.z2,
       radius: w.radius,
     })),
     excitations: [
@@ -113,7 +152,7 @@ export async function runSimulation(
         voltage_imag: excitation.voltage_imag,
       },
     ],
-    ground: groundPayload,
+    ground: buildGroundPayload(ground),
     frequency: {
       start_mhz: frequency.start_mhz,
       stop_mhz: frequency.stop_mhz,
@@ -123,6 +162,53 @@ export async function runSimulation(
   };
 
   return api.post<SimulationResult>("/api/v1/simulate", body, {
-    timeout: 60000, // 60s for large sweeps
+    timeout: 60000,
+  });
+}
+
+/** V2: Advanced simulation options */
+export interface AdvancedSimulationOptions {
+  wires: WireGeometry[];
+  excitations: Excitation[];
+  ground: GroundConfig;
+  frequency: FrequencyRange;
+  loads?: LumpedLoad[];
+  transmission_lines?: TransmissionLine[];
+  compute_currents?: boolean;
+  comment?: string;
+}
+
+/** V2: Advanced simulation with loads, TL, multiple excitations, currents */
+export async function runAdvancedSimulation(
+  options: AdvancedSimulationOptions
+): Promise<SimulationResult> {
+  const body = {
+    wires: options.wires.map((w) => ({
+      tag: w.tag,
+      segments: w.segments,
+      x1: w.x1, y1: w.y1, z1: w.z1,
+      x2: w.x2, y2: w.y2, z2: w.z2,
+      radius: w.radius,
+    })),
+    excitations: options.excitations.map((e) => ({
+      wire_tag: e.wire_tag,
+      segment: e.segment,
+      voltage_real: e.voltage_real,
+      voltage_imag: e.voltage_imag,
+    })),
+    ground: buildGroundPayload(options.ground),
+    frequency: {
+      start_mhz: options.frequency.start_mhz,
+      stop_mhz: options.frequency.stop_mhz,
+      steps: options.frequency.steps,
+    },
+    loads: options.loads ?? [],
+    transmission_lines: options.transmission_lines ?? [],
+    compute_currents: options.compute_currents ?? false,
+    comment: options.comment ?? "AntSim V2 simulation",
+  };
+
+  return api.post<SimulationResult>("/api/v1/simulate", body, {
+    timeout: 60000,
   });
 }

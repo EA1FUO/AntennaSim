@@ -7,6 +7,9 @@ from src.models.ground import GroundType
 def build_card_deck(request: SimulationRequest) -> str:
     """Generate a complete NEC2 input card deck from a SimulationRequest.
 
+    Supports V1 cards: CM, CE, GW, GE, GN, EX, FR, RP, EN
+    Supports V2 cards: LD (loads), TL (transmission lines), PT (current output)
+
     Returns the full .nec file content as a string.
     """
     lines: list[str] = []
@@ -15,7 +18,9 @@ def build_card_deck(request: SimulationRequest) -> str:
     lines.append(f"CM {request.comment}")
     lines.append("CE")
 
-    # Geometry: GW cards for each wire
+    # ---- Geometry Section ----
+
+    # GW cards for each wire
     for wire in request.wires:
         lines.append(
             f"GW {wire.tag} {wire.segments} "
@@ -32,6 +37,8 @@ def build_card_deck(request: SimulationRequest) -> str:
     else:
         lines.append("GE 0")
 
+    # ---- Program Control Section ----
+
     # Ground card
     if ground_type == GroundType.FREE_SPACE:
         lines.append("GN -1")
@@ -40,6 +47,30 @@ def build_card_deck(request: SimulationRequest) -> str:
     else:
         eps_r, sigma = request.ground.get_nec_params()
         lines.append(f"GN 2 0 0 0 {eps_r:.4f} {sigma:.6f}")
+
+    # V2: Loading cards (LD)
+    for ld in request.loads:
+        # LD TYPE TAG SEG_START SEG_END PARAM1 PARAM2 PARAM3
+        lines.append(
+            f"LD {ld.load_type.value} {ld.wire_tag} {ld.segment_start} {ld.segment_end} "
+            f"{ld.param1:.6g} {ld.param2:.6g} {ld.param3:.6g}"
+        )
+
+    # V2: Transmission line cards (TL)
+    for tl in request.transmission_lines:
+        # TL TAG1 SEG1 TAG2 SEG2 Z0 LENGTH SHUNT_Y1_R SHUNT_Y1_I SHUNT_Y2_R SHUNT_Y2_I
+        lines.append(
+            f"TL {tl.wire_tag1} {tl.segment1} {tl.wire_tag2} {tl.segment2} "
+            f"{tl.impedance:.4f} {tl.length:.6f} "
+            f"{tl.shunt_admittance_real1:.6g} {tl.shunt_admittance_imag1:.6g} "
+            f"{tl.shunt_admittance_real2:.6g} {tl.shunt_admittance_imag2:.6g}"
+        )
+
+    # V2: Current output control
+    if request.compute_currents:
+        lines.append("PT 0 0 0 0")  # Print currents normally
+    else:
+        lines.append("PT -1 0 0 0")  # Suppress current printout
 
     # Excitation cards
     for ex in request.excitations:

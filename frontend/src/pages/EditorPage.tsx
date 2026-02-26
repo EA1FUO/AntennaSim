@@ -60,10 +60,15 @@ export function EditorPage() {
   // Simulation store
   const simStatus = useSimulationStore((s) => s.status);
   const simError = useSimulationStore((s) => s.error);
-  const simulate = useSimulationStore((s) => s.simulate);
+  const simulateAdvanced = useSimulationStore((s) => s.simulateAdvanced);
   const selectedFreqResult = useSimulationStore((s) =>
     s.getSelectedFrequencyResult()
   );
+
+  // V2 features from editor store
+  const loads = useEditorStore((s) => s.loads);
+  const transmissionLines = useEditorStore((s) => s.transmissionLines);
+  const computeCurrents = useEditorStore((s) => s.computeCurrents);
 
   // UI store
   const viewToggles = useUIStore((s) => s.viewToggles);
@@ -124,8 +129,16 @@ export function EditorPage() {
   const handleRunSimulation = useCallback(() => {
     if (wires.length === 0 || excitations.length === 0) return;
     const wireGeometry = getWireGeometry();
-    simulate(wireGeometry, excitations[0]!, ground, frequencyRange);
-  }, [wires, excitations, ground, frequencyRange, simulate, getWireGeometry]);
+    simulateAdvanced({
+      wires: wireGeometry,
+      excitations,
+      ground,
+      frequency: frequencyRange,
+      loads: loads.length > 0 ? loads : undefined,
+      transmission_lines: transmissionLines.length > 0 ? transmissionLines : undefined,
+      compute_currents: computeCurrents,
+    });
+  }, [wires, excitations, ground, frequencyRange, loads, transmissionLines, computeCurrents, simulateAdvanced, getWireGeometry]);
 
   const isLoading = simStatus === "loading";
   const canRun = wires.length > 0 && excitations.length > 0;

@@ -24,6 +24,20 @@ class PatternData(BaseModel):
     )
 
 
+class SegmentCurrent(BaseModel):
+    """Current data for a single wire segment (V2)."""
+
+    tag: int = Field(description="Wire tag number")
+    segment: int = Field(description="Segment index (1-based)")
+    x: float = Field(description="Segment center X coordinate (m)")
+    y: float = Field(description="Segment center Y coordinate (m)")
+    z: float = Field(description="Segment center Z coordinate (m)")
+    current_real: float = Field(description="Current real part (A)")
+    current_imag: float = Field(description="Current imaginary part (A)")
+    current_magnitude: float = Field(description="Current magnitude (A)")
+    current_phase_deg: float = Field(description="Current phase (degrees)")
+
+
 class FrequencyResult(BaseModel):
     """Simulation results for a single frequency point."""
 
@@ -47,6 +61,9 @@ class FrequencyResult(BaseModel):
     )
     pattern: PatternData | None = Field(
         default=None, description="Full 3D pattern data"
+    )
+    currents: list[SegmentCurrent] | None = Field(
+        default=None, description="V2: Per-segment current distribution"
     )
 
 

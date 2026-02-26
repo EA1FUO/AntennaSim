@@ -12,11 +12,15 @@
 
 import { create } from "zustand";
 import type { WireGeometry, Excitation, GroundConfig, FrequencyRange } from "../templates/types";
+import type { LumpedLoad, TransmissionLine } from "../api/nec";
 import { autoSegment, centerSegment } from "../engine/segmentation";
 
 // ---- Types ----
 
 export type EditorMode = "select" | "add" | "move";
+
+// Re-export for convenience
+export type { LumpedLoad, TransmissionLine } from "../api/nec";
 
 export interface EditorWire extends WireGeometry {
   /** Whether this wire is currently selected */
@@ -27,6 +31,8 @@ export interface EditorWire extends WireGeometry {
 interface EditorSnapshot {
   wires: EditorWire[];
   excitations: Excitation[];
+  loads: LumpedLoad[];
+  transmissionLines: TransmissionLine[];
 }
 
 // ---- Default state ----
@@ -45,6 +51,12 @@ interface EditorState {
   wires: EditorWire[];
   /** Excitation sources */
   excitations: Excitation[];
+  /** V2: Lumped loads */
+  loads: LumpedLoad[];
+  /** V2: Transmission lines */
+  transmissionLines: TransmissionLine[];
+  /** Whether to compute current distribution */
+  computeCurrents: boolean;
   /** Currently selected wire tags */
   selectedTags: Set<number>;
   /** Current editor mode */
@@ -110,6 +122,19 @@ interface EditorState {
   setExcitation: (wireTag: number, segment: number) => void;
   removeExcitation: (wireTag: number) => void;
 
+  // ---- V2: Loads ----
+  addLoad: (load: LumpedLoad) => void;
+  updateLoad: (index: number, load: LumpedLoad) => void;
+  removeLoad: (index: number) => void;
+
+  // ---- V2: Transmission Lines ----
+  addTransmissionLine: (tl: TransmissionLine) => void;
+  updateTransmissionLine: (index: number, tl: TransmissionLine) => void;
+  removeTransmissionLine: (index: number) => void;
+
+  // ---- V2: Currents ----
+  setComputeCurrents: (compute: boolean) => void;
+
   // ---- Undo/Redo ----
   undo: () => void;
   redo: () => void;
@@ -128,6 +153,8 @@ function takeSnapshot(state: EditorState): EditorSnapshot {
   return {
     wires: state.wires.map((w) => ({ ...w })),
     excitations: state.excitations.map((e) => ({ ...e })),
+    loads: state.loads.map((l) => ({ ...l })),
+    transmissionLines: state.transmissionLines.map((t) => ({ ...t })),
   };
 }
 
@@ -161,6 +188,9 @@ function snap(value: number, gridSize: number): number {
 export const useEditorStore = create<EditorState>((set, get) => ({
   wires: [],
   excitations: [],
+  loads: [],
+  transmissionLines: [],
+  computeCurrents: false,
   selectedTags: new Set<number>(),
   mode: "select",
   ground: { ...DEFAULT_GROUND },
@@ -306,6 +336,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ...pushUndo(state),
       wires: [],
       excitations: [],
+      loads: [],
+      transmissionLines: [],
       selectedTags: new Set(),
       nextTag: 1,
     });
@@ -408,6 +440,48 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
 
+  // ---- V2: Loads ----
+
+  addLoad: (load) => {
+    const state = get();
+    set({ ...pushUndo(state), loads: [...state.loads, { ...load }] });
+  },
+
+  updateLoad: (index, load) => {
+    const state = get();
+    const newLoads = [...state.loads];
+    newLoads[index] = { ...load };
+    set({ ...pushUndo(state), loads: newLoads });
+  },
+
+  removeLoad: (index) => {
+    const state = get();
+    set({ ...pushUndo(state), loads: state.loads.filter((_, i) => i !== index) });
+  },
+
+  // ---- V2: Transmission Lines ----
+
+  addTransmissionLine: (tl) => {
+    const state = get();
+    set({ ...pushUndo(state), transmissionLines: [...state.transmissionLines, { ...tl }] });
+  },
+
+  updateTransmissionLine: (index, tl) => {
+    const state = get();
+    const newTLs = [...state.transmissionLines];
+    newTLs[index] = { ...tl };
+    set({ ...pushUndo(state), transmissionLines: newTLs });
+  },
+
+  removeTransmissionLine: (index) => {
+    const state = get();
+    set({ ...pushUndo(state), transmissionLines: state.transmissionLines.filter((_, i) => i !== index) });
+  },
+
+  // ---- V2: Currents ----
+
+  setComputeCurrents: (compute) => set({ computeCurrents: compute }),
+
   // ---- Undo/Redo ----
 
   undo: () => {
@@ -421,6 +495,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({
       wires: previous.wires,
       excitations: previous.excitations,
+      loads: previous.loads,
+      transmissionLines: previous.transmissionLines,
       selectedTags: new Set(),
       undoStack: newUndoStack,
       redoStack: [...state.redoStack, current],
@@ -440,6 +516,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({
       wires: next.wires,
       excitations: next.excitations,
+      loads: next.loads,
+      transmissionLines: next.transmissionLines,
       selectedTags: new Set(),
       undoStack: [...state.undoStack, current],
       redoStack: newRedoStack,

@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, Field, model_validator
 
-from src.models.antenna import Wire, Excitation
+from src.models.antenna import Wire, Excitation, LumpedLoad, TransmissionLine
 from src.models.ground import GroundConfig
 
 
@@ -46,7 +46,11 @@ class PatternConfig(BaseModel):
 
 
 class SimulationRequest(BaseModel):
-    """Request body for POST /api/v1/simulate."""
+    """Request body for POST /api/v1/simulate.
+
+    V1 fields: wires, excitations, ground, frequency, pattern, comment
+    V2 fields: loads, transmission_lines, compute_currents
+    """
 
     wires: list[Wire] = Field(min_length=1, max_length=500)
     excitations: list[Excitation] = Field(min_length=1, max_length=50)
@@ -54,6 +58,14 @@ class SimulationRequest(BaseModel):
     frequency: FrequencyConfig
     pattern: PatternConfig = Field(default_factory=PatternConfig)
     comment: str = Field(default="AntSim simulation", max_length=200)
+
+    # V2 optional advanced fields
+    loads: list[LumpedLoad] = Field(default_factory=list, max_length=100,
+                                    description="Lumped loads (LD cards)")
+    transmission_lines: list[TransmissionLine] = Field(default_factory=list, max_length=50,
+                                                       description="Transmission lines (TL cards)")
+    compute_currents: bool = Field(default=False,
+                                   description="If true, request current distribution data (PT 0)")
 
     @model_validator(mode="after")
     def validate_total_segments(self) -> "SimulationRequest":
@@ -72,5 +84,21 @@ class SimulationRequest(BaseModel):
                 raise ValueError(
                     f"Excitation references wire tag {ex.wire_tag} "
                     f"which doesn't exist. Valid tags: {wire_tags}"
+                )
+        # Validate load wire references
+        for ld in self.loads:
+            if ld.wire_tag != 0 and ld.wire_tag not in wire_tags:
+                raise ValueError(
+                    f"Load references wire tag {ld.wire_tag} which doesn't exist"
+                )
+        # Validate transmission line wire references
+        for tl in self.transmission_lines:
+            if tl.wire_tag1 not in wire_tags:
+                raise ValueError(
+                    f"Transmission line references wire tag {tl.wire_tag1} which doesn't exist"
+                )
+            if tl.wire_tag2 not in wire_tags:
+                raise ValueError(
+                    f"Transmission line references wire tag {tl.wire_tag2} which doesn't exist"
                 )
         return self

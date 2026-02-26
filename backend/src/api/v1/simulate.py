@@ -91,6 +91,7 @@ async def simulate(request_body: SimulationRequest, request: Request) -> Simulat
                 theta_step=request_body.pattern.theta_step,
                 phi_start=request_body.pattern.phi_start,
                 phi_step=request_body.pattern.phi_step,
+                compute_currents=request_body.compute_currents,
             )
         except Exception as e:
             logger.error("Output parsing failed for %s: %s", sim_id, e)
