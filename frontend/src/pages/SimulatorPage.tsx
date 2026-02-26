@@ -8,11 +8,13 @@
  *   [3D Viewport (45%)] [Bottom Sheet: Antenna | Results tabs]
  */
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useAntennaStore } from "../stores/antennaStore";
 import { useSimulationStore } from "../stores/simulationStore";
 import { useUIStore } from "../stores/uiStore";
 import { SceneRoot } from "../components/three/SceneRoot";
+import { ErrorBoundary } from "../components/common/ErrorBoundary";
+import { KeyboardShortcutsPanel } from "../components/common/KeyboardShortcutsPanel";
 import { CameraPresetsOverlay } from "../components/three/CameraPresets";
 import { ViewToggleToolbar } from "../components/three/ViewToggleToolbar";
 import { Navbar } from "../components/layout/Navbar";
@@ -94,6 +96,8 @@ export function SimulatorPage() {
     simulate(wireGeometry, excitation, ground, frequencyRange);
   }, [simulate, wireGeometry, excitation, ground, frequencyRange]);
 
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+
   const isLoading = simStatus === "loading";
 
   // Pattern data for 3D viewport
@@ -168,13 +172,15 @@ export function SimulatorPage() {
 
         {/* === CENTER: 3D VIEWPORT === */}
         <main className="flex-1 relative min-w-0">
-          <SceneRoot
-            wires={wireData}
-            feedpoints={feedpoints}
-            viewToggles={viewToggles}
-            patternData={patternData}
-            currents={currents}
-          />
+          <ErrorBoundary label="3D Viewport">
+            <SceneRoot
+              wires={wireData}
+              feedpoints={feedpoints}
+              viewToggles={viewToggles}
+              patternData={patternData}
+              currents={currents}
+            />
+          </ErrorBoundary>
 
           {/* Overlays */}
           <CameraPresetsOverlay
@@ -213,7 +219,9 @@ export function SimulatorPage() {
 
         {/* === RIGHT PANEL (desktop only) === */}
         <aside className="hidden lg:flex flex-col w-72 xl:w-80 border-l border-border bg-surface overflow-hidden shrink-0">
-          <ResultsPanel />
+          <ErrorBoundary label="Results">
+            <ResultsPanel />
+          </ErrorBoundary>
         </aside>
       </div>
 
@@ -306,6 +314,12 @@ export function SimulatorPage() {
       </div>
 
       <StatusBar />
+
+      <KeyboardShortcutsPanel
+        isOpen={shortcutsOpen}
+        onClose={() => setShortcutsOpen(false)}
+        mode="simulator"
+      />
     </div>
   );
 }

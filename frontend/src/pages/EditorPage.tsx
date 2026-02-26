@@ -13,6 +13,7 @@ import { useEditorStore } from "../stores/editorStore";
 import { useSimulationStore } from "../stores/simulationStore";
 import { useUIStore } from "../stores/uiStore";
 import { EditorScene } from "../components/three/EditorScene";
+import { ErrorBoundary } from "../components/common/ErrorBoundary";
 import { CameraPresetsOverlay } from "../components/three/CameraPresets";
 import { ViewToggleToolbar } from "../components/three/ViewToggleToolbar";
 import { Navbar } from "../components/layout/Navbar";
@@ -164,7 +165,9 @@ export function EditorPage() {
 
         {/* === CENTER: 3D VIEWPORT === */}
         <main className="flex-1 relative min-w-0">
-          <EditorScene viewToggles={viewToggles} patternData={patternData} currents={currentData} />
+          <ErrorBoundary label="3D Viewport">
+            <EditorScene viewToggles={viewToggles} patternData={patternData} currents={currentData} />
+          </ErrorBoundary>
 
           {/* Overlays */}
           <CameraPresetsOverlay

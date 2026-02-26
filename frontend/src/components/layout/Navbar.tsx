@@ -58,6 +58,16 @@ export function Navbar() {
             Editor
           </a>
           <a
+            href="/library"
+            className={`hover:text-accent transition-colors ${
+              location.pathname === "/library"
+                ? "text-text-primary font-medium"
+                : "text-text-secondary"
+            }`}
+          >
+            Library
+          </a>
+          <a
             href="/about"
             className={`hover:text-accent transition-colors ${
               location.pathname === "/about"
