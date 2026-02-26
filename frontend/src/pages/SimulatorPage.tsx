@@ -24,6 +24,7 @@ import { Button } from "../components/ui/Button";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { ColorScale } from "../components/ui/ColorScale";
 import { ResultsPanel } from "../components/results/ResultsTabs";
+import { SWRChart } from "../components/results/SWRChart";
 import { formatSwr, formatGain, formatImpedance, swrColorClass } from "../utils/units";
 import type { AntennaTemplate } from "../templates/types";
 import type { CameraPreset, ViewToggles } from "../components/three/types";
@@ -51,7 +52,10 @@ export function SimulatorPage() {
   // Simulation store
   const simStatus = useSimulationStore((s) => s.status);
   const simError = useSimulationStore((s) => s.error);
+  const result = useSimulationStore((s) => s.result);
   const simulate = useSimulationStore((s) => s.simulate);
+  const selectedFreqIndex = useSimulationStore((s) => s.selectedFreqIndex);
+  const setSelectedFreqIndex = useSimulationStore((s) => s.setSelectedFreqIndex);
   const selectedFreqResult = useSimulationStore((s) =>
     s.getSelectedFrequencyResult()
   );
@@ -78,6 +82,11 @@ export function SimulatorPage() {
   const handleToggle = useCallback(
     (key: keyof ViewToggles) => toggleView(key),
     [toggleView]
+  );
+
+  const handleFreqClick = useCallback(
+    (index: number) => setSelectedFreqIndex(index),
+    [setSelectedFreqIndex]
   );
 
   const handleRunSimulation = useCallback(() => {
@@ -199,15 +208,20 @@ export function SimulatorPage() {
       </div>
 
       {/* === MOBILE BOTTOM SHEET === */}
-      <div className="lg:hidden border-t border-border bg-surface">
-        <div className="px-3 pt-2 pb-1">
+      <div className="lg:hidden border-t border-border bg-surface flex flex-col max-h-[55vh]">
+        {/* Drag handle */}
+        <div className="flex justify-center py-1.5 shrink-0">
+          <div className="w-8 h-1 rounded-full bg-border" />
+        </div>
+
+        <div className="px-3 pb-1 shrink-0">
           <SegmentedControl
             segments={MOBILE_SEGMENTS}
             activeKey={mobileTab}
             onChange={(key) => setMobileTab(key as typeof mobileTab)}
           />
         </div>
-        <div className="px-3 py-2 max-h-48 overflow-y-auto">
+        <div className="px-3 py-2 flex-1 overflow-y-auto">
           {mobileTab === "antenna" && (
             <div className="space-y-3">
               <TemplatePicker
@@ -223,37 +237,57 @@ export function SimulatorPage() {
             </div>
           )}
           {mobileTab === "results" && (
-            <div>
+            <div className="space-y-3">
               {simStatus === "idle" && (
                 <p className="text-xs text-text-secondary text-center py-4">
                   Run a simulation to see results.
                 </p>
               )}
               {simStatus === "success" && selectedFreqResult && (
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="bg-background rounded-md p-2">
-                    <div className="text-[10px] text-text-secondary">SWR</div>
-                    <div
-                      className={`text-base font-mono font-bold ${swrColorClass(selectedFreqResult.swr_50)}`}
-                    >
-                      {formatSwr(selectedFreqResult.swr_50)}
+                <>
+                  {/* Quick summary cards */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="bg-background rounded-md p-2">
+                      <div className="text-[10px] text-text-secondary">SWR</div>
+                      <div
+                        className={`text-base font-mono font-bold ${swrColorClass(selectedFreqResult.swr_50)}`}
+                      >
+                        {formatSwr(selectedFreqResult.swr_50)}
+                      </div>
+                    </div>
+                    <div className="bg-background rounded-md p-2">
+                      <div className="text-[10px] text-text-secondary">Gain</div>
+                      <div className="text-base font-mono font-bold text-text-primary">
+                        {formatGain(selectedFreqResult.gain_max_dbi)}
+                      </div>
+                    </div>
+                    <div className="bg-background rounded-md p-2">
+                      <div className="text-[10px] text-text-secondary">Z</div>
+                      <div className="text-[10px] font-mono text-text-primary">
+                        {formatImpedance(
+                          selectedFreqResult.impedance.real,
+                          selectedFreqResult.impedance.imag
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="bg-background rounded-md p-2">
-                    <div className="text-[10px] text-text-secondary">Gain</div>
-                    <div className="text-base font-mono font-bold text-text-primary">
-                      {formatGain(selectedFreqResult.gain_max_dbi)}
+
+                  {/* SWR chart (compact) */}
+                  {result && (
+                    <div>
+                      <h4 className="text-[10px] text-text-secondary mb-1">SWR vs Frequency</h4>
+                      <SWRChart
+                        data={result.frequency_data}
+                        onFrequencyClick={handleFreqClick}
+                        selectedIndex={selectedFreqIndex}
+                      />
                     </div>
-                  </div>
-                  <div className="bg-background rounded-md p-2">
-                    <div className="text-[10px] text-text-secondary">Z</div>
-                    <div className="text-[10px] font-mono text-text-primary">
-                      {formatImpedance(
-                        selectedFreqResult.impedance.real,
-                        selectedFreqResult.impedance.imag
-                      )}
-                    </div>
-                  </div>
+                  )}
+                </>
+              )}
+              {simStatus === "loading" && (
+                <div className="flex items-center justify-center py-6">
+                  <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
             </div>

@@ -26,12 +26,24 @@ services:
       - /tmp/nec_workdir:size=100M
     security_opt:
       - no-new-privileges:true
+    depends_on:
+      - redis
 
   redis:
     image: redis:7-alpine
     volumes:
       - redis_data:/data
     command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+
+  nginx:
+    build: ./nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - frontend
+      - backend
     restart: unless-stopped
 
 volumes:

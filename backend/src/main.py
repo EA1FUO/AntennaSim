@@ -1,3 +1,5 @@
+"""AntSim Backend — FastAPI application factory with lifespan events."""
+
 import logging
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
@@ -7,6 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import settings
 from src.api.router import api_router
+from src.core.exceptions import register_exception_handlers
+from src.simulation.cache import get_redis, close_redis
 
 logger = logging.getLogger("antsim")
 
@@ -30,8 +34,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     else:
         logger.warning("nec2c NOT found in PATH — simulations will fail")
 
+    # Initialize Redis connection
+    redis_conn = await get_redis()
+    if redis_conn:
+        logger.info("Redis cache enabled")
+    else:
+        logger.warning("Redis unavailable — caching and rate limiting disabled")
+
     yield
 
+    # Shutdown: close Redis
+    await close_redis()
     logger.info("AntSim backend shutting down")
 
 
@@ -43,6 +56,9 @@ app = FastAPI(
     docs_url="/docs" if settings.is_dev else None,
     redoc_url="/redoc" if settings.is_dev else None,
 )
+
+# Register custom exception handlers
+register_exception_handlers(app)
 
 # CORS
 app.add_middleware(
