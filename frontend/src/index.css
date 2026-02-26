@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-background: #0a0a0f;
+    --color-surface: #13131a;
+    --color-surface-hover: #1a1a24;
+    --color-border: #2a2a35;
+    --color-text-primary: #e8e8ed;
+    --color-text-secondary: #8888a0;
+    --color-accent: #3b82f6;
+    --color-accent-hover: #2563eb;
+    --color-accent-glow: rgba(59, 130, 246, 0.2);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+  }
+
+  body {
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    background-color: var(--color-background);
+    color: var(--color-text-primary);
+    overflow: hidden;
+  }
+
+  /* Monospace numbers */
+  .font-mono {
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-variant-numeric: tabular-nums;
+  }
+}

@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# NEC2 temp files (should never be committed)
+*.nec
+*.out
+nec_workdir/
+
+# Redis
+dump.rdb
+
+# Test & coverage
+coverage/
+htmlcov/
+.coverage
+.pytest_cache/
+
+# Logs
+*.log
+logs/
+
+# Misc
+*.bak
+*.tmp

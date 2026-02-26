@@ -1,0 +1,16 @@
+{
+  "name": "AntSim — Web Antenna Simulator",
+  "short_name": "AntSim",
+  "description": "Free web-based antenna simulator powered by NEC2",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0A0F",
+  "theme_color": "#3B82F6",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

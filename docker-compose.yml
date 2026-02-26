@@ -1,0 +1,38 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - ENVIRONMENT=production
+      - ALLOWED_ORIGINS=https://antsim.app,https://www.antsim.app
+      - REDIS_URL=redis://redis:6379
+      - MAX_CONCURRENT_SIMS=4
+      - SIM_TIMEOUT_SECONDS=30
+      - NEC_WORKDIR=/tmp/nec_workdir
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 512M
+    read_only: true
+    tmpfs:
+      - /tmp/nec_workdir:size=100M
+    security_opt:
+      - no-new-privileges:true
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+
+volumes:
+  redis_data:
