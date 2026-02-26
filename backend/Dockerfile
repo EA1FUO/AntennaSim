@@ -8,8 +8,8 @@ RUN which nec2c
 
 WORKDIR /app
 
-COPY pyproject.toml uv.lock ./
-RUN pip install uv && uv sync --frozen --no-dev
+COPY pyproject.toml ./
+RUN pip install --no-cache-dir .
 
 COPY src/ ./src/
 
