@@ -8,7 +8,7 @@
  *   [3D Viewport (45%)] [Bottom Sheet: Wires | Properties | Results]
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useEditorStore } from "../stores/editorStore";
 import { useSimulationStore } from "../stores/simulationStore";
 import { useUIStore } from "../stores/uiStore";
@@ -85,8 +85,36 @@ export function EditorPage() {
   // Right panel tab state: editor tools vs simulation results
   const [rightPanelTab, setRightPanelTab] = useState<"editor" | "results">("editor");
 
+  // Draggable divider: wire table height as a fraction (0.2 to 0.8)
+  const [splitFraction, setSplitFraction] = useState(0.5);
+  const editorPanelRef = useRef<HTMLDivElement>(null);
+  const isDividerDragging = useRef(false);
+
+  // Collapsible tool sections
+  const [importExportOpen, setImportExportOpen] = useState(false);
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [optimizerOpen, setOptimizerOpen] = useState(false);
+
   // Mobile tab state (local to editor)
   const [mobileTab, setMobileTab] = useState<MobileEditorTab>("wires");
+
+  // Divider drag handlers
+  const handleDividerPointerDown = useCallback((e: React.PointerEvent) => {
+    isDividerDragging.current = true;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, []);
+
+  const handleDividerPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!isDividerDragging.current || !editorPanelRef.current) return;
+    const rect = editorPanelRef.current.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const fraction = Math.min(0.8, Math.max(0.15, y / rect.height));
+    setSplitFraction(fraction);
+  }, []);
+
+  const handleDividerPointerUp = useCallback(() => {
+    isDividerDragging.current = false;
+  }, []);
 
   // Auto-switch to results tab when simulation completes
   useEffect(() => {
@@ -196,6 +224,11 @@ export function EditorPage() {
                   (click to place)
                 </span>
               )}
+              {mode === "move" && (
+                <span className="text-text-secondary ml-1">
+                  (Shift = vertical)
+                </span>
+              )}
             </div>
           </div>
 
@@ -246,26 +279,93 @@ export function EditorPage() {
           </div>
 
           {rightPanelTab === "editor" ? (
-            <>
-              {/* Wire table */}
-              <div className="flex-1 min-h-0 border-b border-border overflow-hidden flex flex-col">
+            <div ref={editorPanelRef} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              {/* Wire table — height controlled by splitFraction */}
+              <div
+                className="overflow-hidden flex flex-col shrink-0"
+                style={{ height: `${splitFraction * 100}%` }}
+              >
                 <WireTable />
               </div>
 
-              {/* Properties panel */}
-              <div className="h-48 border-b border-border overflow-y-auto shrink-0">
+              {/* Draggable divider */}
+              <div
+                className="h-1.5 bg-border hover:bg-accent/40 cursor-row-resize shrink-0 flex items-center justify-center transition-colors active:bg-accent/60"
+                onPointerDown={handleDividerPointerDown}
+                onPointerMove={handleDividerPointerMove}
+                onPointerUp={handleDividerPointerUp}
+              >
+                <div className="w-8 h-0.5 rounded-full bg-text-secondary/30" />
+              </div>
+
+              {/* Properties panel — takes remaining space */}
+              <div className="flex-1 min-h-0 overflow-y-auto">
                 <WirePropertiesPanel />
               </div>
 
-              {/* Import/Export + Compare + Optimizer */}
-              <div className="border-b border-border overflow-y-auto max-h-52 shrink-0 p-2 space-y-2">
-                <ImportExportPanel />
-                <CompareOverlay />
-                <div className="border-t border-border pt-2">
-                  <OptimizerPanel />
-                </div>
+              {/* Collapsible tool sections */}
+              <div className="border-t border-border shrink-0 overflow-y-auto max-h-64">
+                {/* Import/Export */}
+                <button
+                  onClick={() => setImportExportOpen(!importExportOpen)}
+                  className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover transition-colors"
+                >
+                  <span>Import / Export</span>
+                  <svg
+                    width="12" height="12" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2"
+                    className={`transition-transform ${importExportOpen ? "rotate-180" : ""}`}
+                  >
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
+                {importExportOpen && (
+                  <div className="px-2 pb-2">
+                    <ImportExportPanel />
+                  </div>
+                )}
+
+                {/* Compare */}
+                <button
+                  onClick={() => setCompareOpen(!compareOpen)}
+                  className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover transition-colors border-t border-border"
+                >
+                  <span>Compare</span>
+                  <svg
+                    width="12" height="12" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2"
+                    className={`transition-transform ${compareOpen ? "rotate-180" : ""}`}
+                  >
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
+                {compareOpen && (
+                  <div className="px-2 pb-2">
+                    <CompareOverlay />
+                  </div>
+                )}
+
+                {/* Optimizer */}
+                <button
+                  onClick={() => setOptimizerOpen(!optimizerOpen)}
+                  className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover transition-colors border-t border-border"
+                >
+                  <span>Optimizer</span>
+                  <svg
+                    width="12" height="12" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2"
+                    className={`transition-transform ${optimizerOpen ? "rotate-180" : ""}`}
+                  >
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
+                {optimizerOpen && (
+                  <div className="px-2 pb-2">
+                    <OptimizerPanel />
+                  </div>
+                )}
               </div>
-            </>
+            </div>
           ) : (
             /* Results panel — same as the simulator's */
             <div className="flex-1 overflow-hidden flex flex-col">

@@ -65,10 +65,10 @@ function GhostWire({ start, end }: { start: Vector3; end: Vector3 }) {
   );
 }
 
-/** Drag target: either an endpoint or the entire wire */
+/** Drag target: either an endpoint or the entire wire, optionally vertical-only */
 type DragTarget =
-  | { type: "endpoint"; tag: number; endpoint: "start" | "end" }
-  | { type: "wire"; tag: number; offsetX: number; offsetY: number; offsetZ: number };
+  | { type: "endpoint"; tag: number; endpoint: "start" | "end"; vertical?: boolean; lastY?: number }
+  | { type: "wire"; tag: number; offsetX: number; offsetY: number; offsetZ: number; vertical?: boolean; lastY?: number };
 
 /** Inner scene content — needs access to useThree */
 function EditorSceneContent({
@@ -99,9 +99,9 @@ function EditorSceneContent({
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef<DragTarget | null>(null);
 
-  const { raycaster } = useThree();
+  const { raycaster, camera } = useThree();
 
-  /** Raycast to ground plane to get NEC2 coordinates */
+  /** Raycast to ground plane to get NEC2 coordinates (horizontal movement: X/Y) */
   const raycastToGround = useCallback(
     (event: ThreeEvent<MouseEvent | PointerEvent>): [number, number, number] | null => {
       const intersection = new Vector3();
@@ -116,6 +116,25 @@ function EditorSceneContent({
       return [necX, necY, necZ];
     },
     [raycaster, snapSize]
+  );
+
+  /** Raycast to a camera-facing vertical plane for Shift+drag (Z-axis movement).
+   *  Returns the Y coordinate in Three.js (= Z in NEC2) for vertical offset. */
+  const raycastVertical = useCallback(
+    (event: ThreeEvent<PointerEvent>): number | null => {
+      const intersection = new Vector3();
+      const ray = event.ray ?? raycaster.ray;
+      // Build a vertical plane that faces the camera (perpendicular to camera's XZ direction)
+      const camDir = new Vector3();
+      camera.getWorldDirection(camDir);
+      camDir.y = 0; // project to horizontal
+      camDir.normalize();
+      const vPlane = new Plane().setFromNormalAndCoplanarPoint(camDir, new Vector3(0, 0, 0));
+      const hit = ray.intersectPlane(vPlane, intersection);
+      if (!hit) return null;
+      return snap(intersection.y, snapSize); // Three.js Y = NEC2 Z
+    },
+    [raycaster, camera, snapSize]
   );
 
   /** Handle clicking on empty space */
@@ -160,9 +179,36 @@ function EditorSceneContent({
 
       // Drag operations
       if (isDragging && dragRef.current) {
+        const target = dragRef.current;
+        const shiftHeld = event.nativeEvent.shiftKey;
+
+        // Shift+drag = vertical (Z-axis in NEC2) movement only
+        if (shiftHeld) {
+          const yVal = raycastVertical(event);
+          if (yVal === null) return;
+
+          if (target.type === "endpoint") {
+            const { tag, endpoint } = target;
+            // Only update NEC2 Z coordinate (Three.js Y)
+            if (endpoint === "start") {
+              updateWire(tag, { z1: yVal });
+            } else {
+              updateWire(tag, { z2: yVal });
+            }
+          } else if (target.type === "wire") {
+            const lastY = target.lastY ?? yVal;
+            const dz = yVal - lastY; // NEC2 dz = Three.js dy
+            if (dz !== 0) {
+              moveWire(target.tag, 0, 0, dz);
+            }
+            target.lastY = yVal;
+          }
+          return;
+        }
+
+        // Normal drag on ground plane (horizontal X/Y movement)
         const pos = raycastToGround(event);
         if (!pos) return;
-        const target = dragRef.current;
 
         if (target.type === "endpoint") {
           const { tag, endpoint } = target;
@@ -184,7 +230,7 @@ function EditorSceneContent({
         }
       }
     },
-    [mode, addStart, isDragging, raycastToGround, updateWire, moveWire]
+    [mode, addStart, isDragging, raycastToGround, raycastVertical, updateWire, moveWire]
   );
 
   const handlePointerUp = useCallback(() => {
@@ -226,6 +272,7 @@ function EditorSceneContent({
         event.stopPropagation();
         const pos = raycastToGround(event);
         if (!pos) return;
+        const yVal = raycastVertical(event);
         setIsDragging(true);
         dragRef.current = {
           type: "wire",
@@ -233,10 +280,11 @@ function EditorSceneContent({
           offsetX: pos[0],
           offsetY: pos[1],
           offsetZ: pos[2],
+          lastY: yVal ?? undefined,
         };
       }
     },
-    [mode, raycastToGround]
+    [mode, raycastToGround, raycastVertical]
   );
 
   // Convert wires to WireData format
