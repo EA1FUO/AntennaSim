@@ -16,6 +16,15 @@ No installation required. Just `docker compose up` and go.
 
 ---
 
+<p align="center">
+  <img src="screenshots/simulator.png" alt="AntSim — 3D viewport with radiation pattern, current flow, and real-time simulation" width="100%">
+</p>
+<p align="center">
+  <img src="screenshots/editor.png" alt="AntSim — Wire editor with optimizer" width="100%">
+</p>
+
+---
+
 ## Table of Contents
 
 - [Features](#features)
