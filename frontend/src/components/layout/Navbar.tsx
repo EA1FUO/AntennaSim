@@ -68,6 +68,16 @@ export function Navbar() {
             Library
           </a>
           <a
+            href="/learn"
+            className={`hover:text-accent transition-colors ${
+              location.pathname === "/learn"
+                ? "text-text-primary font-medium"
+                : "text-text-secondary"
+            }`}
+          >
+            Learn
+          </a>
+          <a
             href="/about"
             className={`hover:text-accent transition-colors ${
               location.pathname === "/about"
