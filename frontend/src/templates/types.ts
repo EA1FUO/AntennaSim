@@ -133,6 +133,51 @@ export interface AntennaTemplate {
   relatedTemplates: string[];
 }
 
+/** Arc definition for templates that use GA cards */
+export interface ArcGeometry {
+  tag: number;
+  segments: number;
+  arc_radius: number;
+  start_angle: number; // degrees
+  end_angle: number;   // degrees
+  wire_radius: number;
+}
+
+/**
+ * Convert an arc definition to a series of short straight wire segments
+ * for 3D preview rendering. The arc lies in the XZ plane (NEC2 convention).
+ * If center_height is provided, the arc center is translated up by that amount.
+ */
+export function arcToWireSegments(
+  arc: ArcGeometry,
+  centerHeight: number = 0
+): WireGeometry[] {
+  const wires: WireGeometry[] = [];
+  const startRad = (arc.start_angle * Math.PI) / 180;
+  const endRad = (arc.end_angle * Math.PI) / 180;
+  const totalAngle = endRad - startRad;
+  const numSegs = arc.segments;
+  const angleStep = totalAngle / numSegs;
+
+  for (let i = 0; i < numSegs; i++) {
+    const a1 = startRad + i * angleStep;
+    const a2 = startRad + (i + 1) * angleStep;
+    wires.push({
+      tag: arc.tag,
+      segments: 1,
+      // GA creates arc in X-Z plane: X = R * cos(a), Z = R * sin(a), Y = 0
+      x1: arc.arc_radius * Math.cos(a1),
+      y1: 0,
+      z1: arc.arc_radius * Math.sin(a1) + centerHeight,
+      x2: arc.arc_radius * Math.cos(a2),
+      y2: 0,
+      z2: arc.arc_radius * Math.sin(a2) + centerHeight,
+      radius: arc.wire_radius,
+    });
+  }
+  return wires;
+}
+
 /** Extract current parameter values from a template's defaults */
 export function getDefaultParams(
   template: AntennaTemplate

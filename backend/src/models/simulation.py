@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, Field, model_validator
 
-from src.models.antenna import Wire, Excitation, LumpedLoad, TransmissionLine
+from src.models.antenna import Wire, Excitation, LumpedLoad, TransmissionLine, WireArc, GeometryTransform, CylindricalSymmetry
 from src.models.ground import GroundConfig
 
 
@@ -66,6 +66,14 @@ class SimulationRequest(BaseModel):
                                                        description="Transmission lines (TL cards)")
     compute_currents: bool = Field(default=False,
                                    description="If true, request current distribution data (PT 0)")
+
+    # V2: Advanced geometry cards
+    arcs: list[WireArc] = Field(default_factory=list, max_length=100,
+                                 description="Wire arcs (GA cards)")
+    transforms: list[GeometryTransform] = Field(default_factory=list, max_length=50,
+                                                  description="Geometry transforms (GM cards)")
+    symmetry: CylindricalSymmetry | None = Field(default=None,
+                                                   description="Cylindrical symmetry (GR card)")
 
     @model_validator(mode="after")
     def validate_total_segments(self) -> "SimulationRequest":

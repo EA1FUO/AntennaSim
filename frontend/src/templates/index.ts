@@ -18,6 +18,7 @@ import { logPeriodicTemplate } from "./log-periodic";
 import { hexBeamTemplate } from "./hex-beam";
 import { fanDipoleTemplate } from "./fan-dipole";
 import { offCenterFedTemplate } from "./off-center-fed";
+import { magneticLoopTemplate } from "./magnetic-loop";
 
 /** All available templates, in display order */
 export const templates: AntennaTemplate[] = [
@@ -36,6 +37,7 @@ export const templates: AntennaTemplate[] = [
   // Loops
   deltaLoopTemplate,
   quadTemplate,
+  magneticLoopTemplate,
   // Directional
   yagiTemplate,
   moxonTemplate,

@@ -29,6 +29,29 @@ def build_card_deck(request: SimulationRequest) -> str:
             f"{wire.radius:.6f}"
         )
 
+    # GA cards for wire arcs
+    for arc in request.arcs:
+        lines.append(
+            f"GA {arc.tag} {arc.segments} "
+            f"{arc.arc_radius:.6f} {arc.start_angle:.2f} {arc.end_angle:.2f} "
+            f"{arc.wire_radius:.6f}"
+        )
+
+    # GM cards for geometry transforms
+    for gm in request.transforms:
+        lines.append(
+            f"GM {gm.tag_increment} {gm.n_new_structures} "
+            f"{gm.rot_x:.4f} {gm.rot_y:.4f} {gm.rot_z:.4f} "
+            f"{gm.trans_x:.6f} {gm.trans_y:.6f} {gm.trans_z:.6f} "
+            f"{gm.start_tag}"
+        )
+
+    # GR card for cylindrical symmetry
+    if request.symmetry:
+        lines.append(
+            f"GR {request.symmetry.tag_increment} {request.symmetry.n_copies}"
+        )
+
     # Geometry end
     # GE 1 if ground-connected vertical (wire touches z=0), GE 0 otherwise
     ground_type = request.ground.ground_type

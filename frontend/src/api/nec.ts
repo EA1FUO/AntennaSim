@@ -66,6 +66,35 @@ export interface LumpedLoad {
   param3: number; // C (F) or 0
 }
 
+/** V2: Wire arc definition (GA card) */
+export interface WireArc {
+  tag: number;
+  segments: number;
+  arc_radius: number;
+  start_angle: number;
+  end_angle: number;
+  wire_radius: number;
+}
+
+/** V2: Geometry transform (GM card) */
+export interface GeometryTransformDef {
+  tag_increment: number;
+  n_new_structures: number;
+  rot_x?: number;
+  rot_y?: number;
+  rot_z?: number;
+  trans_x?: number;
+  trans_y?: number;
+  trans_z?: number;
+  start_tag?: number;
+}
+
+/** V2: Cylindrical symmetry (GR card) */
+export interface CylindricalSymmetryDef {
+  tag_increment: number;
+  n_copies: number;
+}
+
 /** V2: Transmission line definition */
 export interface TransmissionLine {
   wire_tag1: number;
@@ -184,6 +213,9 @@ export interface AdvancedSimulationOptions {
   frequency: FrequencyRange;
   loads?: LumpedLoad[];
   transmission_lines?: TransmissionLine[];
+  arcs?: WireArc[];
+  transforms?: GeometryTransformDef[];
+  symmetry?: CylindricalSymmetryDef;
   compute_currents?: boolean;
   pattern_step?: number;
   comment?: string;
@@ -224,6 +256,9 @@ export async function runAdvancedSimulation(
     },
     loads: options.loads ?? [],
     transmission_lines: options.transmission_lines ?? [],
+    arcs: options.arcs ?? [],
+    transforms: options.transforms ?? [],
+    ...(options.symmetry ? { symmetry: options.symmetry } : {}),
     compute_currents: options.compute_currents ?? false,
     comment: options.comment ?? "AntSim V2 simulation",
   };

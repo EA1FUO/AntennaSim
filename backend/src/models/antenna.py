@@ -83,6 +83,71 @@ class LumpedLoad(BaseModel):
     param3: float = Field(default=0.0, description="C (Farads) or 0")
 
 
+# ---- V2: Wire Arc (GA card) ----
+
+class WireArc(BaseModel):
+    """A wire arc element (NEC2 GA card).
+
+    GA TAG SEGMENTS ARC_RADIUS START_ANGLE END_ANGLE WIRE_RADIUS
+
+    Creates a wire arc in the XZ plane centered at the origin.
+    The arc is defined by a radius and start/end angles.
+    """
+
+    tag: int = Field(ge=1, le=9999, description="Wire tag number")
+    segments: int = Field(ge=1, le=200, description="Number of segments")
+    arc_radius: float = Field(gt=0.0, le=100.0, description="Arc radius (m)")
+    start_angle: float = Field(ge=-360.0, le=360.0, description="Start angle (degrees)")
+    end_angle: float = Field(ge=-360.0, le=360.0, description="End angle (degrees)")
+    wire_radius: float = Field(ge=0.0001, le=0.1, description="Wire radius (m)")
+
+    @model_validator(mode="after")
+    def validate_angles(self) -> "WireArc":
+        if abs(self.end_angle - self.start_angle) < 0.1:
+            raise ValueError("Arc must span at least 0.1 degrees")
+        return self
+
+
+# ---- V2: Coordinate Transformation (GM card) ----
+
+class GeometryTransform(BaseModel):
+    """Coordinate transformation (NEC2 GM card).
+
+    GM TAG_INC N_NEW ROT_X ROT_Y ROT_Z TRANS_X TRANS_Y TRANS_Z START_TAG
+
+    Duplicates and transforms geometry. Creates N_NEW copies with
+    incremental tag numbering.
+    """
+
+    tag_increment: int = Field(ge=0, le=9999, default=0,
+                                description="Tag number increment for new structures")
+    n_new_structures: int = Field(ge=0, le=100, default=0,
+                                   description="Number of new structures to create (0 = transform in place)")
+    rot_x: float = Field(default=0.0, ge=-360.0, le=360.0, description="Rotation about X axis (degrees)")
+    rot_y: float = Field(default=0.0, ge=-360.0, le=360.0, description="Rotation about Y axis (degrees)")
+    rot_z: float = Field(default=0.0, ge=-360.0, le=360.0, description="Rotation about Z axis (degrees)")
+    trans_x: float = Field(default=0.0, ge=-1000.0, le=1000.0, description="Translation in X (m)")
+    trans_y: float = Field(default=0.0, ge=-1000.0, le=1000.0, description="Translation in Y (m)")
+    trans_z: float = Field(default=0.0, ge=-1000.0, le=1000.0, description="Translation in Z (m)")
+    start_tag: int = Field(default=0, ge=0, le=9999,
+                           description="Starting tag of structures to transform (0 = all)")
+
+
+# ---- V2: Cylindrical Symmetry (GR card) ----
+
+class CylindricalSymmetry(BaseModel):
+    """Cylindrical symmetry (NEC2 GR card).
+
+    GR TAG_INCREMENT N_COPIES
+
+    Creates rotational copies of the existing geometry around the Z axis.
+    Each copy is rotated by 360/N_COPIES degrees.
+    """
+
+    tag_increment: int = Field(ge=1, le=9999, description="Tag increment for each copy")
+    n_copies: int = Field(ge=1, le=360, description="Number of rotational copies")
+
+
 # Common wire conductivities for convenience
 WIRE_CONDUCTIVITY: dict[str, float] = {
     "copper": 5.8e7,
