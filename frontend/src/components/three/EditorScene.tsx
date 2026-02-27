@@ -28,8 +28,7 @@ import { NearFieldPlane } from "./NearFieldPlane";
 import { CurrentFlowParticles } from "./CurrentFlowParticles";
 import { RadiationSlice } from "./RadiationSlice";
 import { SceneRaycaster } from "./SceneRaycaster";
-import { Cursor3DTooltip } from "./Cursor3DTooltip";
-import type { ViewToggles, MeasurementData } from "./types";
+import type { ViewToggles } from "./types";
 import type { PatternData, SegmentCurrent, NearFieldResult } from "../../api/nec";
 import { useUIStore } from "../../stores/uiStore";
 import { useEditorStore, snap } from "../../stores/editorStore";
@@ -454,10 +453,8 @@ export function EditorScene({ viewToggles, patternData, currents, nearField }: E
   const theme = useUIStore((s) => s.theme);
   const sceneBg = theme === "dark" ? "#0A0A0F" : "#E8E8ED";
 
-  const [measurement, setMeasurement] = useState<{ data: MeasurementData | null; x: number; y: number }>({ data: null, x: 0, y: 0 });
-  const handleMeasurement = useCallback((data: MeasurementData | null, x: number, y: number) => {
-    setMeasurement({ data, x, y });
-  }, []);
+  // Tooltip ref — direct DOM mutation, no React state
+  const tooltipRef = useRef<HTMLDivElement>(null);
 
   const glConfig = useMemo(
     () => ({
@@ -478,10 +475,14 @@ export function EditorScene({ viewToggles, patternData, currents, nearField }: E
     >
       <Suspense fallback={null}>
         <EditorSceneContent viewToggles={viewToggles} patternData={patternData} currents={currents} nearField={nearField} />
-        <SceneRaycaster onMeasurement={handleMeasurement} />
+        <SceneRaycaster tooltipRef={tooltipRef} />
       </Suspense>
     </Canvas>
-    <Cursor3DTooltip data={measurement.data} x={measurement.x} y={measurement.y} />
+    <div
+      ref={tooltipRef}
+      className="fixed z-50 pointer-events-none bg-surface/95 backdrop-blur-sm border border-border rounded-md px-2.5 py-1.5 shadow-lg text-[11px] font-mono leading-relaxed whitespace-nowrap"
+      style={{ display: "none" }}
+    />
     </>
   );
 }

@@ -216,6 +216,9 @@ function FlowParticles({
     return { curve: c, particleCount: count, speeds: sp };
   }, [segments, maxMagnitude]);
 
+  // Reusable vector for per-frame curve sampling — avoids GC pressure
+  const _curvePoint = useMemo(() => new Vector3(), []);
+
   // Animate particle positions along the curve
   useFrame((_, delta) => {
     if (!particleRef.current || !curve || particleCount === 0) return;
@@ -229,8 +232,8 @@ function FlowParticles({
       if (t > 1) t -= 1;
       mesh.userData.t = t;
 
-      const pos = curve.getPointAt(t);
-      mesh.position.copy(pos);
+      curve.getPointAt(t, _curvePoint);
+      mesh.position.copy(_curvePoint);
     }
   });
 

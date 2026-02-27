@@ -151,6 +151,9 @@ export function CurrentFlowParticles({
   // Temp object for matrix updates
   const tempObj = useMemo(() => new Object3D(), []);
 
+  // Reusable vector for per-frame interpolation — avoids GC pressure
+  const _lerpVec = useMemo(() => new Vector3(), []);
+
   // Animate particles each frame
   useFrame((state) => {
     const mesh = meshRef.current;
@@ -161,16 +164,14 @@ export function CurrentFlowParticles({
 
     for (const wire of wireData) {
       const speed = 0.3 + wire.currentMag * 0.7; // Speed: 0.3 to 1.0
+      const scale = 0.5 + wire.currentMag * 0.8;
 
       for (let i = 0; i < wire.count; i++) {
-        // Calculate particle position along wire
+        // Calculate particle position along wire — reuse _lerpVec, no allocation
         const phase = (i / wire.count + time * speed) % 1.0;
-        const pos = new Vector3().lerpVectors(wire.start, wire.end, phase);
+        _lerpVec.lerpVectors(wire.start, wire.end, phase);
 
-        tempObj.position.copy(pos);
-
-        // Scale by brightness
-        const scale = 0.5 + wire.currentMag * 0.8;
+        tempObj.position.copy(_lerpVec);
         tempObj.scale.setScalar(scale);
 
         tempObj.updateMatrix();

@@ -1,5 +1,5 @@
 import { Canvas } from "@react-three/fiber";
-import { Suspense, useCallback, useMemo, useState } from "react";
+import { Suspense, useMemo, useRef } from "react";
 import { ACESFilmicToneMapping, SRGBColorSpace } from "three";
 import { GroundPlane } from "./GroundPlane";
 import { CompassRose } from "./CompassRose";
@@ -16,8 +16,7 @@ import { NearFieldPlane } from "./NearFieldPlane";
 import { CurrentFlowParticles } from "./CurrentFlowParticles";
 import { RadiationSlice } from "./RadiationSlice";
 import { SceneRaycaster } from "./SceneRaycaster";
-import { Cursor3DTooltip } from "./Cursor3DTooltip";
-import type { WireData, FeedpointData, ViewToggles, MeasurementData } from "./types";
+import type { WireData, FeedpointData, ViewToggles } from "./types";
 import type { PatternData, SegmentCurrent, NearFieldResult } from "../../api/nec";
 import { useUIStore } from "../../stores/uiStore";
 
@@ -45,11 +44,8 @@ export function SceneRoot({
   const sceneBg = theme === "dark" ? "#0A0A0F" : "#E8E8ED";
   const fogColor = theme === "dark" ? "#0A0A0F" : "#E8E8ED";
 
-  // 3D hover measurement state
-  const [measurement, setMeasurement] = useState<{ data: MeasurementData | null; x: number; y: number }>({ data: null, x: 0, y: 0 });
-  const handleMeasurement = useCallback((data: MeasurementData | null, x: number, y: number) => {
-    setMeasurement({ data, x, y });
-  }, []);
+  // Tooltip ref — direct DOM mutation, no React state
+  const tooltipRef = useRef<HTMLDivElement>(null);
 
   const glConfig = useMemo(
     () => ({
@@ -175,10 +171,14 @@ export function SceneRoot({
         <PostProcessing />
 
         {/* 3D hover measurement raycaster */}
-        <SceneRaycaster onMeasurement={handleMeasurement} />
+        <SceneRaycaster tooltipRef={tooltipRef} />
       </Suspense>
     </Canvas>
-    <Cursor3DTooltip data={measurement.data} x={measurement.x} y={measurement.y} />
+    <div
+      ref={tooltipRef}
+      className="fixed z-50 pointer-events-none bg-surface/95 backdrop-blur-sm border border-border rounded-md px-2.5 py-1.5 shadow-lg text-[11px] font-mono leading-relaxed whitespace-nowrap"
+      style={{ display: "none" }}
+    />
     </>
   );
 }
