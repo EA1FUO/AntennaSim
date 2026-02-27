@@ -10,7 +10,7 @@
  * - Theme-aware (dark/light)
  */
 
-import { useMemo, useState, useCallback, useRef } from "react";
+import { useMemo, useState, useCallback, useRef, useId } from "react";
 import type { FrequencyResult } from "../../api/nec";
 import { useUIStore } from "../../stores/uiStore";
 import { formatFrequency, formatImpedance } from "../../utils/units";
@@ -166,6 +166,7 @@ export function SmithChart({
   const theme = useUIStore((s) => s.theme);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const clipId = useId().replace(/:/g, "_") + "_smith_clip";
 
   const isDark = theme === "dark";
   const margin = 30;
@@ -244,7 +245,7 @@ export function SmithChart({
         preserveAspectRatio="xMidYMid meet"
       >
         <defs>
-          <clipPath id="smith-clip">
+          <clipPath id={clipId}>
             <circle cx={cx} cy={cy} r={chartRadius} />
           </clipPath>
         </defs>
@@ -253,7 +254,7 @@ export function SmithChart({
         <rect width={size} height={size} fill={bgColor} rx={4} />
 
         {/* SWR circles (filled zones + dashed outlines) */}
-        <g clipPath="url(#smith-clip)">
+        <g clipPath={`url(#${clipId})`}>
           <path d={swrCirclePath(3, cx, cy, chartRadius)} fill={swrWarningColor} />
           <path d={swrCirclePath(2, cx, cy, chartRadius)} fill={swrGoodColor} />
           <path d={swrCirclePath(1.5, cx, cy, chartRadius)} fill={swrExcellentColor} />
@@ -274,7 +275,7 @@ export function SmithChart({
         />
 
         {/* Constant R circles */}
-        <g clipPath="url(#smith-clip)">
+        <g clipPath={`url(#${clipId})`}>
           {rValues.map((r) => (
             <path
               key={`r-${r}`}
@@ -287,7 +288,7 @@ export function SmithChart({
         </g>
 
         {/* Constant X arcs */}
-        <g clipPath="url(#smith-clip)">
+        <g clipPath={`url(#${clipId})`}>
           {xValues.map((x) => {
             const path = constantXArc(x, cx, cy, chartRadius);
             if (!path) return null;
@@ -363,7 +364,7 @@ export function SmithChart({
             strokeLinecap="round"
             strokeLinejoin="round"
             opacity={0.8}
-            clipPath="url(#smith-clip)"
+            clipPath={`url(#${clipId})`}
           />
         )}
 
