@@ -10,7 +10,7 @@ services:
       dockerfile: Dockerfile
     environment:
       - ENVIRONMENT=production
-      - ALLOWED_ORIGINS=https://antsim.app,https://www.antsim.app
+      - ALLOWED_ORIGINS=https://antsim.app,https://www.antsim.app,http://localhost,http://localhost:80
       - REDIS_URL=redis://redis:6379
       - MAX_CONCURRENT_SIMS=4
       - SIM_TIMEOUT_SECONDS=180
