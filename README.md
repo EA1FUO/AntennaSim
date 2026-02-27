@@ -140,7 +140,7 @@ Every template includes configurable parameters (frequency, height, element leng
 ### Run
 
 ```bash
-git clone https://github.com/AntennaSim-App/AntennaSim.git
+git clone https://github.com/EA1FUO/AntennaSim.git
 cd AntennaSim
 cp .env.example .env
 docker compose up --build
