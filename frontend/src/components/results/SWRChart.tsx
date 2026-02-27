@@ -157,7 +157,8 @@ export function SWRChart({
   if (data.length === 0 && !s1pData?.length) return null;
 
   return (
-    <div className={`w-full ${heightClass}`}>
+    <div className={`w-full ${heightClass} flex flex-col`}>
+      <div className="flex-1 min-h-0">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={chartData}
@@ -273,18 +274,16 @@ export function SWRChart({
             cursor={{ stroke: ct.cursor, strokeWidth: 1 }}
           />
 
-          {/* Legend when .s1p is present */}
-          {s1pData && s1pData.length > 0 && (
-            <Legend
-              iconType="line"
-              wrapperStyle={{ fontSize: "10px", fontFamily: "JetBrains Mono, monospace" }}
-              formatter={(value: string) => (
-                <span style={{ color: ct.tick }}>
-                  {value === "swr" ? "Simulation" : ".s1p Measured"}
-                </span>
-              )}
-            />
-          )}
+          {/* Legend — always visible */}
+          <Legend
+            iconType="line"
+            wrapperStyle={{ fontSize: "10px", fontFamily: "JetBrains Mono, monospace", paddingTop: "4px" }}
+            formatter={(value: string) => (
+              <span style={{ color: ct.tick }}>
+                {value === "swr" ? "SWR (simulated)" : ".s1p (measured)"}
+              </span>
+            )}
+          />
 
           {/* Simulation SWR line */}
           <Line
@@ -315,6 +314,26 @@ export function SWRChart({
           )}
         </LineChart>
       </ResponsiveContainer>
+      </div>
+      {/* Zone legend */}
+      <div className="flex items-center justify-center gap-3 pt-1 flex-shrink-0" style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px" }}>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-3 h-2 rounded-sm" style={{ backgroundColor: "#10B981", opacity: 0.35 }} />
+          <span style={{ color: ct.tick }}>&lt;1.5 Good</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-3 h-2 rounded-sm" style={{ backgroundColor: "#F59E0B", opacity: 0.35 }} />
+          <span style={{ color: ct.tick }}>1.5-3 OK</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-3 h-2 rounded-sm" style={{ backgroundColor: "#EF4444", opacity: 0.35 }} />
+          <span style={{ color: ct.tick }}>&gt;3 Poor</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-2 h-0 border-t border-dashed" style={{ borderColor: "#10B981" }} />
+          <span style={{ color: ct.tick }}>Resonance</span>
+        </span>
+      </div>
     </div>
   );
 }

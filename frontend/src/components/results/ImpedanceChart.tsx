@@ -96,7 +96,8 @@ export function ImpedanceChart({ data, matching = DEFAULT_MATCHING, heightClass 
   if (data.length === 0) return null;
 
   return (
-    <div className={`w-full ${heightClass}`}>
+    <div className={`w-full ${heightClass} flex flex-col`}>
+      <div className="flex-1 min-h-0">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={chartData}
@@ -179,10 +180,10 @@ export function ImpedanceChart({ data, matching = DEFAULT_MATCHING, heightClass 
 
           <Legend
             iconType="line"
-            wrapperStyle={{ fontSize: "10px", fontFamily: "JetBrains Mono, monospace" }}
+            wrapperStyle={{ fontSize: "10px", fontFamily: "JetBrains Mono, monospace", paddingTop: "4px" }}
             formatter={(value: string) => (
               <span style={{ color: ct.tick }}>
-                {value === "r" ? "R (\u03A9)" : "jX (\u03A9)"}
+                {value === "r" ? "R  Resistance (\u03A9)" : "jX  Reactance (\u03A9)"}
               </span>
             )}
           />
@@ -212,6 +213,18 @@ export function ImpedanceChart({ data, matching = DEFAULT_MATCHING, heightClass 
           />
         </LineChart>
       </ResponsiveContainer>
+      </div>
+      {/* Supplementary legend for reference lines */}
+      <div className="flex items-center justify-center gap-3 pt-1 flex-shrink-0" style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px" }}>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-4 h-0 border-t border-dashed" style={{ borderColor: "#6B7280" }} />
+          <span style={{ color: ct.tick }}>{matching.feedlineZ0}{"\u03A9"} ref</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-4 h-0 border-t border-dashed" style={{ borderColor: "#10B981" }} />
+          <span style={{ color: ct.tick }}>Resonance (jX=0)</span>
+        </span>
+      </div>
     </div>
   );
 }

@@ -212,7 +212,14 @@ export function PatternPolar({ pattern, mode, size = 200, responsive = false }: 
     ];
   }, [mode]);
 
+  // Legend colors
+  const patternColor = "#3B82F6";
+  const beamwidthColor = "#F59E0B";
+  const maxGainColor = "#EF4444";
+
   return (
+    <div className={responsive ? "w-full h-full flex flex-col" : "flex flex-col"}>
+    <div className={responsive ? "flex-1 min-h-0" : ""}>
     <svg
       width={responsive ? "100%" : size}
       height={responsive ? "100%" : size}
@@ -374,5 +381,26 @@ export function PatternPolar({ pattern, mode, size = 200, responsive = false }: 
         {beamwidthArc ? ` | BW: ${beamwidthArc.beamwidth.toFixed(0)}\u00B0` : ""}
       </text>
     </svg>
+    </div>
+    {/* Legend */}
+    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pt-1.5 flex-shrink-0" style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px" }}>
+      <span className="flex items-center gap-1">
+        <span className="inline-block w-3 h-2 rounded-sm" style={{ backgroundColor: patternColor, opacity: 0.4 }} />
+        <span style={{ color: ct.tick }}>Gain pattern</span>
+      </span>
+      <span className="flex items-center gap-1">
+        <span className="inline-block w-3 h-0.5 rounded" style={{ backgroundColor: beamwidthColor, opacity: 0.7 }} />
+        <span style={{ color: ct.tick }}>-3dB beamwidth</span>
+      </span>
+      <span className="flex items-center gap-1">
+        <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: maxGainColor }} />
+        <span style={{ color: ct.tick }}>Max gain</span>
+      </span>
+      <span className="flex items-center gap-1">
+        <span className="inline-block w-3 h-0 border-t" style={{ borderColor: ct.grid, opacity: 0.6 }} />
+        <span style={{ color: ct.tick }}>dBi grid</span>
+      </span>
+    </div>
+    </div>
   );
 }

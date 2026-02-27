@@ -242,7 +242,8 @@ export function SmithChart({
   }, [gammaPoints.length]);
 
   return (
-    <div className={responsive ? "relative w-full h-full" : "relative"}>
+    <div className={responsive ? "relative w-full h-full flex flex-col" : "relative flex flex-col"}>
+      <div className={responsive ? "flex-1 min-h-0 relative" : "relative"}>
       <svg
         ref={svgRef}
         width={responsive ? "100%" : size}
@@ -430,6 +431,34 @@ export function SmithChart({
           z0={z0}
         />
       )}
+      </div>
+      {/* Legend */}
+      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pt-2 flex-shrink-0" style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px" }}>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-3 h-0.5 rounded" style={{ backgroundColor: trajectoryColor }} />
+          <span style={{ color: textColor }}>Z locus</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: pointColor }} />
+          <span style={{ color: textColor }}>Freq marker</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: selectedPointColor }} />
+          <span style={{ color: textColor }}>Selected</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-3 h-2 rounded-sm" style={{ backgroundColor: "#10B981", opacity: 0.4 }} />
+          <span style={{ color: textColor }}>SWR &lt;1.5</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-3 h-2 rounded-sm" style={{ backgroundColor: "#22C55E", opacity: 0.3 }} />
+          <span style={{ color: textColor }}>SWR &lt;2</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-3 h-2 rounded-sm" style={{ backgroundColor: "#F59E0B", opacity: 0.25 }} />
+          <span style={{ color: textColor }}>SWR &lt;3</span>
+        </span>
+      </div>
     </div>
   );
 }
