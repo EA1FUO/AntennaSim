@@ -27,7 +27,9 @@ import { CurrentDistribution3D } from "./CurrentDistribution3D";
 import { NearFieldPlane } from "./NearFieldPlane";
 import { CurrentFlowParticles } from "./CurrentFlowParticles";
 import { RadiationSlice } from "./RadiationSlice";
-import type { ViewToggles } from "./types";
+import { SceneRaycaster } from "./SceneRaycaster";
+import { Cursor3DTooltip } from "./Cursor3DTooltip";
+import type { ViewToggles, MeasurementData } from "./types";
 import type { PatternData, SegmentCurrent, NearFieldResult } from "../../api/nec";
 import { useUIStore } from "../../stores/uiStore";
 import { useEditorStore, snap } from "../../stores/editorStore";
@@ -452,6 +454,11 @@ export function EditorScene({ viewToggles, patternData, currents, nearField }: E
   const theme = useUIStore((s) => s.theme);
   const sceneBg = theme === "dark" ? "#0A0A0F" : "#E8E8ED";
 
+  const [measurement, setMeasurement] = useState<{ data: MeasurementData | null; x: number; y: number }>({ data: null, x: 0, y: 0 });
+  const handleMeasurement = useCallback((data: MeasurementData | null, x: number, y: number) => {
+    setMeasurement({ data, x, y });
+  }, []);
+
   const glConfig = useMemo(
     () => ({
       antialias: true,
@@ -463,6 +470,7 @@ export function EditorScene({ viewToggles, patternData, currents, nearField }: E
   );
 
   return (
+    <>
     <Canvas
       gl={glConfig}
       camera={{ position: [15, 12, 15], fov: 50, near: 0.1, far: 500 }}
@@ -470,7 +478,10 @@ export function EditorScene({ viewToggles, patternData, currents, nearField }: E
     >
       <Suspense fallback={null}>
         <EditorSceneContent viewToggles={viewToggles} patternData={patternData} currents={currents} nearField={nearField} />
+        <SceneRaycaster onMeasurement={handleMeasurement} />
       </Suspense>
     </Canvas>
+    <Cursor3DTooltip data={measurement.data} x={measurement.x} y={measurement.y} />
+    </>
   );
 }

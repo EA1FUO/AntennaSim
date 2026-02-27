@@ -8,7 +8,7 @@
  * Colormap: blue (low) -> yellow -> red (high field strength)
  */
 
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import {
   DataTexture,
   RGBAFormat,
@@ -16,6 +16,7 @@ import {
   LinearFilter,
   DoubleSide,
 } from "three";
+import type { Mesh } from "three";
 import type { NearFieldResult } from "../../api/nec";
 
 interface NearFieldPlaneProps {
@@ -115,8 +116,17 @@ export function NearFieldPlane({ data, opacity = 0.6 }: NearFieldPlaneProps) {
     }
   }, [data]);
 
+  // Tag mesh with NF data for hover measurement
+  const meshRef = useRef<Mesh>(null);
+  useEffect(() => {
+    if (meshRef.current) {
+      meshRef.current.userData = { hoverType: "nearfield", nfData: data };
+    }
+  }, [data]);
+
   return (
     <mesh
+      ref={meshRef}
       position={position}
       rotation={data.plane === "horizontal" ? [-Math.PI / 2, 0, 0] : [0, 0, 0]}
     >

@@ -1,5 +1,5 @@
 import { Canvas } from "@react-three/fiber";
-import { Suspense, useMemo } from "react";
+import { Suspense, useCallback, useMemo, useState } from "react";
 import { ACESFilmicToneMapping, SRGBColorSpace } from "three";
 import { GroundPlane } from "./GroundPlane";
 import { CompassRose } from "./CompassRose";
@@ -15,7 +15,9 @@ import { CurrentDistribution3D } from "./CurrentDistribution3D";
 import { NearFieldPlane } from "./NearFieldPlane";
 import { CurrentFlowParticles } from "./CurrentFlowParticles";
 import { RadiationSlice } from "./RadiationSlice";
-import type { WireData, FeedpointData, ViewToggles } from "./types";
+import { SceneRaycaster } from "./SceneRaycaster";
+import { Cursor3DTooltip } from "./Cursor3DTooltip";
+import type { WireData, FeedpointData, ViewToggles, MeasurementData } from "./types";
 import type { PatternData, SegmentCurrent, NearFieldResult } from "../../api/nec";
 import { useUIStore } from "../../stores/uiStore";
 
@@ -42,6 +44,12 @@ export function SceneRoot({
   const theme = useUIStore((s) => s.theme);
   const sceneBg = theme === "dark" ? "#0A0A0F" : "#E8E8ED";
   const fogColor = theme === "dark" ? "#0A0A0F" : "#E8E8ED";
+
+  // 3D hover measurement state
+  const [measurement, setMeasurement] = useState<{ data: MeasurementData | null; x: number; y: number }>({ data: null, x: 0, y: 0 });
+  const handleMeasurement = useCallback((data: MeasurementData | null, x: number, y: number) => {
+    setMeasurement({ data, x, y });
+  }, []);
 
   const glConfig = useMemo(
     () => ({
@@ -72,6 +80,7 @@ export function SceneRoot({
   }, [wires]);
 
   return (
+    <>
     <Canvas
       gl={glConfig}
       camera={{ position: [15, 12, 15], fov: 50, near: 0.1, far: 500 }}
@@ -164,7 +173,12 @@ export function SceneRoot({
 
         {/* Post-processing */}
         <PostProcessing />
+
+        {/* 3D hover measurement raycaster */}
+        <SceneRaycaster onMeasurement={handleMeasurement} />
       </Suspense>
     </Canvas>
+    <Cursor3DTooltip data={measurement.data} x={measurement.x} y={measurement.y} />
+    </>
   );
 }

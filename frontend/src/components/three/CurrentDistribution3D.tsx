@@ -9,7 +9,7 @@
  * direction of current flow, with speed proportional to current magnitude.
  */
 
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import {
   BufferGeometry,
   Float32BufferAttribute,
@@ -18,6 +18,7 @@ import {
   CatmullRomCurve3,
   Group,
 } from "three";
+import type { Mesh } from "three";
 import { useFrame } from "@react-three/fiber";
 import type { SegmentCurrent } from "../../api/nec";
 
@@ -162,10 +163,18 @@ function WireCurrentTube({
     return geo;
   }, [segments, maxMagnitude, tubeRadius]);
 
+  // Tag mesh with current data for hover measurement
+  const meshRef = useRef<Mesh>(null);
+  useEffect(() => {
+    if (meshRef.current) {
+      meshRef.current.userData = { hoverType: "current", segments };
+    }
+  }, [segments]);
+
   if (!geometry) return null;
 
   return (
-    <mesh geometry={geometry}>
+    <mesh ref={meshRef} geometry={geometry}>
       <meshStandardMaterial
         vertexColors
         metalness={0.4}

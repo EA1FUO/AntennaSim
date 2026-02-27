@@ -55,3 +55,11 @@ export const WIRE_COLORS = [
 export function getWireColor(tag: number): string {
   return WIRE_COLORS[(tag - 1) % WIRE_COLORS.length] ?? WIRE_COLORS[0]!;
 }
+
+// ---- 3D Hover Measurement Types ----
+
+export type MeasurementData =
+  | { type: "pattern"; gainDbi: number; theta: number; phi: number }
+  | { type: "wire"; tag: number; lengthM: number; zMin: number; zMax: number; radiusMm: number }
+  | { type: "current"; tag: number; segment: number; magnitudeA: number; phaseDeg: number; x: number; y: number; z: number }
+  | { type: "nearfield"; fieldVm: number; x: number; y: number; heightM: number };

@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import { TubeGeometry, LineCurve3, Vector3, MeshStandardMaterial } from "three";
+import type { Mesh } from "three";
 import type { WireData } from "./types";
 import { getWireColor } from "./types";
 
@@ -39,9 +40,27 @@ export function AntennaModel({ wire }: AntennaModelProps) {
 
   const capRadius = Math.max(wire.radius * 60, 0.04);
 
+  // Tag mesh with wire data for hover measurement
+  const meshRef = useRef<Mesh>(null);
+  useEffect(() => {
+    if (meshRef.current) {
+      const dx = wire.x2 - wire.x1;
+      const dy = wire.y2 - wire.y1;
+      const dz = wire.z2 - wire.z1;
+      meshRef.current.userData = {
+        hoverType: "wire",
+        tag: wire.tag,
+        lengthM: Math.sqrt(dx * dx + dy * dy + dz * dz),
+        zMin: Math.min(wire.z1, wire.z2),
+        zMax: Math.max(wire.z1, wire.z2),
+        radiusMm: wire.radius * 1000,
+      };
+    }
+  }, [wire]);
+
   return (
     <group>
-      <mesh geometry={geometry} material={material} />
+      <mesh ref={meshRef} geometry={geometry} material={material} />
       {/* End caps - small spheres */}
       {endCapPositions.map((pos, i) => (
         <mesh key={i} position={pos}>

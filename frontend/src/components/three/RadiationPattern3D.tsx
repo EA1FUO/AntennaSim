@@ -6,13 +6,14 @@
  * through a perceptual colormap (blue → green → amber → red).
  */
 
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import {
   BufferGeometry,
   Float32BufferAttribute,
   DoubleSide,
   Color,
 } from "three";
+import type { Mesh } from "three";
 import type { PatternData } from "../../api/nec";
 
 interface RadiationPattern3DProps {
@@ -178,6 +179,14 @@ export function RadiationPattern3D({
     return geo;
   }, [pattern, scale]);
 
+  // Tag mesh with pattern data for hover measurement
+  const meshRef = useRef<Mesh>(null);
+  useEffect(() => {
+    if (meshRef.current) {
+      meshRef.current.userData = { hoverType: "pattern", patternData: pattern };
+    }
+  }, [pattern]);
+
   if (geometry.attributes.position === undefined) {
     return null;
   }
@@ -186,7 +195,7 @@ export function RadiationPattern3D({
     <group position={center}>
       {/* Solid surface */}
       {!wireframe && (
-        <mesh geometry={geometry}>
+        <mesh ref={meshRef} geometry={geometry}>
           <meshPhysicalMaterial
             vertexColors
             transparent
