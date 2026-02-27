@@ -21,14 +21,18 @@ export function GroundPlane() {
         fadeStrength={1.5}
         infiniteGrid
       />
-      {/* Semi-transparent ground surface */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
+      {/* Semi-transparent ground surface — offset below grid to prevent z-fighting */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]}>
         <planeGeometry args={[200, 200]} />
         <meshStandardMaterial
           color="#1a2a1a"
           transparent
           opacity={0.15}
           roughness={1}
+          polygonOffset
+          polygonOffsetFactor={1}
+          polygonOffsetUnits={1}
+          depthWrite={false}
         />
       </mesh>
     </group>

@@ -8,7 +8,7 @@
  *   [3D Viewport (45%)] [Bottom Sheet: Wires | Properties | Results]
  */
 
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useEditorStore } from "../stores/editorStore";
 import { useSimulationStore } from "../stores/simulationStore";
 import { useUIStore } from "../stores/uiStore";
@@ -21,6 +21,8 @@ import { EditorToolbar } from "../components/editors/EditorToolbar";
 import { WireTable } from "../components/editors/WireTable";
 import { WirePropertiesPanel } from "../components/editors/WirePropertiesPanel";
 import { GroundEditor } from "../components/editors/GroundEditor";
+import { TemplatePicker } from "../components/editors/TemplatePicker";
+import { ParameterPanel } from "../components/editors/ParameterPanel";
 import { ResultsPanel } from "../components/results/ResultsTabs";
 import { PatternFrequencySlider } from "../components/results/PatternFrequencySlider";
 import { CompareOverlay } from "../components/results/CompareOverlay";
@@ -29,6 +31,9 @@ import { OptimizerPanel } from "../components/editors/OptimizerPanel";
 import { ColorScale } from "../components/ui/ColorScale";
 import { Button } from "../components/ui/Button";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
+import { templates } from "../templates";
+import { getDefaultParams } from "../templates/types";
+import type { AntennaTemplate } from "../templates/types";
 import type { CameraPreset, ViewToggles } from "../components/three/types";
 
 /** Mobile tab options */
@@ -47,6 +52,7 @@ export function EditorPage() {
   const ground = useEditorStore((s) => s.ground);
   const setGround = useEditorStore((s) => s.setGround);
   const frequencyRange = useEditorStore((s) => s.frequencyRange);
+  const setFrequencyRange = useEditorStore((s) => s.setFrequencyRange);
   const designFrequencyMhz = useEditorStore((s) => s.designFrequencyMhz);
   const setDesignFrequency = useEditorStore((s) => s.setDesignFrequency);
   const mode = useEditorStore((s) => s.mode);
@@ -61,6 +67,9 @@ export function EditorPage() {
   const selectAll = useEditorStore((s) => s.selectAll);
   const getWireGeometry = useEditorStore((s) => s.getWireGeometry);
   const getTotalSegments = useEditorStore((s) => s.getTotalSegments);
+  const moveAllWiresZ = useEditorStore((s) => s.moveAllWiresZ);
+  const clearAll = useEditorStore((s) => s.clearAll);
+  const setWires = useEditorStore((s) => s.setWires);
 
   // Simulation store
   const simStatus = useSimulationStore((s) => s.status);
@@ -85,36 +94,25 @@ export function EditorPage() {
   // Right panel tab state: editor tools vs simulation results
   const [rightPanelTab, setRightPanelTab] = useState<"editor" | "results">("editor");
 
-  // Draggable divider: wire table height as a fraction (0.2 to 0.8)
-  const [splitFraction, setSplitFraction] = useState(0.5);
-  const editorPanelRef = useRef<HTMLDivElement>(null);
-  const isDividerDragging = useRef(false);
-
-  // Collapsible tool sections
+  // Collapsible panel sections — wire table and properties open by default
+  const [wireTableOpen, setWireTableOpen] = useState(true);
+  const [wirePropsOpen, setWirePropsOpen] = useState(true);
+  const [templateLoaderOpen, setTemplateLoaderOpen] = useState(false);
   const [importExportOpen, setImportExportOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
   const [optimizerOpen, setOptimizerOpen] = useState(false);
 
+  // Template loader state
+  const [selectedTemplate, setSelectedTemplate] = useState<AntennaTemplate>(templates[0]!);
+  const [templateParams, setTemplateParams] = useState<Record<string, number>>(
+    () => getDefaultParams(templates[0]!)
+  );
+
+  // Pattern resolution
+  const [patternStep, setPatternStep] = useState(5);
+
   // Mobile tab state (local to editor)
   const [mobileTab, setMobileTab] = useState<MobileEditorTab>("wires");
-
-  // Divider drag handlers
-  const handleDividerPointerDown = useCallback((e: React.PointerEvent) => {
-    isDividerDragging.current = true;
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }, []);
-
-  const handleDividerPointerMove = useCallback((e: React.PointerEvent) => {
-    if (!isDividerDragging.current || !editorPanelRef.current) return;
-    const rect = editorPanelRef.current.getBoundingClientRect();
-    const y = e.clientY - rect.top;
-    const fraction = Math.min(0.8, Math.max(0.15, y / rect.height));
-    setSplitFraction(fraction);
-  }, []);
-
-  const handleDividerPointerUp = useCallback(() => {
-    isDividerDragging.current = false;
-  }, []);
 
   // Auto-switch to results tab when simulation completes
   useEffect(() => {
@@ -181,14 +179,85 @@ export function EditorPage() {
       loads: loads.length > 0 ? loads : undefined,
       transmission_lines: transmissionLines.length > 0 ? transmissionLines : undefined,
       compute_currents: computeCurrents,
+      pattern_step: patternStep,
     });
-  }, [wires, excitations, ground, frequencyRange, loads, transmissionLines, computeCurrents, simulateAdvanced, getWireGeometry]);
+  }, [wires, excitations, ground, frequencyRange, loads, transmissionLines, computeCurrents, patternStep, simulateAdvanced, getWireGeometry]);
+
+  // Template loader handlers
+  const handleTemplateSelect = useCallback((t: AntennaTemplate) => {
+    setSelectedTemplate(t);
+    setTemplateParams(getDefaultParams(t));
+  }, []);
+
+  const handleTemplateParamChange = useCallback((key: string, value: number) => {
+    setTemplateParams((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  const handleLoadTemplate = useCallback(() => {
+    const geom = selectedTemplate.generateGeometry(templateParams);
+    const exc = selectedTemplate.generateExcitation(templateParams, geom);
+    const freqRange = selectedTemplate.defaultFrequencyRange(templateParams);
+    const freqParam = templateParams.frequency ?? templateParams.freq ?? 14.15;
+
+    // Clear editor and load template wires
+    clearAll();
+    setWires(
+      geom.map((w) => ({ ...w, selected: false })),
+      [exc]
+    );
+
+    // Update design frequency and sweep range
+    setDesignFrequency(freqParam);
+    setFrequencyRange(freqRange);
+
+    // Set ground from template default
+    setGround(selectedTemplate.defaultGround);
+
+    // Collapse the template loader
+    setTemplateLoaderOpen(false);
+  }, [selectedTemplate, templateParams, clearAll, setWires, setDesignFrequency, setFrequencyRange, setGround]);
 
   const isLoading = simStatus === "loading";
   const canRun = wires.length > 0 && excitations.length > 0;
   const patternData = selectedFreqResult?.pattern ?? null;
   const currentData = selectedFreqResult?.currents ?? null;
   const totalSegments = getTotalSegments();
+
+  // Compute current antenna height (min Z across all wire endpoints)
+  const antennaMinZ = useMemo(() => {
+    if (wires.length === 0) return 0;
+    let minZ = Infinity;
+    for (const w of wires) {
+      minZ = Math.min(minZ, w.z1, w.z2);
+    }
+    return Math.round(minZ * 100) / 100;
+  }, [wires]);
+
+  const antennaMaxZ = useMemo(() => {
+    if (wires.length === 0) return 0;
+    let maxZ = -Infinity;
+    for (const w of wires) {
+      maxZ = Math.max(maxZ, w.z1, w.z2);
+    }
+    return Math.round(maxZ * 100) / 100;
+  }, [wires]);
+
+  // Warning: all wires at ground level
+  const allWiresAtGround = useMemo(() => {
+    if (wires.length === 0) return false;
+    return wires.every((w) => Math.abs(w.z1) < 0.001 && Math.abs(w.z2) < 0.001);
+  }, [wires]);
+
+  // Height adjustment handler — shifts all wires so that the lowest point is at the target height
+  const handleHeightChange = useCallback(
+    (targetMinZ: number) => {
+      const dz = targetMinZ - antennaMinZ;
+      if (Math.abs(dz) > 0.001) {
+        moveAllWiresZ(dz);
+      }
+    },
+    [antennaMinZ, moveAllWiresZ]
+  );
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -279,92 +348,110 @@ export function EditorPage() {
           </div>
 
           {rightPanelTab === "editor" ? (
-            <div ref={editorPanelRef} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              {/* Wire table — height controlled by splitFraction */}
-              <div
-                className="overflow-hidden flex flex-col shrink-0"
-                style={{ height: `${splitFraction * 100}%` }}
+            <div className="flex-1 overflow-y-auto min-h-0">
+              {/* Wires */}
+              <button
+                onClick={() => setWireTableOpen(!wireTableOpen)}
+                className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover transition-colors"
               >
-                <WireTable />
-              </div>
+                <span>Wires ({wires.length})</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${wireTableOpen ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
+              </button>
+              {wireTableOpen && (
+                <div className="min-h-[150px] max-h-[300px] overflow-y-auto">
+                  <WireTable />
+                </div>
+              )}
 
-              {/* Draggable divider */}
-              <div
-                className="h-1.5 bg-border hover:bg-accent/40 cursor-row-resize shrink-0 flex items-center justify-center transition-colors active:bg-accent/60"
-                onPointerDown={handleDividerPointerDown}
-                onPointerMove={handleDividerPointerMove}
-                onPointerUp={handleDividerPointerUp}
+              {/* Properties */}
+              <button
+                onClick={() => setWirePropsOpen(!wirePropsOpen)}
+                className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover transition-colors border-t border-border"
               >
-                <div className="w-8 h-0.5 rounded-full bg-text-secondary/30" />
-              </div>
+                <span>Properties {selectedTags.size > 0 ? `(${selectedTags.size} selected)` : ""}</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${wirePropsOpen ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
+              </button>
+              {wirePropsOpen && (
+                <div className="min-h-[150px] max-h-[300px] overflow-y-auto">
+                  <WirePropertiesPanel />
+                </div>
+              )}
 
-              {/* Properties panel — takes remaining space */}
-              <div className="flex-1 min-h-0 overflow-y-auto">
-                <WirePropertiesPanel />
-              </div>
-
-              {/* Collapsible tool sections */}
-              <div className="border-t border-border shrink-0 overflow-y-auto max-h-64">
-                {/* Import/Export */}
-                <button
-                  onClick={() => setImportExportOpen(!importExportOpen)}
-                  className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover transition-colors"
-                >
-                  <span>Import / Export</span>
-                  <svg
-                    width="12" height="12" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" strokeWidth="2"
-                    className={`transition-transform ${importExportOpen ? "rotate-180" : ""}`}
+              {/* Load Template */}
+              <button
+                onClick={() => setTemplateLoaderOpen(!templateLoaderOpen)}
+                className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover transition-colors border-t border-border"
+              >
+                <span>Load Template</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${templateLoaderOpen ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
+              </button>
+              {templateLoaderOpen && (
+                <div className="px-2 pb-2 pt-1 space-y-2 min-h-[150px]">
+                  <TemplatePicker
+                    selectedId={selectedTemplate.id}
+                    onSelect={handleTemplateSelect}
+                  />
+                  <ParameterPanel
+                    parameters={selectedTemplate.parameters}
+                    values={templateParams}
+                    onParamChange={handleTemplateParamChange}
+                  />
+                  {wires.length > 0 && (
+                    <p className="text-[10px] text-swr-warning leading-tight px-0.5">
+                      Loading a template will replace all current wires.
+                    </p>
+                  )}
+                  <Button
+                    onClick={handleLoadTemplate}
+                    className="w-full"
+                    size="sm"
                   >
-                    <path d="M6 9l6 6 6-6" />
-                  </svg>
-                </button>
-                {importExportOpen && (
-                  <div className="px-2 pb-2">
-                    <ImportExportPanel />
-                  </div>
-                )}
+                    Load into Editor
+                  </Button>
+                </div>
+              )}
 
-                {/* Compare */}
-                <button
-                  onClick={() => setCompareOpen(!compareOpen)}
-                  className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover transition-colors border-t border-border"
-                >
-                  <span>Compare</span>
-                  <svg
-                    width="12" height="12" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" strokeWidth="2"
-                    className={`transition-transform ${compareOpen ? "rotate-180" : ""}`}
-                  >
-                    <path d="M6 9l6 6 6-6" />
-                  </svg>
-                </button>
-                {compareOpen && (
-                  <div className="px-2 pb-2">
-                    <CompareOverlay />
-                  </div>
-                )}
+              {/* Import/Export */}
+              <button
+                onClick={() => setImportExportOpen(!importExportOpen)}
+                className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover transition-colors border-t border-border"
+              >
+                <span>Import / Export</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${importExportOpen ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
+              </button>
+              {importExportOpen && (
+                <div className="px-2 pb-2 pt-1 min-h-[150px]">
+                  <ImportExportPanel />
+                </div>
+              )}
 
-                {/* Optimizer */}
-                <button
-                  onClick={() => setOptimizerOpen(!optimizerOpen)}
-                  className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover transition-colors border-t border-border"
-                >
-                  <span>Optimizer</span>
-                  <svg
-                    width="12" height="12" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" strokeWidth="2"
-                    className={`transition-transform ${optimizerOpen ? "rotate-180" : ""}`}
-                  >
-                    <path d="M6 9l6 6 6-6" />
-                  </svg>
-                </button>
-                {optimizerOpen && (
-                  <div className="px-2 pb-2">
-                    <OptimizerPanel />
-                  </div>
-                )}
-              </div>
+              {/* Compare */}
+              <button
+                onClick={() => setCompareOpen(!compareOpen)}
+                className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover transition-colors border-t border-border"
+              >
+                <span>Compare</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${compareOpen ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
+              </button>
+              {compareOpen && (
+                <div className="px-2 pb-2 pt-1 min-h-[150px]">
+                  <CompareOverlay />
+                </div>
+              )}
+
+              {/* Optimizer */}
+              <button
+                onClick={() => setOptimizerOpen(!optimizerOpen)}
+                className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover transition-colors border-t border-border"
+              >
+                <span>Optimizer</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${optimizerOpen ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
+              </button>
+              {optimizerOpen && (
+                <div className="px-2 pb-2 pt-1 min-h-[150px]">
+                  <OptimizerPanel />
+                </div>
+              )}
             </div>
           ) : (
             /* Results panel — same as the simulator's */
@@ -397,6 +484,90 @@ export function EditorPage() {
               <span className="text-[10px] text-text-secondary">MHz</span>
             </div>
 
+            {/* Antenna height — raise/lower all wires */}
+            {wires.length > 0 && (
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] text-text-secondary shrink-0">
+                  Height:
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  value={antennaMinZ}
+                  onChange={(e) => handleHeightChange(parseFloat(e.target.value))}
+                  className="flex-1 h-1 accent-accent"
+                  title={`Lowest point: ${antennaMinZ}m, Highest: ${antennaMaxZ}m`}
+                />
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  max="200"
+                  value={antennaMinZ}
+                  onChange={(e) => {
+                    const v = parseFloat(e.target.value);
+                    if (!isNaN(v) && v >= 0) handleHeightChange(v);
+                  }}
+                  className="w-14 bg-background text-text-primary text-[10px] font-mono px-1 py-0.5 rounded border border-border focus:border-accent/50 outline-none text-right"
+                />
+                <span className="text-[10px] text-text-secondary">m</span>
+              </div>
+            )}
+
+            {/* Frequency sweep range */}
+            <div className="flex items-center gap-1">
+              <label className="text-[10px] text-text-secondary shrink-0">
+                Sweep:
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                min="0.1"
+                max="500"
+                value={frequencyRange.start_mhz}
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value);
+                  if (!isNaN(v) && v > 0 && v < frequencyRange.stop_mhz)
+                    setFrequencyRange({ ...frequencyRange, start_mhz: v });
+                }}
+                className="w-16 bg-background text-text-primary text-[10px] font-mono px-1 py-0.5 rounded border border-border focus:border-accent/50 outline-none text-right"
+                title="Sweep start (MHz)"
+              />
+              <span className="text-[10px] text-text-secondary">-</span>
+              <input
+                type="number"
+                step="0.1"
+                min="0.1"
+                max="500"
+                value={frequencyRange.stop_mhz}
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value);
+                  if (!isNaN(v) && v > 0 && v > frequencyRange.start_mhz)
+                    setFrequencyRange({ ...frequencyRange, stop_mhz: v });
+                }}
+                className="w-16 bg-background text-text-primary text-[10px] font-mono px-1 py-0.5 rounded border border-border focus:border-accent/50 outline-none text-right"
+                title="Sweep stop (MHz)"
+              />
+              <span className="text-[10px] text-text-secondary">MHz</span>
+              <input
+                type="number"
+                step="1"
+                min="1"
+                max="201"
+                value={frequencyRange.steps}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10);
+                  if (!isNaN(v) && v >= 1 && v <= 201)
+                    setFrequencyRange({ ...frequencyRange, steps: v });
+                }}
+                className="w-10 bg-background text-text-primary text-[10px] font-mono px-1 py-0.5 rounded border border-border focus:border-accent/50 outline-none text-right"
+                title="Number of sweep steps"
+              />
+              <span className="text-[10px] text-text-secondary">pts</span>
+            </div>
+
             {/* Snap size */}
             <div className="flex items-center gap-2">
               <label className="text-[10px] text-text-secondary shrink-0">
@@ -419,6 +590,37 @@ export function EditorPage() {
 
             {/* Ground */}
             <GroundEditor ground={ground} onChange={setGround} />
+
+            {/* Pattern resolution */}
+            <div className="flex items-center gap-2">
+              <label className="text-[10px] text-text-secondary shrink-0">
+                Pattern:
+              </label>
+              <select
+                value={patternStep}
+                onChange={(e) => setPatternStep(parseInt(e.target.value, 10))}
+                className="flex-1 bg-background text-text-primary text-[10px] font-mono px-1 py-0.5 rounded border border-border outline-none"
+              >
+                <option value="1">1° (very fine)</option>
+                <option value="2">2° (fine)</option>
+                <option value="5">5° (standard)</option>
+                <option value="10">10° (fast)</option>
+              </select>
+            </div>
+
+            {/* Warning: wires at ground level */}
+            {allWiresAtGround && (
+              <div className="flex items-start gap-1.5 p-1.5 rounded-md bg-swr-warning/10 border border-swr-warning/30">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-swr-warning shrink-0 mt-0.5">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+                <p className="text-[10px] text-swr-warning leading-tight">
+                  All wires are at ground level (Z=0). Use the height slider above to raise the antenna, or results will show no radiation.
+                </p>
+              </div>
+            )}
 
             {/* Run */}
             <Button
@@ -480,13 +682,14 @@ export function EditorPage() {
           </span>
           <span>Wires: {wires.length}</span>
           <span>Segments: {totalSegments}</span>
+          {wires.length > 0 && <span>Height: {antennaMinZ}–{antennaMaxZ}m</span>}
           <span>
             Snap: {snapSize > 0 ? `${snapSize}m` : "Off"}
           </span>
         </div>
         <div className="flex items-center gap-3">
           <span>
-            Design: {designFrequencyMhz} MHz
+            Design: {designFrequencyMhz} MHz | Sweep: {frequencyRange.start_mhz}–{frequencyRange.stop_mhz} MHz
           </span>
           {selectedTags.size > 0 && (
             <span className="text-accent">

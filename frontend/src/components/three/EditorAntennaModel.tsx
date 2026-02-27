@@ -127,20 +127,20 @@ export function EditorAntennaModel({
     [wire.tag, onWireClick]
   );
 
-  /** Wire body drag — starts a whole-wire move */
+  /** Wire body drag — starts a whole-wire move (no need to pre-select) */
   const handleWirePointerDown = useCallback(
     (event: ThreeEvent<PointerEvent>) => {
-      if (mode === "move" && isSelected && onWireDragStart) {
+      if (mode === "move" && onWireDragStart) {
         event.stopPropagation();
         onWireDragStart(wire.tag, event);
       }
     },
-    [mode, isSelected, wire.tag, onWireDragStart]
+    [mode, wire.tag, onWireDragStart]
   );
 
   const capRadius = Math.max(wire.radius * 60, 0.04);
   const endpointRadius = mode === "move" ? capRadius * 2.5 : capRadius;
-  const endpointColor = mode === "move" && isSelected ? "#10B981" : getWireColor(wire.tag);
+  const endpointColor = mode === "move" ? "#10B981" : getWireColor(wire.tag);
 
   return (
     <group>
@@ -162,7 +162,7 @@ export function EditorAntennaModel({
         position={start}
         onClick={handleClick}
         onPointerDown={
-          mode === "move" && isSelected && onEndpointDragStart
+          mode === "move" && onEndpointDragStart
             ? (e: ThreeEvent<PointerEvent>) => {
                 e.stopPropagation();
                 onEndpointDragStart(wire.tag, "start", e);
@@ -175,15 +175,15 @@ export function EditorAntennaModel({
           color={endpointColor}
           metalness={0.5}
           roughness={0.4}
-          emissive={mode === "move" && isSelected ? "#10B981" : "#000000"}
-          emissiveIntensity={mode === "move" && isSelected ? 0.5 : 0}
+          emissive={mode === "move" ? "#10B981" : "#000000"}
+          emissiveIntensity={mode === "move" ? 0.5 : 0}
         />
       </mesh>
       <mesh
         position={end}
         onClick={handleClick}
         onPointerDown={
-          mode === "move" && isSelected && onEndpointDragStart
+          mode === "move" && onEndpointDragStart
             ? (e: ThreeEvent<PointerEvent>) => {
                 e.stopPropagation();
                 onEndpointDragStart(wire.tag, "end", e);
@@ -196,8 +196,8 @@ export function EditorAntennaModel({
           color={endpointColor}
           metalness={0.5}
           roughness={0.4}
-          emissive={mode === "move" && isSelected ? "#10B981" : "#000000"}
-          emissiveIntensity={mode === "move" && isSelected ? 0.5 : 0}
+          emissive={mode === "move" ? "#10B981" : "#000000"}
+          emissiveIntensity={mode === "move" ? 0.5 : 0}
         />
       </mesh>
 

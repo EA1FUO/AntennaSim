@@ -37,7 +37,8 @@ interface SimulationState {
     wires: WireGeometry[],
     excitation: Excitation,
     ground: GroundConfig,
-    frequency: FrequencyRange
+    frequency: FrequencyRange,
+    patternStep?: number
   ) => Promise<void>;
   /** V2: Run an advanced simulation with all V2 features */
   simulateAdvanced: (options: AdvancedSimulationOptions) => Promise<void>;
@@ -76,11 +77,11 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
 
   isLoading: () => get().status === "loading",
 
-  simulate: async (wires, excitation, ground, frequency) => {
+  simulate: async (wires, excitation, ground, frequency, patternStep) => {
     set({ status: "loading", error: null });
 
     try {
-      const result = await runSimulation(wires, excitation, ground, frequency);
+      const result = await runSimulation(wires, excitation, ground, frequency, patternStep);
       set({ status: "success", result, selectedFreqIndex: findBestSwrIndex(result) });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Simulation failed";

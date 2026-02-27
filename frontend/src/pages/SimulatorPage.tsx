@@ -92,9 +92,12 @@ export function SimulatorPage() {
     [setSelectedFreqIndex]
   );
 
+  // Pattern resolution
+  const [patternStep, setPatternStep] = useState(5);
+
   const handleRunSimulation = useCallback(() => {
-    simulate(wireGeometry, excitation, ground, frequencyRange);
-  }, [simulate, wireGeometry, excitation, ground, frequencyRange]);
+    simulate(wireGeometry, excitation, ground, frequencyRange, patternStep);
+  }, [simulate, wireGeometry, excitation, ground, frequencyRange, patternStep]);
 
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
@@ -129,6 +132,32 @@ export function SimulatorPage() {
             <div className="border-t border-border" />
 
             <GroundEditor ground={ground} onChange={setGround} />
+
+            <div className="border-t border-border" />
+
+            {/* Pattern resolution */}
+            <div className="space-y-1">
+              <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider px-1">
+                Pattern Resolution
+              </h3>
+              <div className="flex items-center gap-2 px-1">
+                <select
+                  value={patternStep}
+                  onChange={(e) => setPatternStep(parseInt(e.target.value, 10))}
+                  className="flex-1 bg-background text-text-primary text-xs font-mono px-1.5 py-1 rounded border border-border outline-none"
+                >
+                  <option value="1">1° (very fine — slow)</option>
+                  <option value="2">2° (fine)</option>
+                  <option value="5">5° (standard)</option>
+                  <option value="10">10° (fast)</option>
+                </select>
+              </div>
+              {patternStep <= 2 && (
+                <p className="text-[10px] text-swr-warning px-1 leading-tight">
+                  Fine resolution increases computation time significantly.
+                </p>
+              )}
+            </div>
 
             {/* Tips */}
             {template.tips.length > 0 && (

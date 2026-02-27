@@ -78,12 +78,19 @@ class SimulationRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_excitations_reference_valid_wires(self) -> "SimulationRequest":
-        wire_tags = {w.tag for w in self.wires}
+        wire_map = {w.tag: w for w in self.wires}
+        wire_tags = set(wire_map.keys())
         for ex in self.excitations:
             if ex.wire_tag not in wire_tags:
                 raise ValueError(
                     f"Excitation references wire tag {ex.wire_tag} "
                     f"which doesn't exist. Valid tags: {wire_tags}"
+                )
+            wire = wire_map[ex.wire_tag]
+            if ex.segment < 1 or ex.segment > wire.segments:
+                raise ValueError(
+                    f"Excitation on wire {ex.wire_tag} references segment {ex.segment}, "
+                    f"but wire only has {wire.segments} segments (valid: 1-{wire.segments})"
                 )
         # Validate load wire references
         for ld in self.loads:

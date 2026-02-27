@@ -134,9 +134,11 @@ export async function runSimulation(
   wires: WireGeometry[],
   excitation: Excitation,
   ground: GroundConfig,
-  frequency: FrequencyRange
+  frequency: FrequencyRange,
+  patternStep?: number
 ): Promise<SimulationResult> {
-  const body = {
+  const step = patternStep ?? 5;
+  const body: Record<string, unknown> = {
     wires: wires.map((w) => ({
       tag: w.tag,
       segments: w.segments,
@@ -158,6 +160,14 @@ export async function runSimulation(
       stop_mhz: frequency.stop_mhz,
       steps: frequency.steps,
     },
+    pattern: {
+      theta_start: -90,
+      theta_stop: 90,
+      theta_step: step,
+      phi_start: 0,
+      phi_stop: 360 - step,
+      phi_step: step,
+    },
     comment: "AntSim simulation",
   };
 
@@ -175,6 +185,7 @@ export interface AdvancedSimulationOptions {
   loads?: LumpedLoad[];
   transmission_lines?: TransmissionLine[];
   compute_currents?: boolean;
+  pattern_step?: number;
   comment?: string;
 }
 
@@ -182,7 +193,8 @@ export interface AdvancedSimulationOptions {
 export async function runAdvancedSimulation(
   options: AdvancedSimulationOptions
 ): Promise<SimulationResult> {
-  const body = {
+  const step = options.pattern_step ?? 5;
+  const body: Record<string, unknown> = {
     wires: options.wires.map((w) => ({
       tag: w.tag,
       segments: w.segments,
@@ -201,6 +213,14 @@ export async function runAdvancedSimulation(
       start_mhz: options.frequency.start_mhz,
       stop_mhz: options.frequency.stop_mhz,
       steps: options.frequency.steps,
+    },
+    pattern: {
+      theta_start: -90,
+      theta_stop: 90,
+      theta_step: step,
+      phi_start: 0,
+      phi_stop: 360 - step,
+      phi_step: step,
     },
     loads: options.loads ?? [],
     transmission_lines: options.transmission_lines ?? [],

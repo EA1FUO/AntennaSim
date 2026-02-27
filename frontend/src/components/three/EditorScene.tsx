@@ -65,10 +65,11 @@ function GhostWire({ start, end }: { start: Vector3; end: Vector3 }) {
   );
 }
 
-/** Drag target: either an endpoint or the entire wire, optionally vertical-only */
+/** Drag target: either an endpoint or the entire wire, optionally vertical-only.
+ *  origZ tracks the NEC2 Z of the dragged point at drag start so we can preserve height. */
 type DragTarget =
-  | { type: "endpoint"; tag: number; endpoint: "start" | "end"; vertical?: boolean; lastY?: number }
-  | { type: "wire"; tag: number; offsetX: number; offsetY: number; offsetZ: number; vertical?: boolean; lastY?: number };
+  | { type: "endpoint"; tag: number; endpoint: "start" | "end"; origZ: number; lastY?: number }
+  | { type: "wire"; tag: number; offsetX: number; offsetY: number; offsetZ: number; origZ: number; lastY?: number };
 
 /** Inner scene content — needs access to useThree */
 function EditorSceneContent({
@@ -206,27 +207,28 @@ function EditorSceneContent({
           return;
         }
 
-        // Normal drag on ground plane (horizontal X/Y movement)
+        // Normal drag on ground plane (horizontal X/Y movement only — preserve Z height)
         const pos = raycastToGround(event);
         if (!pos) return;
 
         if (target.type === "endpoint") {
           const { tag, endpoint } = target;
+          // Only update X/Y from ground raycast; keep the endpoint's original Z
           if (endpoint === "start") {
-            updateWire(tag, { x1: pos[0], y1: pos[1], z1: pos[2] });
+            updateWire(tag, { x1: pos[0], y1: pos[1], z1: target.origZ });
           } else {
-            updateWire(tag, { x2: pos[0], y2: pos[1], z2: pos[2] });
+            updateWire(tag, { x2: pos[0], y2: pos[1], z2: target.origZ });
           }
         } else if (target.type === "wire") {
-          // Whole-wire move: apply offset from grab point
+          // Whole-wire move: only apply horizontal delta (X/Y), preserve Z
           const dx = pos[0] - target.offsetX;
           const dy = pos[1] - target.offsetY;
-          const dz = pos[2] - target.offsetZ;
-          moveWire(target.tag, dx, dy, dz);
+          if (dx !== 0 || dy !== 0) {
+            moveWire(target.tag, dx, dy, 0);
+          }
           // Update offset to current position for next delta
           target.offsetX = pos[0];
           target.offsetY = pos[1];
-          target.offsetZ = pos[2];
         }
       }
     },
@@ -240,10 +242,10 @@ function EditorSceneContent({
     }
   }, [isDragging]);
 
-  /** Handle wire click */
+  /** Handle wire click — works in both select and move mode */
   const handleWireClick = useCallback(
     (tag: number, event: ThreeEvent<MouseEvent>) => {
-      if (mode === "select") {
+      if (mode === "select" || mode === "move") {
         if (event.nativeEvent.shiftKey || event.nativeEvent.ctrlKey || event.nativeEvent.metaKey) {
           toggleSelection(tag);
         } else {
@@ -258,11 +260,14 @@ function EditorSceneContent({
   const handleEndpointDragStart = useCallback(
     (tag: number, endpoint: "start" | "end", _event: ThreeEvent<PointerEvent>) => {
       if (mode === "move") {
+        // Capture the endpoint's current NEC2 Z so we can preserve it during horizontal drags
+        const wire = wires.find((w) => w.tag === tag);
+        const origZ = wire ? (endpoint === "start" ? wire.z1 : wire.z2) : 0;
         setIsDragging(true);
-        dragRef.current = { type: "endpoint", tag, endpoint };
+        dragRef.current = { type: "endpoint", tag, endpoint, origZ };
       }
     },
-    [mode]
+    [mode, wires]
   );
 
   /** Handle wire body drag start (move mode — whole wire) */
@@ -273,6 +278,9 @@ function EditorSceneContent({
         const pos = raycastToGround(event);
         if (!pos) return;
         const yVal = raycastVertical(event);
+        // Capture wire's average Z so Shift+drag has a baseline
+        const wire = wires.find((w) => w.tag === tag);
+        const origZ = wire ? (wire.z1 + wire.z2) / 2 : 0;
         setIsDragging(true);
         dragRef.current = {
           type: "wire",
@@ -280,11 +288,12 @@ function EditorSceneContent({
           offsetX: pos[0],
           offsetY: pos[1],
           offsetZ: pos[2],
+          origZ,
           lastY: yVal ?? undefined,
         };
       }
     },
-    [mode, raycastToGround, raycastVertical]
+    [mode, wires, raycastToGround, raycastVertical]
   );
 
   // Convert wires to WireData format
@@ -344,7 +353,7 @@ function EditorSceneContent({
       {/* Clickable background plane (invisible, for catching clicks on empty space) */}
       <mesh
         visible={false}
-        position={[0, -0.01, 0]}
+        position={[0, -0.1, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
         onClick={handleBackgroundClick}
         onPointerMove={handlePointerMove}

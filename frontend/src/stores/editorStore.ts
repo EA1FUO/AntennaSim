@@ -93,6 +93,8 @@ interface EditorState {
   deleteSelected: () => void;
   /** Move an entire wire by a delta in NEC2 coordinates */
   moveWire: (tag: number, dx: number, dy: number, dz: number) => void;
+  /** Move ALL wires by a delta in NEC2 Z (height) */
+  moveAllWiresZ: (dz: number) => void;
   /** Split a wire at its midpoint into two wires */
   splitWire: (tag: number) => void;
   /** Clear all wires */
@@ -181,6 +183,22 @@ function computeSegments(wire: { x1: number; y1: number; z1: number; x2: number;
   return autoSegment(length, freqMhz);
 }
 
+/** Ensure all excitation segment indices are valid for their wire's segment count.
+ *  If an excitation references a segment beyond the wire's count, re-center it. */
+function fixExcitations(excitations: Excitation[], wires: EditorWire[]): Excitation[] {
+  let changed = false;
+  const fixed = excitations.map((e) => {
+    const wire = wires.find((w) => w.tag === e.wire_tag);
+    if (!wire) return e;
+    if (e.segment > wire.segments) {
+      changed = true;
+      return { ...e, segment: centerSegment(wire.segments) };
+    }
+    return e;
+  });
+  return changed ? fixed : excitations;
+}
+
 /** Snap a coordinate to grid */
 function snap(value: number, gridSize: number): number {
   if (gridSize <= 0) return value;
@@ -256,7 +274,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     const newWires = [...state.wires];
     newWires[idx] = updated;
-    set({ ...pushUndo(state), wires: newWires });
+    // Fix any excitation segment indices that exceed the new segment count
+    const newExcitations = fixExcitations(state.excitations, newWires);
+    set({ ...pushUndo(state), wires: newWires, excitations: newExcitations });
   },
 
   moveWire: (tag, dx, dy, dz) => {
@@ -279,6 +299,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     const newWires = [...state.wires];
     newWires[idx] = updated;
+    set({ ...pushUndo(state), wires: newWires });
+  },
+
+  moveAllWiresZ: (dz) => {
+    const state = get();
+    if (dz === 0 || state.wires.length === 0) return;
+    const newWires = state.wires.map((w) => ({
+      ...w,
+      z1: w.z1 + dz,
+      z2: w.z2 + dz,
+    }));
     set({ ...pushUndo(state), wires: newWires });
   },
 
@@ -371,10 +402,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setWires: (wires, excitations) => {
     const state = get();
     const maxTag = wires.reduce((max, w) => Math.max(max, w.tag), 0);
+    const newWires = wires.map((w) => ({ ...w }));
+    const rawExcitations = excitations?.map((e) => ({ ...e })) ?? state.excitations;
+    // Fix any excitation segment indices that exceed wire segment counts
+    const fixedExcitations = fixExcitations(rawExcitations, newWires);
     set({
       ...pushUndo(state),
-      wires: wires.map((w) => ({ ...w })),
-      excitations: excitations?.map((e) => ({ ...e })) ?? state.excitations,
+      wires: newWires,
+      excitations: fixedExcitations,
       selectedTags: new Set(),
       nextTag: maxTag + 1,
     });
@@ -438,7 +473,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       }
       return e;
     });
-    set({ designFrequencyMhz: mhz, wires: newWires, excitations: newExcitations });
+    // Update frequency range to center on the new design frequency (~10% bandwidth)
+    const bandwidth = mhz * 0.1;
+    const newFreqRange: FrequencyRange = {
+      start_mhz: Math.round(Math.max(0.1, mhz - bandwidth / 2) * 1000) / 1000,
+      stop_mhz: Math.round((mhz + bandwidth / 2) * 1000) / 1000,
+      steps: state.frequencyRange.steps,
+    };
+    set({
+      ...pushUndo(state),
+      designFrequencyMhz: mhz,
+      wires: newWires,
+      excitations: newExcitations,
+      frequencyRange: newFreqRange,
+    });
   },
 
   // ---- Excitation ----
