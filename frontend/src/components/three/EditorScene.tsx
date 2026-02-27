@@ -24,8 +24,11 @@ import { RadiationPattern3D } from "./RadiationPattern3D";
 import { VolumetricShells } from "./VolumetricShells";
 import { GroundReflection } from "./GroundReflection";
 import { CurrentDistribution3D } from "./CurrentDistribution3D";
+import { NearFieldPlane } from "./NearFieldPlane";
+import { CurrentFlowParticles } from "./CurrentFlowParticles";
+import { RadiationSlice } from "./RadiationSlice";
 import type { ViewToggles } from "./types";
-import type { PatternData, SegmentCurrent } from "../../api/nec";
+import type { PatternData, SegmentCurrent, NearFieldResult } from "../../api/nec";
 import { useUIStore } from "../../stores/uiStore";
 import { useEditorStore, snap } from "../../stores/editorStore";
 
@@ -33,6 +36,7 @@ interface EditorSceneProps {
   viewToggles: ViewToggles;
   patternData?: PatternData | null;
   currents?: SegmentCurrent[] | null;
+  nearField?: NearFieldResult | null;
 }
 
 /** Ground plane for raycasting (XZ plane at y=0 in Three.js = z=0 in NEC2) */
@@ -76,6 +80,7 @@ function EditorSceneContent({
   viewToggles,
   patternData,
   currents,
+  nearField,
 }: EditorSceneProps) {
   const theme = useUIStore((s) => s.theme);
 
@@ -417,6 +422,25 @@ function EditorSceneContent({
         <CurrentDistribution3D currents={currents} />
       )}
 
+      {/* Animated current flow particles */}
+      {viewToggles.currentFlow && currents && currents.length > 0 && (
+        <CurrentFlowParticles currents={currents} />
+      )}
+
+      {/* Near-field heatmap plane */}
+      {viewToggles.nearField && nearField && (
+        <NearFieldPlane data={nearField} />
+      )}
+
+      {/* Radiation pattern slice animation */}
+      {viewToggles.slice && patternData && (
+        <RadiationSlice
+          pattern={patternData}
+          scale={5}
+          center={antennaCentroid}
+        />
+      )}
+
       {/* Camera controls — disabled during drag, auto-frames to antenna bbox */}
       <CameraControls enabled={!isDragging} wires={wireDataList} />
       <PostProcessing />
@@ -424,7 +448,7 @@ function EditorSceneContent({
   );
 }
 
-export function EditorScene({ viewToggles, patternData, currents }: EditorSceneProps) {
+export function EditorScene({ viewToggles, patternData, currents, nearField }: EditorSceneProps) {
   const theme = useUIStore((s) => s.theme);
   const sceneBg = theme === "dark" ? "#0A0A0F" : "#E8E8ED";
 
@@ -445,7 +469,7 @@ export function EditorScene({ viewToggles, patternData, currents }: EditorSceneP
       style={{ background: sceneBg }}
     >
       <Suspense fallback={null}>
-        <EditorSceneContent viewToggles={viewToggles} patternData={patternData} currents={currents} />
+        <EditorSceneContent viewToggles={viewToggles} patternData={patternData} currents={currents} nearField={nearField} />
       </Suspense>
     </Canvas>
   );

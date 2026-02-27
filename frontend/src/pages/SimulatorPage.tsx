@@ -106,6 +106,7 @@ export function SimulatorPage() {
   // Pattern data for 3D viewport
   const patternData = selectedFreqResult?.pattern ?? null;
   const currents = selectedFreqResult?.currents ?? null;
+  const nearField = result?.near_field ?? null;
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -208,6 +209,7 @@ export function SimulatorPage() {
               viewToggles={viewToggles}
               patternData={patternData}
               currents={currents}
+              nearField={nearField}
             />
           </ErrorBoundary>
 

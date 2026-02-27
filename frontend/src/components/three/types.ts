@@ -31,6 +31,12 @@ export interface ViewToggles {
   reflection: boolean;
   /** V2: Show volumetric gain shells instead of surface */
   volumetric: boolean;
+  /** V2: Show near-field heatmap plane */
+  nearField: boolean;
+  /** V2: Show animated current flow particles */
+  currentFlow: boolean;
+  /** V2: Show animated radiation pattern slice */
+  slice: boolean;
 }
 
 /** Camera preset names */

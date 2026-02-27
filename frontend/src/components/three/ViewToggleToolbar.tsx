@@ -16,6 +16,9 @@ export function ViewToggleToolbar({ toggles, onToggle }: ViewToggleToolbarProps)
     { key: "volumetric", label: "Shells" },
     { key: "current", label: "Current" },
     { key: "reflection", label: "Mirror" },
+    { key: "currentFlow", label: "Flow" },
+    { key: "slice", label: "Slice" },
+    { key: "nearField", label: "NF" },
     { key: "compass", label: "Compass" },
   ];
 

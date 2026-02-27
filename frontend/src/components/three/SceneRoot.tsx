@@ -12,8 +12,11 @@ import { RadiationPattern3D } from "./RadiationPattern3D";
 import { VolumetricShells } from "./VolumetricShells";
 import { GroundReflection } from "./GroundReflection";
 import { CurrentDistribution3D } from "./CurrentDistribution3D";
+import { NearFieldPlane } from "./NearFieldPlane";
+import { CurrentFlowParticles } from "./CurrentFlowParticles";
+import { RadiationSlice } from "./RadiationSlice";
 import type { WireData, FeedpointData, ViewToggles } from "./types";
-import type { PatternData, SegmentCurrent } from "../../api/nec";
+import type { PatternData, SegmentCurrent, NearFieldResult } from "../../api/nec";
 import { useUIStore } from "../../stores/uiStore";
 
 interface SceneRootProps {
@@ -24,6 +27,8 @@ interface SceneRootProps {
   patternData?: PatternData | null;
   /** V2: Current distribution data */
   currents?: SegmentCurrent[] | null;
+  /** V2: Near-field visualization data */
+  nearField?: NearFieldResult | null;
 }
 
 export function SceneRoot({
@@ -32,6 +37,7 @@ export function SceneRoot({
   viewToggles,
   patternData,
   currents,
+  nearField,
 }: SceneRootProps) {
   const theme = useUIStore((s) => s.theme);
   const sceneBg = theme === "dark" ? "#0A0A0F" : "#E8E8ED";
@@ -132,6 +138,25 @@ export function SceneRoot({
         {/* Current Distribution overlay */}
         {viewToggles.current && currents && currents.length > 0 && (
           <CurrentDistribution3D currents={currents} />
+        )}
+
+        {/* Animated current flow particles */}
+        {viewToggles.currentFlow && currents && currents.length > 0 && (
+          <CurrentFlowParticles currents={currents} />
+        )}
+
+        {/* Near-field heatmap plane */}
+        {viewToggles.nearField && nearField && (
+          <NearFieldPlane data={nearField} />
+        )}
+
+        {/* Radiation pattern slice animation */}
+        {viewToggles.slice && patternData && (
+          <RadiationSlice
+            pattern={patternData}
+            scale={5}
+            center={antennaCentroid}
+          />
         )}
 
         {/* Camera — auto-frames to antenna bounding box */}

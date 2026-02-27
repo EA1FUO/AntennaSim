@@ -221,6 +221,7 @@ export function EditorPage() {
   const canRun = wires.length > 0 && excitations.length > 0;
   const patternData = selectedFreqResult?.pattern ?? null;
   const currentData = selectedFreqResult?.currents ?? null;
+  const nearFieldData = simResult?.near_field ?? null;
   const totalSegments = getTotalSegments();
 
   // Compute current antenna height (min Z across all wire endpoints)
@@ -273,7 +274,7 @@ export function EditorPage() {
         {/* === CENTER: 3D VIEWPORT === */}
         <main className="flex-1 relative min-w-0">
           <ErrorBoundary label="3D Viewport">
-            <EditorScene viewToggles={viewToggles} patternData={patternData} currents={currentData} />
+            <EditorScene viewToggles={viewToggles} patternData={patternData} currents={currentData} nearField={nearFieldData} />
           </ErrorBoundary>
 
           {/* Overlays */}
