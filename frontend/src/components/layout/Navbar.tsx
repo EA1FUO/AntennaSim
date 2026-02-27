@@ -31,7 +31,7 @@ export function Navbar() {
             AntSim
           </span>
           <span className="text-text-secondary text-[10px] font-mono">
-            v0.1
+            v0.2
           </span>
         </a>
 
