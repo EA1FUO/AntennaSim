@@ -363,8 +363,8 @@ function EditorSceneContent({
         <meshBasicMaterial transparent opacity={0} />
       </mesh>
 
-      {/* Ground */}
-      {viewToggles.grid && <GroundPlane />}
+      {/* Ground — auto-sized to antenna footprint */}
+      {viewToggles.grid && <GroundPlane wires={wireDataList} />}
       {viewToggles.compass && <CompassRose />}
       <AxesHelper />
 
@@ -417,8 +417,8 @@ function EditorSceneContent({
         <CurrentDistribution3D currents={currents} />
       )}
 
-      {/* Camera controls — disabled during drag to prevent orbit while moving wires */}
-      <CameraControls enabled={!isDragging} />
+      {/* Camera controls — disabled during drag, auto-frames to antenna bbox */}
+      <CameraControls enabled={!isDragging} wires={wireDataList} />
       <PostProcessing />
     </>
   );

@@ -1,7 +1,13 @@
 /**
  * 2D Polar radiation pattern plot.
- * Draws azimuth or elevation cut as a polar diagram using SVG.
- * Shows gain in dBi on radial axis with -3dB beamwidth arc.
+ *
+ * Features:
+ * - Azimuth or elevation cut as a polar diagram using SVG
+ * - Concentric gain circles clearly labeled in dBi
+ * - N/S/E/W cardinal direction labels
+ * - -3dB beamwidth arc visually highlighted
+ * - Max gain direction marked with a dot and annotation
+ * - Smooth pattern fill with gradient
  */
 
 import { useMemo } from "react";
@@ -24,9 +30,7 @@ function extractCut(
   const { gain_dbi, theta_start, theta_step, theta_count, phi_start, phi_step, phi_count } = pattern;
 
   if (mode === "azimuth") {
-    // Find theta index closest to 90 degrees (horizon) or max gain theta
-    // For azimuth cut, we want a horizontal plane cut
-    // theta=90 in NEC2 is the horizon
+    // Find theta index with max gain for azimuth cut
     let bestTheta = 0;
     let bestGain = -Infinity;
     for (let ti = 0; ti < theta_count; ti++) {
@@ -39,7 +43,6 @@ function extractCut(
       }
     }
 
-    // Extract the phi cut at that theta
     const points: { angle: number; gain: number }[] = [];
     for (let pi = 0; pi < phi_count; pi++) {
       const phi = phi_start + pi * phi_step;
@@ -65,16 +68,15 @@ function extractCut(
     for (let ti = 0; ti < theta_count; ti++) {
       const theta = theta_start + ti * theta_step;
       const gain = gain_dbi[ti]?.[bestPhi] ?? -999;
-      // Convert theta to elevation angle for polar plot
       // NEC2 theta: 0=zenith, 90=horizon, 180=nadir
-      // We want to display as 0=up (zenith), 90=horizon, etc.
-      points.push({ angle: theta + 90, gain }); // shift so 0=zenith in polar
+      // Shift so 0=up (zenith) in polar
+      points.push({ angle: theta + 90, gain });
     }
     return points;
   }
 }
 
-/** Convert gain in dBi to a normalized radius (0-1) for the polar plot */
+/** Convert gain in dBi to a normalized radius (0-1) */
 function gainToRadius(gain: number, minGain: number, maxGain: number): number {
   if (gain <= -999) return 0;
   const range = maxGain - minGain;
@@ -119,7 +121,7 @@ export function PatternPolar({ pattern, mode, size = 200 }: PatternPolarProps) {
 
   const cx = size / 2;
   const cy = size / 2;
-  const plotRadius = (size / 2) * 0.85;
+  const plotRadius = (size / 2) * 0.82;
 
   // Build SVG path for the pattern
   const pathData = useMemo(() => {
@@ -133,15 +135,80 @@ export function PatternPolar({ pattern, mode, size = 200 }: PatternPolarProps) {
     for (let i = 1; i < points.length; i++) {
       d += ` L ${points[i]!.x.toFixed(1)} ${points[i]!.y.toFixed(1)}`;
     }
-    d += " Z"; // close the path
+    d += " Z";
     return d;
   }, [cut, minGain, maxGain, cx, cy, plotRadius]);
 
-  // Grid circles at 25%, 50%, 75%, 100%
+  // Find max gain point for marker
+  const maxGainPoint = useMemo(() => {
+    let best = { angle: 0, gain: -Infinity, x: cx, y: cy };
+    for (const p of cut) {
+      if (p.gain > best.gain && p.gain > -999) {
+        const r = gainToRadius(p.gain, minGain, maxGain);
+        const pos = polarToXY(p.angle, r, cx, cy, plotRadius);
+        best = { angle: p.angle, gain: p.gain, x: pos.x, y: pos.y };
+      }
+    }
+    return best;
+  }, [cut, minGain, maxGain, cx, cy, plotRadius]);
+
+  // Find -3dB beamwidth
+  const beamwidthArc = useMemo(() => {
+    const threshold = maxGain - 3;
+    if (maxGain <= -999 || threshold <= minGain) return null;
+
+    // Find continuous arc above threshold
+    const aboveThreshold = cut.filter((p) => p.gain >= threshold && p.gain > -999);
+    if (aboveThreshold.length < 2) return null;
+
+    // Simple approach: find the angular range
+    const angles = aboveThreshold.map((p) => p.angle);
+    const startAngle = Math.min(...angles);
+    const endAngle = Math.max(...angles);
+    const beamwidth = endAngle - startAngle;
+
+    if (beamwidth <= 0 || beamwidth >= 360) return null;
+
+    // Build arc path at the -3dB radius
+    const r3db = gainToRadius(threshold, minGain, maxGain);
+    const arcPoints: string[] = [];
+    for (let a = startAngle; a <= endAngle; a += 1) {
+      const pos = polarToXY(a, r3db, cx, cy, plotRadius);
+      arcPoints.push(`${pos.x.toFixed(1)} ${pos.y.toFixed(1)}`);
+    }
+    if (arcPoints.length < 2) return null;
+
+    return {
+      path: `M ${arcPoints.join(" L ")}`,
+      beamwidth,
+      startAngle,
+      endAngle,
+    };
+  }, [cut, maxGain, minGain, cx, cy, plotRadius]);
+
+  // Grid circles — 4 even divisions
   const gridCircles = [0.25, 0.5, 0.75, 1.0];
 
-  // Cardinal lines every 30 degrees
-  const cardinalLines = Array.from({ length: 12 }, (_, i) => i * 30);
+  // Radial lines every 30 degrees
+  const radialLines = Array.from({ length: 12 }, (_, i) => i * 30);
+
+  // Cardinal labels
+  const cardinalLabels = useMemo(() => {
+    if (mode === "azimuth") {
+      return [
+        { angle: 0, label: "N" },
+        { angle: 90, label: "E" },
+        { angle: 180, label: "S" },
+        { angle: 270, label: "W" },
+      ];
+    }
+    return [
+      { angle: 0, label: "Z" },
+      { angle: 90, label: "H" },
+      { angle: 180, label: "-Z" },
+      { angle: 270, label: "H" },
+    ];
+  }, [mode]);
 
   return (
     <svg
@@ -165,7 +232,7 @@ export function PatternPolar({ pattern, mode, size = 200 }: PatternPolarProps) {
       ))}
 
       {/* Radial lines */}
-      {cardinalLines.map((angle) => {
+      {radialLines.map((angle) => {
         const { x, y } = polarToXY(angle, 1, cx, cy, plotRadius);
         return (
           <line
@@ -181,22 +248,19 @@ export function PatternPolar({ pattern, mode, size = 200 }: PatternPolarProps) {
         );
       })}
 
-      {/* Angle labels at cardinal directions */}
-      {[0, 90, 180, 270].map((angle) => {
-        const { x, y } = polarToXY(angle, 1.1, cx, cy, plotRadius);
-        const label =
-          mode === "azimuth"
-            ? ["N", "E", "S", "W"][angle / 90]
-            : ["0\u00B0", "90\u00B0", "180\u00B0", "270\u00B0"][angle / 90];
+      {/* Cardinal direction labels */}
+      {cardinalLabels.map(({ angle, label }) => {
+        const { x, y } = polarToXY(angle, 1.12, cx, cy, plotRadius);
         return (
           <text
-            key={angle}
+            key={`card-${angle}`}
             x={x}
             y={y}
             textAnchor="middle"
             dominantBaseline="central"
             fill={ct.tick}
-            fontSize={9}
+            fontSize={10}
+            fontWeight="bold"
             fontFamily="JetBrains Mono, monospace"
           >
             {label}
@@ -204,19 +268,42 @@ export function PatternPolar({ pattern, mode, size = 200 }: PatternPolarProps) {
         );
       })}
 
+      {/* Intermediate angle labels (every 30 deg, skip cardinals) */}
+      {radialLines
+        .filter((a) => a % 90 !== 0)
+        .map((angle) => {
+          const { x, y } = polarToXY(angle, 1.12, cx, cy, plotRadius);
+          return (
+            <text
+              key={`ang-${angle}`}
+              x={x}
+              y={y}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fill={ct.tick}
+              fontSize={7}
+              fontFamily="JetBrains Mono, monospace"
+              opacity={0.6}
+            >
+              {angle}{"\u00B0"}
+            </text>
+          );
+        })}
+
       {/* Gain labels on grid circles */}
       {gridCircles.map((r) => {
         const gainVal = minGain + (maxGain - minGain) * r;
         return (
           <text
-            key={r}
-            x={cx + 2}
+            key={`gain-${r}`}
+            x={cx + 3}
             y={cy - plotRadius * r - 2}
             fill={ct.tick}
             fontSize={7}
             fontFamily="JetBrains Mono, monospace"
+            opacity={0.8}
           >
-            {gainVal.toFixed(0)}
+            {gainVal.toFixed(1)} dBi
           </text>
         );
       })}
@@ -231,7 +318,45 @@ export function PatternPolar({ pattern, mode, size = 200 }: PatternPolarProps) {
         strokeLinejoin="round"
       />
 
-      {/* Max gain label */}
+      {/* -3dB beamwidth arc highlight */}
+      {beamwidthArc && (
+        <path
+          d={beamwidthArc.path}
+          fill="none"
+          stroke="#F59E0B"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          opacity={0.7}
+        />
+      )}
+
+      {/* Max gain point marker */}
+      {maxGainPoint.gain > -999 && (
+        <g>
+          <circle
+            cx={maxGainPoint.x}
+            cy={maxGainPoint.y}
+            r={3.5}
+            fill="#EF4444"
+            stroke="#FFFFFF"
+            strokeWidth={1}
+          />
+          {/* Max gain annotation */}
+          <text
+            x={maxGainPoint.x + (maxGainPoint.x > cx ? 6 : -6)}
+            y={maxGainPoint.y - 6}
+            textAnchor={maxGainPoint.x > cx ? "start" : "end"}
+            fill="#EF4444"
+            fontSize={8}
+            fontWeight="bold"
+            fontFamily="JetBrains Mono, monospace"
+          >
+            {maxGainPoint.gain.toFixed(1)} dBi
+          </text>
+        </g>
+      )}
+
+      {/* Bottom label: mode + max gain + beamwidth */}
       <text
         x={cx}
         y={size - 4}
@@ -240,7 +365,10 @@ export function PatternPolar({ pattern, mode, size = 200 }: PatternPolarProps) {
         fontSize={8}
         fontFamily="JetBrains Mono, monospace"
       >
-        {mode === "azimuth" ? "Azimuth" : "Elevation"} | Max: {maxGain.toFixed(1)} dBi
+        {mode === "azimuth" ? "Azimuth (H)" : "Elevation (E)"}
+        {" | Max: "}
+        {maxGain.toFixed(1)} dBi
+        {beamwidthArc ? ` | BW: ${beamwidthArc.beamwidth.toFixed(0)}\u00B0` : ""}
       </text>
     </svg>
   );

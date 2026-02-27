@@ -1,7 +1,13 @@
 /**
  * Impedance (R + jX) vs Frequency chart.
- * Shows resistance (solid blue) and reactance (dashed orange).
- * 50-ohm reference line highlighted.
+ *
+ * Features:
+ * - R (resistance) as solid blue line, X (reactance) as solid orange line
+ * - 50-ohm reference line (dashed gray with label)
+ * - Zero-reactance reference line
+ * - Resonance markers where X crosses zero (jX = 0)
+ * - Crosshair tooltip showing frequency, R, X, and |Z|
+ * - Clear legend with color-coded labels
  */
 
 import { useMemo } from "react";
@@ -21,9 +27,11 @@ import { useChartTheme } from "../../hooks/useChartTheme";
 
 interface ImpedanceChartProps {
   data: FrequencyResult[];
+  /** Height class override (default: h-48) */
+  heightClass?: string;
 }
 
-export function ImpedanceChart({ data }: ImpedanceChartProps) {
+export function ImpedanceChart({ data, heightClass = "h-48" }: ImpedanceChartProps) {
   const chartData = useMemo(
     () =>
       data.map((d) => ({
@@ -58,16 +66,34 @@ export function ImpedanceChart({ data }: ImpedanceChartProps) {
     };
   }, [chartData]);
 
+  // Find resonance points where X crosses zero
+  const resonanceFreqs = useMemo(() => {
+    const crossings: number[] = [];
+    for (let i = 0; i < chartData.length - 1; i++) {
+      const x0 = chartData[i]!.x;
+      const x1 = chartData[i + 1]!.x;
+      // Sign change indicates zero crossing
+      if ((x0 >= 0 && x1 < 0) || (x0 < 0 && x1 >= 0)) {
+        // Linear interpolation to find exact crossing frequency
+        const f0 = chartData[i]!.freq;
+        const f1 = chartData[i + 1]!.freq;
+        const ratio = Math.abs(x0) / (Math.abs(x0) + Math.abs(x1));
+        crossings.push(f0 + ratio * (f1 - f0));
+      }
+    }
+    return crossings;
+  }, [chartData]);
+
   const ct = useChartTheme();
 
   if (data.length === 0) return null;
 
   return (
-    <div className="w-full h-48">
+    <div className={`w-full ${heightClass}`}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={chartData}
-          margin={{ top: 5, right: 5, bottom: 5, left: -10 }}
+          margin={{ top: 10, right: 10, bottom: 5, left: -5 }}
         >
           <CartesianGrid
             strokeDasharray="3 3"
@@ -80,7 +106,7 @@ export function ImpedanceChart({ data }: ImpedanceChartProps) {
             type="number"
             domain={[freqRange.min, freqRange.max]}
             tick={{ fill: ct.tick, fontSize: 10, fontFamily: "JetBrains Mono, monospace" }}
-            tickFormatter={(v: number) => v.toFixed(1)}
+            tickFormatter={(v: number) => v.toFixed(3)}
             stroke={ct.axis}
           />
 
@@ -94,14 +120,32 @@ export function ImpedanceChart({ data }: ImpedanceChartProps) {
           {/* 50-ohm reference line */}
           <ReferenceLine
             y={50}
-            stroke="#3B82F6"
+            stroke="#6B7280"
             strokeDasharray="6 3"
-            strokeOpacity={0.3}
-            label={{ value: "50\u03A9", position: "right", fill: "#3B82F6", fontSize: 9 }}
+            strokeOpacity={0.5}
+            label={{ value: "50\u03A9", position: "right", fill: "#6B7280", fontSize: 9, fontFamily: "JetBrains Mono, monospace" }}
           />
 
-          {/* Zero reactance reference */}
+          {/* Zero reactance reference (resonance line) */}
           <ReferenceLine y={0} stroke={ct.axis} strokeOpacity={0.6} />
+
+          {/* Resonance markers where X crosses zero */}
+          {resonanceFreqs.map((freq, i) => (
+            <ReferenceLine
+              key={`res-${i}`}
+              x={freq}
+              stroke="#10B981"
+              strokeDasharray="3 3"
+              strokeOpacity={0.5}
+              label={{
+                value: `${freq.toFixed(3)}`,
+                position: "top",
+                fill: "#10B981",
+                fontSize: 8,
+                fontFamily: "JetBrains Mono, monospace",
+              }}
+            />
+          ))}
 
           <Tooltip
             contentStyle={{
@@ -114,9 +158,14 @@ export function ImpedanceChart({ data }: ImpedanceChartProps) {
             labelStyle={{ color: ct.tooltipLabel }}
             labelFormatter={(v: number) => `${v.toFixed(3)} MHz`}
             formatter={(value: number, name: string) => {
-              const label = name === "r" ? "R" : "X";
-              const unit = "\u03A9";
-              return [`${value.toFixed(1)} ${unit}`, label];
+              const label = name === "r" ? "R" : "jX";
+              const color = name === "r" ? "#3B82F6" : "#F59E0B";
+              return [
+                <span key={name} style={{ color }}>
+                  {value.toFixed(1)} {"\u03A9"}
+                </span>,
+                label,
+              ];
             }}
             cursor={{ stroke: ct.cursor, strokeWidth: 1 }}
           />
@@ -126,7 +175,7 @@ export function ImpedanceChart({ data }: ImpedanceChartProps) {
             wrapperStyle={{ fontSize: "10px", fontFamily: "JetBrains Mono, monospace" }}
             formatter={(value: string) => (
               <span style={{ color: ct.tick }}>
-                {value === "r" ? "R (\u03A9)" : "X (\u03A9)"}
+                {value === "r" ? "R (\u03A9)" : "jX (\u03A9)"}
               </span>
             )}
           />
@@ -138,18 +187,21 @@ export function ImpedanceChart({ data }: ImpedanceChartProps) {
             stroke="#3B82F6"
             strokeWidth={2}
             dot={false}
+            activeDot={{ r: 3, fill: "#3B82F6" }}
             name="r"
+            animationDuration={300}
           />
 
-          {/* Reactance — dashed orange */}
+          {/* Reactance — solid orange */}
           <Line
             type="monotone"
             dataKey="x"
             stroke="#F59E0B"
             strokeWidth={2}
-            strokeDasharray="5 3"
             dot={false}
+            activeDot={{ r: 3, fill: "#F59E0B" }}
             name="x"
+            animationDuration={300}
           />
         </LineChart>
       </ResponsiveContainer>

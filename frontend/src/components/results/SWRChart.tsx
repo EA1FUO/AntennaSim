@@ -1,7 +1,14 @@
 /**
  * SWR vs Frequency chart using Recharts.
- * Background color zones: green (<1.5), amber (1.5-3), red (>3).
- * Optional .s1p overlay for measured VNA data comparison.
+ *
+ * Features:
+ * - Background color zones: green (<1.5), amber (1.5-3), red (>3)
+ * - Non-linear Y-axis ticks at key SWR values
+ * - Band edge markers with labels
+ * - Resonance point (minimum SWR) highlighted with annotation
+ * - 3-decimal frequency labels on X-axis
+ * - Crosshair tooltip showing frequency, SWR, and impedance
+ * - Optional .s1p overlay for measured VNA data comparison
  */
 
 import { useMemo, useCallback } from "react";
@@ -15,10 +22,28 @@ import {
   Tooltip,
   ReferenceLine,
   ReferenceArea,
+  Legend,
 } from "recharts";
 import type { FrequencyResult } from "../../api/nec";
 import type { S1PDataPoint } from "../../utils/s1p-parser";
 import { useChartTheme } from "../../hooks/useChartTheme";
+
+/** Amateur radio band edges (MHz) */
+const HAM_BANDS = [
+  { name: "160m", start: 1.8, end: 2.0 },
+  { name: "80m", start: 3.5, end: 4.0 },
+  { name: "60m", start: 5.3305, end: 5.4065 },
+  { name: "40m", start: 7.0, end: 7.3 },
+  { name: "30m", start: 10.1, end: 10.15 },
+  { name: "20m", start: 14.0, end: 14.35 },
+  { name: "17m", start: 18.068, end: 18.168 },
+  { name: "15m", start: 21.0, end: 21.45 },
+  { name: "12m", start: 24.89, end: 24.99 },
+  { name: "10m", start: 28.0, end: 29.7 },
+  { name: "6m", start: 50.0, end: 54.0 },
+  { name: "2m", start: 144.0, end: 148.0 },
+  { name: "70cm", start: 420.0, end: 450.0 },
+];
 
 interface SWRChartProps {
   data: FrequencyResult[];
@@ -26,6 +51,8 @@ interface SWRChartProps {
   selectedIndex?: number;
   /** Optional .s1p overlay data */
   s1pData?: S1PDataPoint[];
+  /** Height class override (default: h-48) */
+  heightClass?: string;
 }
 
 export function SWRChart({
@@ -33,17 +60,15 @@ export function SWRChart({
   onFrequencyClick,
   selectedIndex,
   s1pData,
+  heightClass = "h-48",
 }: SWRChartProps) {
-  // Merge simulation data and .s1p data into a unified dataset.
-  // For the sim line we use "swr", for .s1p we use "s1pSwr".
+  // Merge simulation data and .s1p data into a unified dataset
   const chartData = useMemo(() => {
-    // Build a map keyed by frequency (rounded to avoid float mismatches)
     const merged: Record<
       string,
-      { freq: number; swr?: number; s1pSwr?: number; index?: number }
+      { freq: number; swr?: number; s1pSwr?: number; index?: number; r?: number; x?: number }
     > = {};
 
-    // Add simulation data
     for (let i = 0; i < data.length; i++) {
       const d = data[i]!;
       const key = d.frequency_mhz.toFixed(4);
@@ -51,10 +76,11 @@ export function SWRChart({
         freq: d.frequency_mhz,
         swr: Math.min(d.swr_50, 10),
         index: i,
+        r: d.impedance.real,
+        x: d.impedance.imag,
       };
     }
 
-    // Add .s1p data
     if (s1pData) {
       for (const pt of s1pData) {
         const key = pt.frequency_mhz.toFixed(4);
@@ -69,7 +95,6 @@ export function SWRChart({
       }
     }
 
-    // Sort by frequency
     return Object.values(merged).sort((a, b) => a.freq - b.freq);
   }, [data, s1pData]);
 
@@ -80,6 +105,34 @@ export function SWRChart({
       max: chartData[chartData.length - 1]!.freq,
     };
   }, [chartData]);
+
+  // Find resonance point (minimum SWR in simulation data)
+  const resonance = useMemo(() => {
+    if (data.length === 0) return null;
+    let minSwr = Infinity;
+    let minIdx = 0;
+    for (let i = 0; i < data.length; i++) {
+      if (data[i]!.swr_50 < minSwr) {
+        minSwr = data[i]!.swr_50;
+        minIdx = i;
+      }
+    }
+    return {
+      freq: data[minIdx]!.frequency_mhz,
+      swr: Math.min(minSwr, 10),
+      index: minIdx,
+    };
+  }, [data]);
+
+  // Find band edges that fall within the frequency range
+  const visibleBands = useMemo(() => {
+    const { min, max } = freqRange;
+    const span = max - min;
+    if (span <= 0) return [];
+    return HAM_BANDS.filter(
+      (b) => b.start <= max && b.end >= min
+    );
+  }, [freqRange]);
 
   const handleClick = useCallback(
     (point: { activePayload?: Array<{ payload: { index?: number } }> }) => {
@@ -96,11 +149,11 @@ export function SWRChart({
   if (data.length === 0 && !s1pData?.length) return null;
 
   return (
-    <div className="w-full h-48">
+    <div className={`w-full ${heightClass}`}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={chartData}
-          margin={{ top: 5, right: 5, bottom: 5, left: -10 }}
+          margin={{ top: 10, right: 10, bottom: 5, left: -5 }}
           onClick={handleClick}
         >
           {/* SWR quality background zones */}
@@ -120,7 +173,7 @@ export function SWRChart({
             type="number"
             domain={[freqRange.min, freqRange.max]}
             tick={{ fill: ct.tick, fontSize: 10, fontFamily: "JetBrains Mono, monospace" }}
-            tickFormatter={(v: number) => v.toFixed(1)}
+            tickFormatter={(v: number) => v.toFixed(3)}
             stroke={ct.axis}
           />
 
@@ -136,6 +189,24 @@ export function SWRChart({
           <ReferenceLine y={2} stroke="#F59E0B" strokeDasharray="3 3" strokeOpacity={0.4} />
           <ReferenceLine y={3} stroke="#EF4444" strokeDasharray="3 3" strokeOpacity={0.4} />
 
+          {/* Band edge markers */}
+          {visibleBands.map((band) => (
+            <ReferenceArea
+              key={band.name}
+              x1={Math.max(band.start, freqRange.min)}
+              x2={Math.min(band.end, freqRange.max)}
+              fill="#3B82F6"
+              fillOpacity={0.04}
+              label={{
+                value: band.name,
+                position: "insideTopLeft",
+                fill: ct.tick,
+                fontSize: 8,
+                fontFamily: "JetBrains Mono, monospace",
+              }}
+            />
+          ))}
+
           {/* Selected frequency marker */}
           {selectedIndex != null && data[selectedIndex] && (
             <ReferenceLine
@@ -143,6 +214,24 @@ export function SWRChart({
               stroke="#3B82F6"
               strokeWidth={1.5}
               strokeDasharray="4 2"
+            />
+          )}
+
+          {/* Resonance point marker */}
+          {resonance && (
+            <ReferenceLine
+              x={resonance.freq}
+              stroke="#10B981"
+              strokeWidth={1}
+              strokeDasharray="2 2"
+              strokeOpacity={0.6}
+              label={{
+                value: `${resonance.freq.toFixed(3)} MHz  SWR ${resonance.swr.toFixed(2)}`,
+                position: "top",
+                fill: "#10B981",
+                fontSize: 9,
+                fontFamily: "JetBrains Mono, monospace",
+              }}
             />
           )}
 
@@ -176,6 +265,19 @@ export function SWRChart({
             cursor={{ stroke: ct.cursor, strokeWidth: 1 }}
           />
 
+          {/* Legend when .s1p is present */}
+          {s1pData && s1pData.length > 0 && (
+            <Legend
+              iconType="line"
+              wrapperStyle={{ fontSize: "10px", fontFamily: "JetBrains Mono, monospace" }}
+              formatter={(value: string) => (
+                <span style={{ color: ct.tick }}>
+                  {value === "swr" ? "Simulation" : ".s1p Measured"}
+                </span>
+              )}
+            />
+          )}
+
           {/* Simulation SWR line */}
           <Line
             type="monotone"
@@ -185,6 +287,8 @@ export function SWRChart({
             dot={false}
             activeDot={{ r: 4, fill: "#3B82F6", stroke: "#0A0A0F", strokeWidth: 2 }}
             connectNulls={false}
+            name="swr"
+            animationDuration={300}
           />
 
           {/* .s1p overlay line */}
@@ -198,6 +302,7 @@ export function SWRChart({
               dot={false}
               connectNulls={false}
               name="s1pSwr"
+              animationDuration={300}
             />
           )}
         </LineChart>

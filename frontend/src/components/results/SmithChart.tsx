@@ -183,11 +183,15 @@ export function SmithChart({
         {/* Background */}
         <rect width={size} height={size} fill={bgColor} rx={4} />
 
-        {/* SWR circles (filled zones) */}
+        {/* SWR circles (filled zones + dashed outlines) */}
         <g clipPath="url(#smith-clip)">
           <path d={swrCirclePath(3, cx, cy, chartRadius)} fill={swrWarningColor} />
           <path d={swrCirclePath(2, cx, cy, chartRadius)} fill={swrGoodColor} />
           <path d={swrCirclePath(1.5, cx, cy, chartRadius)} fill={swrExcellentColor} />
+          {/* Dashed SWR circle outlines */}
+          <path d={swrCirclePath(1.5, cx, cy, chartRadius)} fill="none" stroke={gridColor} strokeWidth={0.5} strokeDasharray="3 3" />
+          <path d={swrCirclePath(2, cx, cy, chartRadius)} fill="none" stroke={gridColor} strokeWidth={0.5} strokeDasharray="3 3" />
+          <path d={swrCirclePath(3, cx, cy, chartRadius)} fill="none" stroke={gridColor} strokeWidth={0.5} strokeDasharray="3 3" />
         </g>
 
         {/* Unit circle (boundary) */}
@@ -273,8 +277,12 @@ export function SmithChart({
           );
         })}
 
-        {/* Center point (Z0) */}
-        <circle cx={cx} cy={cy} r={2} fill={gridColor} />
+        {/* Center point (Z0 = 50+j0) */}
+        <circle cx={cx} cy={cy} r={3} fill="none" stroke={gridLabelColor} strokeWidth={1} />
+        <circle cx={cx} cy={cy} r={1.5} fill={gridLabelColor} />
+        <text x={cx + 6} y={cy - 6} fill={gridLabelColor} fontSize={7} fontFamily="JetBrains Mono, monospace">
+          {z0}+j0
+        </text>
 
         {/* Impedance trajectory */}
         {trajectoryPath && (
@@ -340,8 +348,8 @@ export function SmithChart({
         <div
           className="absolute bg-surface border border-border rounded-md px-2 py-1.5 shadow-lg pointer-events-none z-20"
           style={{
-            left: Math.min(tooltipData.svgX + 10, size - 120),
-            top: Math.max(tooltipData.svgY - 50, 0),
+            left: Math.min(tooltipData.svgX + 10, size - 140),
+            top: Math.max(tooltipData.svgY - 70, 0),
           }}
         >
           <div className="text-[10px] font-mono space-y-0.5">
@@ -353,6 +361,10 @@ export function SmithChart({
             </div>
             <div className="text-text-secondary">
               SWR = {tooltipData.swr.toFixed(2)}
+            </div>
+            <div className="text-text-secondary">
+              {"\u0393"} = {tooltipData.gamma.real.toFixed(3)} {tooltipData.gamma.imag >= 0 ? "+" : ""}{tooltipData.gamma.imag.toFixed(3)}j
+              {" "}|{"\u0393"}| = {Math.sqrt(tooltipData.gamma.real ** 2 + tooltipData.gamma.imag ** 2).toFixed(3)}
             </div>
           </div>
         </div>

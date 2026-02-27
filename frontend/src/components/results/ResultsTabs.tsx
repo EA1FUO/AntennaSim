@@ -10,6 +10,7 @@ import { ImpedanceChart } from "./ImpedanceChart";
 import { GainTable } from "./GainTable";
 import { PatternPolar } from "./PatternPolar";
 import { SmithChart } from "./SmithChart";
+import { ChartExpandable } from "../ui/ChartPopup";
 import { useSimulationStore } from "../../stores/simulationStore";
 import { useUIStore, type ResultsTab } from "../../stores/uiStore";
 import { formatSwr, formatImpedance, formatGain, swrColorClass } from "../../utils/units";
@@ -187,12 +188,25 @@ export function ResultsPanel() {
                       </button>
                     </div>
                   </div>
-                  <SWRChart
-                    data={result.frequency_data}
-                    onFrequencyClick={handleFreqClick}
-                    selectedIndex={selectedFreqIndex}
-                    s1pData={s1pFile?.data}
-                  />
+                  <ChartExpandable
+                    title="SWR vs Frequency"
+                    expandedChildren={
+                      <SWRChart
+                        data={result.frequency_data}
+                        onFrequencyClick={handleFreqClick}
+                        selectedIndex={selectedFreqIndex}
+                        s1pData={s1pFile?.data}
+                        heightClass="h-full"
+                      />
+                    }
+                  >
+                    <SWRChart
+                      data={result.frequency_data}
+                      onFrequencyClick={handleFreqClick}
+                      selectedIndex={selectedFreqIndex}
+                      s1pData={s1pFile?.data}
+                    />
+                  </ChartExpandable>
                 </div>
               )}
 
@@ -201,7 +215,14 @@ export function ResultsPanel() {
                   <h4 className="text-xs font-medium text-text-secondary">
                     Impedance vs Frequency
                   </h4>
-                  <ImpedanceChart data={result.frequency_data} />
+                  <ChartExpandable
+                    title="Impedance vs Frequency"
+                    expandedChildren={
+                      <ImpedanceChart data={result.frequency_data} heightClass="h-full" />
+                    }
+                  >
+                    <ImpedanceChart data={result.frequency_data} />
+                  </ChartExpandable>
                 </div>
               )}
 
@@ -210,11 +231,25 @@ export function ResultsPanel() {
                   <h4 className="text-xs font-medium text-text-secondary">
                     Smith Chart
                   </h4>
-                  <SmithChart
-                    data={result.frequency_data}
-                    selectedIndex={selectedFreqIndex}
-                    onFrequencyClick={handleFreqClick}
-                  />
+                  <ChartExpandable
+                    title="Smith Chart"
+                    expandedChildren={
+                      <div className="w-full h-full flex items-center justify-center">
+                        <SmithChart
+                          data={result.frequency_data}
+                          selectedIndex={selectedFreqIndex}
+                          onFrequencyClick={handleFreqClick}
+                          size={560}
+                        />
+                      </div>
+                    }
+                  >
+                    <SmithChart
+                      data={result.frequency_data}
+                      selectedIndex={selectedFreqIndex}
+                      onFrequencyClick={handleFreqClick}
+                    />
+                  </ChartExpandable>
                 </div>
               )}
 
@@ -225,16 +260,42 @@ export function ResultsPanel() {
                   </h4>
                   {selectedFreqResult.pattern ? (
                     <div className="space-y-3">
-                      <PatternPolar
-                        pattern={selectedFreqResult.pattern}
-                        mode="azimuth"
-                        size={180}
-                      />
-                      <PatternPolar
-                        pattern={selectedFreqResult.pattern}
-                        mode="elevation"
-                        size={180}
-                      />
+                      <ChartExpandable
+                        title="Azimuth Pattern (H-plane)"
+                        expandedChildren={
+                          <div className="w-full h-full flex items-center justify-center">
+                            <PatternPolar
+                              pattern={selectedFreqResult.pattern}
+                              mode="azimuth"
+                              size={500}
+                            />
+                          </div>
+                        }
+                      >
+                        <PatternPolar
+                          pattern={selectedFreqResult.pattern}
+                          mode="azimuth"
+                          size={180}
+                        />
+                      </ChartExpandable>
+                      <ChartExpandable
+                        title="Elevation Pattern (E-plane)"
+                        expandedChildren={
+                          <div className="w-full h-full flex items-center justify-center">
+                            <PatternPolar
+                              pattern={selectedFreqResult.pattern}
+                              mode="elevation"
+                              size={500}
+                            />
+                          </div>
+                        }
+                      >
+                        <PatternPolar
+                          pattern={selectedFreqResult.pattern}
+                          mode="elevation"
+                          size={180}
+                        />
+                      </ChartExpandable>
                     </div>
                   ) : (
                     <p className="text-xs text-text-secondary text-center py-4">

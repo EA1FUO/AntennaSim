@@ -4,7 +4,7 @@ import { ACESFilmicToneMapping, SRGBColorSpace } from "three";
 import { GroundPlane } from "./GroundPlane";
 import { CompassRose } from "./CompassRose";
 import { AxesHelper } from "./AxesHelper";
-import { AntennaModel } from "./AntennaModel";
+import { AntennaModel, JunctionSpheres } from "./AntennaModel";
 import { FeedpointMarker } from "./FeedpointMarker";
 import { CameraControls } from "./CameraControls";
 import { PostProcessing } from "./PostProcessing";
@@ -83,8 +83,8 @@ export function SceneRoot({
         {/* Fog for depth perception */}
         <fog attach="fog" args={[fogColor, 60, 200]} />
 
-        {/* Ground */}
-        {viewToggles.grid && <GroundPlane />}
+        {/* Ground — auto-sized to antenna footprint */}
+        {viewToggles.grid && <GroundPlane wires={wires} />}
 
         {/* Compass Rose */}
         {viewToggles.compass && <CompassRose />}
@@ -97,6 +97,9 @@ export function SceneRoot({
           wires.map((wire) => (
             <AntennaModel key={wire.tag} wire={wire} />
           ))}
+
+        {/* Wire junction spheres */}
+        {viewToggles.wires && <JunctionSpheres wires={wires} />}
 
         {/* Feedpoints */}
         {viewToggles.wires &&
@@ -131,8 +134,8 @@ export function SceneRoot({
           <CurrentDistribution3D currents={currents} />
         )}
 
-        {/* Camera */}
-        <CameraControls />
+        {/* Camera — auto-frames to antenna bounding box */}
+        <CameraControls wires={wires} hasGround={viewToggles.grid} />
 
         {/* Post-processing */}
         <PostProcessing />

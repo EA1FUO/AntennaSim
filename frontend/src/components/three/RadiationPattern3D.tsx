@@ -87,6 +87,9 @@ export function RadiationPattern3D({
     // Normalize: convert dBi to linear with max = 1
     const gainRange = Math.max(maxGain - minGain, 10); // at least 10dB range
 
+    // Threshold: gains below -20dBi from max collapse to center to avoid noise
+    const noiseFloor = maxGain - 30;
+
     // Build vertices, colors, and indices for a sphere mesh
     const positions: number[] = [];
     const colors: number[] = [];
@@ -94,14 +97,18 @@ export function RadiationPattern3D({
 
     for (let ti = 0; ti < theta_count; ti++) {
       for (let pi = 0; pi < phi_count; pi++) {
-        const gainDb = gain_dbi[ti]?.[pi] ?? -999;
+        let gainDb = gain_dbi[ti]?.[pi] ?? -999;
+
+        // Clamp -999.99 and very low gains to zero radius
+        if (gainDb <= -999 || gainDb < noiseFloor) {
+          gainDb = minGain;
+        }
 
         // Normalized gain (0-1)
-        const normalized =
-          gainDb > -999 ? Math.max(0, (gainDb - minGain) / gainRange) : 0;
+        const normalized = Math.max(0, (gainDb - minGain) / gainRange);
 
-        // Linear gain for radius (use power scale for better visibility)
-        const radius = Math.max(0.01, normalized) * scale;
+        // Linear gain for radius — minimum prevents zero-area triangles
+        const radius = Math.max(0.005, normalized) * scale;
 
         // NEC2 angles: theta from zenith (0=up, 90=horizon, 180=down)
         // phi from X axis (0=east, counterclockwise when viewed from above)
@@ -151,7 +158,22 @@ export function RadiationPattern3D({
     geo.setAttribute("position", new Float32BufferAttribute(positions, 3));
     geo.setAttribute("color", new Float32BufferAttribute(colors, 3));
     geo.setIndex(indices);
+    // Compute smooth vertex normals for non-faceted appearance
     geo.computeVertexNormals();
+    // Normalize normals to ensure consistent lighting
+    const normals = geo.getAttribute("normal");
+    if (normals) {
+      for (let i = 0; i < normals.count; i++) {
+        const nx = normals.getX(i);
+        const ny = normals.getY(i);
+        const nz = normals.getZ(i);
+        const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+        if (len > 0) {
+          normals.setXYZ(i, nx / len, ny / len, nz / len);
+        }
+      }
+      normals.needsUpdate = true;
+    }
 
     return geo;
   }, [pattern, scale]);
