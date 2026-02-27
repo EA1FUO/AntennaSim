@@ -35,7 +35,7 @@ interface ImpedanceChartProps {
   heightClass?: string;
 }
 
-export function ImpedanceChart({ data, matching = DEFAULT_MATCHING, heightClass = "h-48" }: ImpedanceChartProps) {
+export function ImpedanceChart({ data, matching = DEFAULT_MATCHING, heightClass = "h-56" }: ImpedanceChartProps) {
   const chartData = useMemo(
     () =>
       data.map((d) => {
@@ -100,7 +100,7 @@ export function ImpedanceChart({ data, matching = DEFAULT_MATCHING, heightClass 
       <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={chartData}
-          margin={{ top: 10, right: 10, bottom: 5, left: -5 }}
+          margin={{ top: 20, right: 30, bottom: 5, left: -5 }}
         >
           <CartesianGrid
             strokeDasharray="3 3"

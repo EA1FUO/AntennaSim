@@ -65,7 +65,7 @@ export function SWRChart({
   selectedIndex,
   s1pData,
   matching = DEFAULT_MATCHING,
-  heightClass = "h-48",
+  heightClass = "h-56",
 }: SWRChartProps) {
   // Merge simulation data and .s1p data into a unified dataset
   const chartData = useMemo(() => {
@@ -161,7 +161,7 @@ export function SWRChart({
       <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={chartData}
-          margin={{ top: 10, right: 10, bottom: 5, left: -5 }}
+          margin={{ top: 20, right: 15, bottom: 5, left: -5 }}
           onClick={handleClick}
         >
           {/* SWR quality background zones */}
