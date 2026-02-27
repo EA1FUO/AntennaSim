@@ -8,7 +8,7 @@
  *   [3D Viewport (45%)] [Bottom Sheet: Antenna | Results tabs]
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAntennaStore } from "../stores/antennaStore";
 import { useSimulationStore } from "../stores/simulationStore";
 import { useUIStore } from "../stores/uiStore";
@@ -58,6 +58,7 @@ export function SimulatorPage() {
   const simError = useSimulationStore((s) => s.error);
   const result = useSimulationStore((s) => s.result);
   const simulate = useSimulationStore((s) => s.simulate);
+  const resetSimulation = useSimulationStore((s) => s.reset);
   const selectedFreqIndex = useSimulationStore((s) => s.selectedFreqIndex);
   const setSelectedFreqIndex = useSimulationStore((s) => s.setSelectedFreqIndex);
   const selectedFreqResult = useSimulationStore((s) =>
@@ -73,6 +74,16 @@ export function SimulatorPage() {
   const setMobileTab = useUIStore((s) => s.setMobileTab);
   const matching = useUIStore((s) => s.matching);
   const setMatching = useUIStore((s) => s.setMatching);
+
+  // Reset stale simulation results when antenna geometry or ground changes
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    resetSimulation();
+  }, [wireGeometry, ground, resetSimulation]);
 
   // Handlers
   const handleTemplateSelect = useCallback(

@@ -8,7 +8,7 @@
  *   [3D Viewport (45%)] [Bottom Sheet: Wires | Properties | Results]
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEditorStore } from "../stores/editorStore";
 import { useSimulationStore } from "../stores/simulationStore";
 import { useUIStore } from "../stores/uiStore";
@@ -77,6 +77,7 @@ export function EditorPage() {
   const simResult = useSimulationStore((s) => s.result);
   const simError = useSimulationStore((s) => s.error);
   const simulateAdvanced = useSimulationStore((s) => s.simulateAdvanced);
+  const resetSimulation = useSimulationStore((s) => s.reset);
   const selectedFreqResult = useSimulationStore((s) =>
     s.getSelectedFrequencyResult()
   );
@@ -159,6 +160,16 @@ export function EditorPage() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [setMode, deselectAll, deleteSelected, undo, redo, selectAll]);
+
+  // Reset stale simulation results when antenna geometry or config changes
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    resetSimulation();
+  }, [wires, excitations, loads, transmissionLines, ground, resetSimulation]);
 
   // Handlers
   const handlePreset = useCallback(
