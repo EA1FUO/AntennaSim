@@ -9,6 +9,7 @@ from src.models.results import (
     PatternData,
     FrequencyResult,
     SegmentCurrent,
+    NearFieldResult,
 )
 
 logger = logging.getLogger("antsim.nec_output")
@@ -68,6 +69,114 @@ _CURRENT_LINE_RE = re.compile(
     r"(" + _NUM + r")\s+(" + _NUM + r")\s+"             # real, imag
     r"(" + _NUM + r")\s+(" + _NUM + r")"                # magnitude, phase
 )
+
+
+# Near electric field section header
+_NEAR_FIELD_HEADER_RE = re.compile(r"NEAR ELECTRIC FIELDS")
+
+# Near field data line:
+# X  Y  Z  EX_MAG  EX_PHASE  EY_MAG  EY_PHASE  EZ_MAG  EZ_PHASE
+_NEAR_FIELD_LINE_RE = re.compile(
+    r"\s*(" + _NUM + r")\s+(" + _NUM + r")\s+(" + _NUM + r")\s+"  # x, y, z
+    r"(" + _NUM + r")\s+(" + _NUM + r")\s+"  # ex_mag, ex_phase
+    r"(" + _NUM + r")\s+(" + _NUM + r")\s+"  # ey_mag, ey_phase
+    r"(" + _NUM + r")\s+(" + _NUM + r")"     # ez_mag, ez_phase
+)
+
+
+def parse_near_field_output(
+    output: str,
+    plane: str = "horizontal",
+    height_m: float = 0.0,
+    extent_m: float = 20.0,
+    resolution_m: float = 0.5,
+) -> NearFieldResult | None:
+    """Parse NE output section for near electric field data.
+
+    Returns a NearFieldResult with a 2D grid of E-field magnitudes.
+    """
+    lines = output.splitlines()
+    in_near_field = False
+    skip_lines = 0
+    raw_data: list[tuple[float, float, float, float]] = []  # x, y, z, |E|
+
+    for line in lines:
+        if _NEAR_FIELD_HEADER_RE.search(line):
+            in_near_field = True
+            skip_lines = 3  # Skip column headers
+            continue
+
+        if in_near_field:
+            if skip_lines > 0:
+                skip_lines -= 1
+                continue
+
+            m = _NEAR_FIELD_LINE_RE.search(line)
+            if m:
+                x = float(m.group(1))
+                y = float(m.group(2))
+                z = float(m.group(3))
+                ex_mag = float(m.group(4))
+                ey_mag = float(m.group(6))
+                ez_mag = float(m.group(8))
+                e_total = math.sqrt(ex_mag ** 2 + ey_mag ** 2 + ez_mag ** 2)
+                raw_data.append((x, y, z, e_total))
+                continue
+
+            if line.strip() == "":
+                if raw_data:
+                    in_near_field = False
+
+    if not raw_data:
+        return None
+
+    # Organize into 2D grid
+    if plane == "horizontal":
+        # Grid is in XY plane at fixed Z = height_m
+        nx = int(2 * extent_m / resolution_m) + 1
+        ny = nx
+        grid = [[0.0] * ny for _ in range(nx)]
+
+        for x, y, _z, e_mag in raw_data:
+            xi = round((x + extent_m) / resolution_m)
+            yi = round((y + extent_m) / resolution_m)
+            if 0 <= xi < nx and 0 <= yi < ny:
+                grid[xi][yi] = e_mag
+
+        return NearFieldResult(
+            plane=plane,
+            height_m=height_m,
+            nx=nx,
+            ny=ny,
+            x_start=-extent_m,
+            y_start=-extent_m,
+            dx=resolution_m,
+            dy=resolution_m,
+            field_magnitude=grid,
+        )
+    else:
+        # Vertical plane: grid is in XZ
+        nx = int(2 * extent_m / resolution_m) + 1
+        nz = int(extent_m / resolution_m) + 1
+        grid = [[0.0] * nz for _ in range(nx)]
+
+        for x, _y, z, e_mag in raw_data:
+            xi = round((x + extent_m) / resolution_m)
+            zi = round(z / resolution_m)
+            if 0 <= xi < nx and 0 <= zi < nz:
+                grid[xi][zi] = e_mag
+
+        return NearFieldResult(
+            plane=plane,
+            height_m=0.0,
+            nx=nx,
+            ny=nz,
+            x_start=-extent_m,
+            y_start=0.0,
+            dx=resolution_m,
+            dy=resolution_m,
+            field_magnitude=grid,
+        )
 
 
 def _compute_beamwidth(

@@ -67,6 +67,22 @@ class FrequencyResult(BaseModel):
     )
 
 
+class NearFieldResult(BaseModel):
+    """Near electric field calculation results."""
+
+    plane: str = Field(description="horizontal or vertical")
+    height_m: float = Field(description="Height of the plane (m)")
+    nx: int = Field(description="Number of X grid points")
+    ny: int = Field(description="Number of Y (or Z) grid points")
+    x_start: float = Field(description="X grid start (m)")
+    y_start: float = Field(description="Y/Z grid start (m)")
+    dx: float = Field(description="X step (m)")
+    dy: float = Field(description="Y/Z step (m)")
+    field_magnitude: list[list[float]] = Field(
+        description="2D grid of E-field magnitudes [xi][yi] in V/m"
+    )
+
+
 class SimulationResult(BaseModel):
     """Complete simulation response."""
 
@@ -76,4 +92,5 @@ class SimulationResult(BaseModel):
     total_segments: int
     cached: bool = False
     frequency_data: list[FrequencyResult]
+    near_field: NearFieldResult | None = Field(default=None, description="Near-field results")
     warnings: list[str] = Field(default_factory=list)

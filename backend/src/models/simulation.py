@@ -6,6 +6,19 @@ from src.models.antenna import Wire, Excitation, LumpedLoad, TransmissionLine, W
 from src.models.ground import GroundConfig
 
 
+class NearFieldConfig(BaseModel):
+    """Near-field calculation configuration."""
+
+    enabled: bool = Field(default=False, description="Enable near-field calculation")
+    plane: str = Field(default="horizontal", description="horizontal or vertical")
+    height_m: float = Field(default=1.8, ge=0.0, le=100.0,
+                             description="Height of horizontal plane (m)")
+    extent_m: float = Field(default=20.0, ge=1.0, le=200.0,
+                             description="Half-extent of calculation grid (m)")
+    resolution_m: float = Field(default=0.5, ge=0.1, le=10.0,
+                                 description="Grid resolution (m)")
+
+
 class FrequencyConfig(BaseModel):
     """Frequency sweep configuration."""
 
@@ -74,6 +87,10 @@ class SimulationRequest(BaseModel):
                                                   description="Geometry transforms (GM cards)")
     symmetry: CylindricalSymmetry | None = Field(default=None,
                                                    description="Cylindrical symmetry (GR card)")
+
+    # V2: Near-field calculation
+    near_field: "NearFieldConfig | None" = Field(default=None,
+                                                   description="Near-field calculation parameters")
 
     @model_validator(mode="after")
     def validate_total_segments(self) -> "SimulationRequest":

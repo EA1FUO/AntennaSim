@@ -125,6 +125,19 @@ export interface FrequencyResult {
   currents: SegmentCurrent[] | null;
 }
 
+/** Near-field calculation result */
+export interface NearFieldResult {
+  plane: string;
+  height_m: number;
+  nx: number;
+  ny: number;
+  x_start: number;
+  y_start: number;
+  dx: number;
+  dy: number;
+  field_magnitude: number[][];
+}
+
 /** Complete simulation response */
 export interface SimulationResult {
   simulation_id: string;
@@ -133,6 +146,7 @@ export interface SimulationResult {
   total_segments: number;
   cached: boolean;
   frequency_data: FrequencyResult[];
+  near_field?: NearFieldResult | null;
   warnings: string[];
 }
 

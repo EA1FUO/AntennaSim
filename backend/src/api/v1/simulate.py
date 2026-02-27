@@ -10,7 +10,7 @@ from src.models.simulation import SimulationRequest
 from src.models.results import SimulationResult
 from src.simulation.nec_input import build_card_deck
 from src.simulation.nec_runner import run_nec2c, NecExecutionError
-from src.simulation.nec_output import parse_nec_output
+from src.simulation.nec_output import parse_nec_output, parse_near_field_output
 from src.simulation.cache import compute_cache_key, get_cached_result, set_cached_result
 from src.core.rate_limiter import check_rate_limit, release_concurrent
 
@@ -104,6 +104,21 @@ async def simulate(request_body: SimulationRequest, request: Request) -> Simulat
                 },
             )
 
+        # Parse near-field data if requested
+        near_field_result = None
+        if request_body.near_field and request_body.near_field.enabled:
+            try:
+                near_field_result = parse_near_field_output(
+                    output,
+                    plane=request_body.near_field.plane,
+                    height_m=request_body.near_field.height_m,
+                    extent_m=request_body.near_field.extent_m,
+                    resolution_m=request_body.near_field.resolution_m,
+                )
+            except Exception as e:
+                logger.warning("Near-field parsing failed for %s: %s", sim_id, e)
+                # Non-fatal — continue without near-field data
+
         if not frequency_data:
             raise HTTPException(
                 status_code=422,
@@ -141,6 +156,7 @@ async def simulate(request_body: SimulationRequest, request: Request) -> Simulat
             total_segments=total_segments,
             cached=False,
             frequency_data=frequency_data,
+            near_field=near_field_result,
             warnings=warnings,
         )
 

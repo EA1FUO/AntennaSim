@@ -109,6 +109,33 @@ def build_card_deck(request: SimulationRequest) -> str:
         f"{freq.start_mhz:.6f} {freq.step_mhz:.6f}"
     )
 
+    # Near-field cards (NE/NH) — must come before RP
+    if request.near_field and request.near_field.enabled:
+        nf = request.near_field
+        if nf.plane == "horizontal":
+            nx = int(2 * nf.extent_m / nf.resolution_m) + 1
+            ny = nx
+            nz = 1
+            x0 = -nf.extent_m
+            y0 = -nf.extent_m
+            z0 = nf.height_m
+            dx = nf.resolution_m
+            dy = nf.resolution_m
+            dz = 0.0
+        else:  # vertical plane along X axis
+            nx = int(2 * nf.extent_m / nf.resolution_m) + 1
+            ny = 1
+            nz = int(nf.extent_m / nf.resolution_m) + 1
+            x0 = -nf.extent_m
+            y0 = 0.0
+            z0 = 0.0
+            dx = nf.resolution_m
+            dy = 0.0
+            dz = nf.resolution_m
+        lines.append(
+            f"NE 0 {nx} {ny} {nz} {x0:.4f} {y0:.4f} {z0:.4f} {dx:.4f} {dy:.4f} {dz:.4f}"
+        )
+
     # Radiation pattern card
     pat = request.pattern
     lines.append(
