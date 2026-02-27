@@ -5,6 +5,8 @@
 import { create } from "zustand";
 import type { ViewToggles, CameraPreset } from "../components/three/types";
 import type { S1PFile } from "../utils/s1p-parser";
+import type { MatchingConfig } from "../utils/units";
+import { DEFAULT_MATCHING } from "../utils/units";
 
 export type Theme = "dark" | "light";
 export type ResultsTab = "swr" | "impedance" | "pattern" | "gain" | "smith";
@@ -27,6 +29,8 @@ interface UIState {
   mobileTab: MobileTab;
   /** Imported .s1p file for SWR overlay */
   s1pFile: S1PFile | null;
+  /** Impedance matching (balun/unun) configuration */
+  matching: MatchingConfig;
 
   // Actions
   setTheme: (theme: Theme) => void;
@@ -41,6 +45,7 @@ interface UIState {
   setResultsTab: (tab: ResultsTab) => void;
   setMobileTab: (tab: MobileTab) => void;
   setS1PFile: (file: S1PFile | null) => void;
+  setMatching: (matching: MatchingConfig) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -65,6 +70,7 @@ export const useUIStore = create<UIState>((set) => ({
   resultsTab: "swr",
   mobileTab: "antenna",
   s1pFile: null,
+  matching: { ...DEFAULT_MATCHING },
 
   setTheme: (theme) => set({ theme }),
   toggleTheme: () =>
@@ -84,4 +90,5 @@ export const useUIStore = create<UIState>((set) => ({
   setResultsTab: (tab) => set({ resultsTab: tab }),
   setMobileTab: (tab) => set({ mobileTab: tab }),
   setS1PFile: (file) => set({ s1pFile: file }),
+  setMatching: (matching) => set({ matching }),
 }));

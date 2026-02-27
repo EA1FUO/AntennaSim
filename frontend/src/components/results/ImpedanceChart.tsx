@@ -23,23 +23,30 @@ import {
   Legend,
 } from "recharts";
 import type { FrequencyResult } from "../../api/nec";
+import type { MatchingConfig } from "../../utils/units";
+import { applyMatching, DEFAULT_MATCHING } from "../../utils/units";
 import { useChartTheme } from "../../hooks/useChartTheme";
 
 interface ImpedanceChartProps {
   data: FrequencyResult[];
+  /** Matching config for impedance transformation */
+  matching?: MatchingConfig;
   /** Height class override (default: h-48) */
   heightClass?: string;
 }
 
-export function ImpedanceChart({ data, heightClass = "h-48" }: ImpedanceChartProps) {
+export function ImpedanceChart({ data, matching = DEFAULT_MATCHING, heightClass = "h-48" }: ImpedanceChartProps) {
   const chartData = useMemo(
     () =>
-      data.map((d) => ({
-        freq: d.frequency_mhz,
-        r: d.impedance.real,
-        x: d.impedance.imag,
-      })),
-    [data]
+      data.map((d) => {
+        const m = applyMatching(d.impedance.real, d.impedance.imag, matching);
+        return {
+          freq: d.frequency_mhz,
+          r: m.real,
+          x: m.imag,
+        };
+      }),
+    [data, matching]
   );
 
   const freqRange = useMemo(() => {
@@ -117,13 +124,13 @@ export function ImpedanceChart({ data, heightClass = "h-48" }: ImpedanceChartPro
             tickFormatter={(v: number) => `${v}`}
           />
 
-          {/* 50-ohm reference line */}
+          {/* Reference impedance line (matches feedline Z0) */}
           <ReferenceLine
-            y={50}
+            y={matching.feedlineZ0}
             stroke="#6B7280"
             strokeDasharray="6 3"
             strokeOpacity={0.5}
-            label={{ value: "50\u03A9", position: "right", fill: "#6B7280", fontSize: 9, fontFamily: "JetBrains Mono, monospace" }}
+            label={{ value: `${matching.feedlineZ0}\u03A9`, position: "right", fill: "#6B7280", fontSize: 9, fontFamily: "JetBrains Mono, monospace" }}
           />
 
           {/* Zero reactance reference (resonance line) */}

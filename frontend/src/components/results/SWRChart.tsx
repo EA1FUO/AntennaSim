@@ -26,6 +26,8 @@ import {
 } from "recharts";
 import type { FrequencyResult } from "../../api/nec";
 import type { S1PDataPoint } from "../../utils/s1p-parser";
+import type { MatchingConfig } from "../../utils/units";
+import { applyMatching, DEFAULT_MATCHING } from "../../utils/units";
 import { useChartTheme } from "../../hooks/useChartTheme";
 
 /** Amateur radio band edges (MHz) */
@@ -51,6 +53,8 @@ interface SWRChartProps {
   selectedIndex?: number;
   /** Optional .s1p overlay data */
   s1pData?: S1PDataPoint[];
+  /** Matching config for impedance transformation */
+  matching?: MatchingConfig;
   /** Height class override (default: h-48) */
   heightClass?: string;
 }
@@ -60,6 +64,7 @@ export function SWRChart({
   onFrequencyClick,
   selectedIndex,
   s1pData,
+  matching = DEFAULT_MATCHING,
   heightClass = "h-48",
 }: SWRChartProps) {
   // Merge simulation data and .s1p data into a unified dataset
@@ -71,13 +76,14 @@ export function SWRChart({
 
     for (let i = 0; i < data.length; i++) {
       const d = data[i]!;
+      const m = applyMatching(d.impedance.real, d.impedance.imag, matching);
       const key = d.frequency_mhz.toFixed(4);
       merged[key] = {
         freq: d.frequency_mhz,
-        swr: Math.min(d.swr_50, 10),
+        swr: Math.min(m.swr, 10),
         index: i,
-        r: d.impedance.real,
-        x: d.impedance.imag,
+        r: m.real,
+        x: m.imag,
       };
     }
 
@@ -96,7 +102,7 @@ export function SWRChart({
     }
 
     return Object.values(merged).sort((a, b) => a.freq - b.freq);
-  }, [data, s1pData]);
+  }, [data, s1pData, matching]);
 
   const freqRange = useMemo(() => {
     if (chartData.length === 0) return { min: 0, max: 1 };
@@ -106,14 +112,16 @@ export function SWRChart({
     };
   }, [chartData]);
 
-  // Find resonance point (minimum SWR in simulation data)
+  // Find resonance point (minimum SWR in simulation data, with matching applied)
   const resonance = useMemo(() => {
     if (data.length === 0) return null;
     let minSwr = Infinity;
     let minIdx = 0;
     for (let i = 0; i < data.length; i++) {
-      if (data[i]!.swr_50 < minSwr) {
-        minSwr = data[i]!.swr_50;
+      const d = data[i]!;
+      const m = applyMatching(d.impedance.real, d.impedance.imag, matching);
+      if (m.swr < minSwr) {
+        minSwr = m.swr;
         minIdx = i;
       }
     }
@@ -122,7 +130,7 @@ export function SWRChart({
       swr: Math.min(minSwr, 10),
       index: minIdx,
     };
-  }, [data]);
+  }, [data, matching]);
 
   // Find band edges that fall within the frequency range
   const visibleBands = useMemo(() => {

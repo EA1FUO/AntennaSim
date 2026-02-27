@@ -13,7 +13,8 @@
 import { useMemo, useState, useCallback, useRef, useId } from "react";
 import type { FrequencyResult } from "../../api/nec";
 import { useUIStore } from "../../stores/uiStore";
-import { formatFrequency, formatImpedance } from "../../utils/units";
+import { formatFrequency, formatImpedance, applyMatching, DEFAULT_MATCHING } from "../../utils/units";
+import type { MatchingConfig } from "../../utils/units";
 
 interface SmithChartProps {
   data: FrequencyResult[];
@@ -27,6 +28,8 @@ interface SmithChartProps {
   onFrequencyClick?: (index: number) => void;
   /** When true, SVG fills its container instead of using fixed pixel dimensions */
   responsive?: boolean;
+  /** Matching config for impedance transformation */
+  matching?: MatchingConfig;
 }
 
 /** Convert impedance Z to reflection coefficient Gamma */
@@ -157,12 +160,15 @@ function SmithTooltip({
 
 export function SmithChart({
   data,
-  z0 = 50,
+  z0: z0Prop,
   size = 280,
   selectedIndex,
   onFrequencyClick,
   responsive = false,
+  matching = DEFAULT_MATCHING,
 }: SmithChartProps) {
+  // Use feedline Z0 from matching config if no explicit z0 prop
+  const z0 = z0Prop ?? matching.feedlineZ0;
   const theme = useUIStore((s) => s.theme);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -186,22 +192,23 @@ export function SmithChart({
   const bgColor = isDark ? "#0A0A0F" : "#F8F8FC";
   const textColor = isDark ? "#8888A0" : "#71717A";
 
-  // Convert impedance data to Gamma coordinates
+  // Convert impedance data to Gamma coordinates (with matching applied)
   const gammaPoints = useMemo(
     () =>
       data.map((d) => {
-        const g = zToGamma(d.impedance.real, d.impedance.imag, z0);
+        const m = applyMatching(d.impedance.real, d.impedance.imag, matching);
+        const g = zToGamma(m.real, m.imag, z0);
         return {
           gamma: g,
           svgX: cx + g.real * chartRadius,
           svgY: cy - g.imag * chartRadius, // SVG Y is flipped
           freq: d.frequency_mhz,
-          zReal: d.impedance.real,
-          zImag: d.impedance.imag,
-          swr: d.swr_50,
+          zReal: m.real,
+          zImag: m.imag,
+          swr: m.swr,
         };
       }),
-    [data, z0, cx, cy, chartRadius]
+    [data, z0, cx, cy, chartRadius, matching]
   );
 
   // Build trajectory polyline

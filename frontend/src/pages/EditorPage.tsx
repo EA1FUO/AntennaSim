@@ -21,6 +21,7 @@ import { EditorToolbar } from "../components/editors/EditorToolbar";
 import { WireTable } from "../components/editors/WireTable";
 import { WirePropertiesPanel } from "../components/editors/WirePropertiesPanel";
 import { GroundEditor } from "../components/editors/GroundEditor";
+import { BalunEditor } from "../components/editors/BalunEditor";
 import { TemplatePicker } from "../components/editors/TemplatePicker";
 import { ParameterPanel } from "../components/editors/ParameterPanel";
 import { ResultsPanel } from "../components/results/ResultsTabs";
@@ -90,6 +91,8 @@ export function EditorPage() {
   const toggleView = useUIStore((s) => s.toggleView);
   const activePreset = useUIStore((s) => s.activePreset);
   const setActivePreset = useUIStore((s) => s.setActivePreset);
+  const matching = useUIStore((s) => s.matching);
+  const setMatching = useUIStore((s) => s.setMatching);
 
   // Right panel tab state: editor tools vs simulation results
   const [rightPanelTab, setRightPanelTab] = useState<"editor" | "results">("editor");
@@ -591,6 +594,9 @@ export function EditorPage() {
 
             {/* Ground */}
             <GroundEditor ground={ground} onChange={setGround} />
+
+            {/* Matching */}
+            <BalunEditor matching={matching} onChange={setMatching} />
 
             {/* Pattern resolution */}
             <div className="flex items-center gap-2">

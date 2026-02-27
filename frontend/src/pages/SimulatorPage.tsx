@@ -22,13 +22,14 @@ import { StatusBar } from "../components/layout/StatusBar";
 import { TemplatePicker } from "../components/editors/TemplatePicker";
 import { ParameterPanel } from "../components/editors/ParameterPanel";
 import { GroundEditor } from "../components/editors/GroundEditor";
+import { BalunEditor } from "../components/editors/BalunEditor";
 import { Button } from "../components/ui/Button";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { ColorScale } from "../components/ui/ColorScale";
 import { ResultsPanel } from "../components/results/ResultsTabs";
 import { PatternFrequencySlider } from "../components/results/PatternFrequencySlider";
 import { SWRChart } from "../components/results/SWRChart";
-import { formatSwr, formatGain, formatImpedance, swrColorClass } from "../utils/units";
+import { formatSwr, formatGain, formatImpedance, swrColorClass, applyMatching } from "../utils/units";
 import type { AntennaTemplate } from "../templates/types";
 import type { CameraPreset, ViewToggles } from "../components/three/types";
 
@@ -70,6 +71,8 @@ export function SimulatorPage() {
   const setActivePreset = useUIStore((s) => s.setActivePreset);
   const mobileTab = useUIStore((s) => s.mobileTab);
   const setMobileTab = useUIStore((s) => s.setMobileTab);
+  const matching = useUIStore((s) => s.matching);
+  const setMatching = useUIStore((s) => s.setMatching);
 
   // Handlers
   const handleTemplateSelect = useCallback(
@@ -133,6 +136,10 @@ export function SimulatorPage() {
             <div className="border-t border-border" />
 
             <GroundEditor ground={ground} onChange={setGround} />
+
+            <div className="border-t border-border" />
+
+            <BalunEditor matching={matching} onChange={setMatching} />
 
             <div className="border-t border-border" />
 
@@ -283,6 +290,7 @@ export function SimulatorPage() {
                 onParamChange={setParam}
               />
               <GroundEditor ground={ground} onChange={setGround} />
+              <BalunEditor matching={matching} onChange={setMatching} />
             </div>
           )}
           {mobileTab === "results" && (
@@ -292,48 +300,53 @@ export function SimulatorPage() {
                   Run a simulation to see results.
                 </p>
               )}
-              {simStatus === "success" && selectedFreqResult && (
-                <>
-                  {/* Quick summary cards */}
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="bg-background rounded-md p-2">
-                      <div className="text-[10px] text-text-secondary">SWR</div>
-                      <div
-                        className={`text-base font-mono font-bold ${swrColorClass(selectedFreqResult.swr_50)}`}
-                      >
-                        {formatSwr(selectedFreqResult.swr_50)}
+              {simStatus === "success" && selectedFreqResult && (() => {
+                const m = applyMatching(
+                  selectedFreqResult.impedance.real,
+                  selectedFreqResult.impedance.imag,
+                  matching
+                );
+                return (
+                  <>
+                    {/* Quick summary cards */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-background rounded-md p-2">
+                        <div className="text-[10px] text-text-secondary">SWR</div>
+                        <div
+                          className={`text-base font-mono font-bold ${swrColorClass(m.swr)}`}
+                        >
+                          {formatSwr(m.swr)}
+                        </div>
+                      </div>
+                      <div className="bg-background rounded-md p-2">
+                        <div className="text-[10px] text-text-secondary">Gain</div>
+                        <div className="text-base font-mono font-bold text-text-primary">
+                          {formatGain(selectedFreqResult.gain_max_dbi)}
+                        </div>
+                      </div>
+                      <div className="bg-background rounded-md p-2">
+                        <div className="text-[10px] text-text-secondary">Z</div>
+                        <div className="text-[10px] font-mono text-text-primary">
+                          {formatImpedance(m.real, m.imag)}
+                        </div>
                       </div>
                     </div>
-                    <div className="bg-background rounded-md p-2">
-                      <div className="text-[10px] text-text-secondary">Gain</div>
-                      <div className="text-base font-mono font-bold text-text-primary">
-                        {formatGain(selectedFreqResult.gain_max_dbi)}
-                      </div>
-                    </div>
-                    <div className="bg-background rounded-md p-2">
-                      <div className="text-[10px] text-text-secondary">Z</div>
-                      <div className="text-[10px] font-mono text-text-primary">
-                        {formatImpedance(
-                          selectedFreqResult.impedance.real,
-                          selectedFreqResult.impedance.imag
-                        )}
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* SWR chart (compact) */}
-                  {result && (
-                    <div>
-                      <h4 className="text-[10px] text-text-secondary mb-1">SWR vs Frequency</h4>
-                      <SWRChart
-                        data={result.frequency_data}
-                        onFrequencyClick={handleFreqClick}
-                        selectedIndex={selectedFreqIndex}
-                      />
-                    </div>
-                  )}
-                </>
-              )}
+                    {/* SWR chart (compact) */}
+                    {result && (
+                      <div>
+                        <h4 className="text-[10px] text-text-secondary mb-1">SWR vs Frequency</h4>
+                        <SWRChart
+                          data={result.frequency_data}
+                          onFrequencyClick={handleFreqClick}
+                          selectedIndex={selectedFreqIndex}
+                          matching={matching}
+                        />
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
               {simStatus === "loading" && (
                 <div className="flex items-center justify-center py-6">
                   <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />

@@ -13,7 +13,7 @@ import { SmithChart } from "./SmithChart";
 import { ChartExpandable } from "../ui/ChartPopup";
 import { useSimulationStore } from "../../stores/simulationStore";
 import { useUIStore, type ResultsTab } from "../../stores/uiStore";
-import { formatSwr, formatImpedance, formatGain, swrColorClass } from "../../utils/units";
+import { formatSwr, formatImpedance, formatGain, swrColorClass, applyMatching } from "../../utils/units";
 import { parseS1P } from "../../utils/s1p-parser";
 
 const TABS = [
@@ -38,6 +38,7 @@ export function ResultsPanel() {
   const setResultsTab = useUIStore((s) => s.setResultsTab);
   const s1pFile = useUIStore((s) => s.s1pFile);
   const setS1PFile = useUIStore((s) => s.setS1PFile);
+  const matching = useUIStore((s) => s.matching);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -133,33 +134,42 @@ export function ResultsPanel() {
         {status === "success" && result && (
           <div className="space-y-3">
             {/* Quick summary — always visible */}
-            {selectedFreqResult && (
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-background rounded-md p-2">
-                  <div className="text-[10px] text-text-secondary">SWR</div>
-                  <div
-                    className={`text-lg font-mono font-bold ${swrColorClass(selectedFreqResult.swr_50)}`}
-                  >
-                    {formatSwr(selectedFreqResult.swr_50)}
+            {selectedFreqResult && (() => {
+              const m = applyMatching(
+                selectedFreqResult.impedance.real,
+                selectedFreqResult.impedance.imag,
+                matching
+              );
+              const hasMatching = matching.ratio !== 1 || matching.feedlineZ0 !== 50;
+              return (
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-background rounded-md p-2">
+                    <div className="text-[10px] text-text-secondary">
+                      SWR{hasMatching ? ` (${matching.feedlineZ0}\u03A9)` : ""}
+                    </div>
+                    <div
+                      className={`text-lg font-mono font-bold ${swrColorClass(m.swr)}`}
+                    >
+                      {formatSwr(m.swr)}
+                    </div>
+                  </div>
+                  <div className="bg-background rounded-md p-2">
+                    <div className="text-[10px] text-text-secondary">Gain</div>
+                    <div className="text-lg font-mono font-bold text-text-primary">
+                      {formatGain(selectedFreqResult.gain_max_dbi)}
+                    </div>
+                  </div>
+                  <div className="bg-background rounded-md p-2 col-span-2">
+                    <div className="text-[10px] text-text-secondary">
+                      Impedance{hasMatching ? ` (after ${matching.ratio}:1)` : ""}
+                    </div>
+                    <div className="text-sm font-mono text-text-primary">
+                      {formatImpedance(m.real, m.imag)}
+                    </div>
                   </div>
                 </div>
-                <div className="bg-background rounded-md p-2">
-                  <div className="text-[10px] text-text-secondary">Gain</div>
-                  <div className="text-lg font-mono font-bold text-text-primary">
-                    {formatGain(selectedFreqResult.gain_max_dbi)}
-                  </div>
-                </div>
-                <div className="bg-background rounded-md p-2 col-span-2">
-                  <div className="text-[10px] text-text-secondary">Impedance</div>
-                  <div className="text-sm font-mono text-text-primary">
-                    {formatImpedance(
-                      selectedFreqResult.impedance.real,
-                      selectedFreqResult.impedance.imag
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Tab content */}
             <div className="border-t border-border pt-3">
@@ -197,6 +207,7 @@ export function ResultsPanel() {
                           onFrequencyClick={handleFreqClick}
                           selectedIndex={selectedFreqIndex}
                           s1pData={s1pFile?.data}
+                          matching={matching}
                           heightClass="h-full"
                         />
                       </div>
@@ -207,6 +218,7 @@ export function ResultsPanel() {
                       onFrequencyClick={handleFreqClick}
                       selectedIndex={selectedFreqIndex}
                       s1pData={s1pFile?.data}
+                      matching={matching}
                     />
                   </ChartExpandable>
                 </div>
@@ -221,11 +233,11 @@ export function ResultsPanel() {
                     title="Impedance vs Frequency"
                     expandedChildren={
                       <div className="w-full h-full">
-                        <ImpedanceChart data={result.frequency_data} heightClass="h-full" />
+                        <ImpedanceChart data={result.frequency_data} matching={matching} heightClass="h-full" />
                       </div>
                     }
                   >
-                    <ImpedanceChart data={result.frequency_data} />
+                    <ImpedanceChart data={result.frequency_data} matching={matching} />
                   </ChartExpandable>
                 </div>
               )}
@@ -243,6 +255,7 @@ export function ResultsPanel() {
                           data={result.frequency_data}
                           selectedIndex={selectedFreqIndex}
                           onFrequencyClick={handleFreqClick}
+                          matching={matching}
                           size={600}
                           responsive
                         />
@@ -253,6 +266,7 @@ export function ResultsPanel() {
                       data={result.frequency_data}
                       selectedIndex={selectedFreqIndex}
                       onFrequencyClick={handleFreqClick}
+                      matching={matching}
                     />
                   </ChartExpandable>
                 </div>
