@@ -158,7 +158,7 @@ For active development with hot-reload on both frontend and backend:
 
 ```bash
 # Clone and configure
-git clone https://github.com/AntennaSim-App/AntennaSim.git
+git clone https://github.com/EA1FUO/AntennaSim.git
 cd AntennaSim
 cp .env.example .env
 
@@ -191,7 +191,7 @@ Source directories are volume-mounted so changes are reflected immediately:
 
 ```bash
 # On your VPS/server:
-git clone https://github.com/AntennaSim-App/AntennaSim.git
+git clone https://github.com/EA1FUO/AntennaSim.git
 cd AntennaSim
 cp .env.example .env
 
