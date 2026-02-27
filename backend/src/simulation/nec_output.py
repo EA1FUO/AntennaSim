@@ -392,9 +392,14 @@ def parse_nec_output(
             if cur_match:
                 seg_num = int(cur_match.group(1))
                 tag_num = int(cur_match.group(2))
-                cx = float(cur_match.group(3))
-                cy = float(cur_match.group(4))
-                cz = float(cur_match.group(5))
+                # NEC2 reports segment positions in wavelengths — convert to meters
+                cx_wl = float(cur_match.group(3))
+                cy_wl = float(cur_match.group(4))
+                cz_wl = float(cur_match.group(5))
+                wavelength_m = 299.792458 / current_freq if current_freq and current_freq > 0 else 1.0
+                cx = cx_wl * wavelength_m
+                cy = cy_wl * wavelength_m
+                cz = cz_wl * wavelength_m
                 # group(6) is segment length, skip
                 c_real = float(cur_match.group(7))
                 c_imag = float(cur_match.group(8))
