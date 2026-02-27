@@ -71,10 +71,12 @@ const OBJECTIVES: { key: Objective; label: string }[] = [
 
 const WIRE_FIELDS = ["x1", "y1", "z1", "x2", "y2", "z2"];
 
-/** Derive WS URL from the current API URL */
+/** Derive WS URL from the current API URL or page origin */
 function getWsUrl(): string {
-  const apiBase = import.meta.env.VITE_API_URL || "http://localhost:8000";
-  return apiBase.replace(/^http/, "ws");
+  const apiBase = import.meta.env.VITE_API_URL;
+  if (apiBase) return apiBase.replace(/^http/, "ws");
+  const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${proto}//${window.location.host}`;
 }
 
 export function OptimizerPanel() {

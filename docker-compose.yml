@@ -23,7 +23,7 @@ services:
           memory: 512M
     read_only: true
     tmpfs:
-      - /tmp/nec_workdir:size=100M
+      - /tmp/nec_workdir:size=100M,uid=999,gid=999
     security_opt:
       - no-new-privileges:true
     depends_on:

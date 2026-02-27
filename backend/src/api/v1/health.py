@@ -40,7 +40,7 @@ async def health_check() -> HealthResponse:
 
     return HealthResponse(
         status="ok",
-        version="0.1.0",
+        version="0.3.2",
         nec2c_available=nec2c_path is not None,
         redis_connected=redis_connected,
         environment=settings.environment,
