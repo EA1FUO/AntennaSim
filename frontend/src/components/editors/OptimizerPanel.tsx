@@ -1,15 +1,15 @@
 /**
  * OptimizerPanel — V2 antenna parameter optimization UI.
  *
- * Allows users to:
- * 1. Select variables to optimize (wire coordinates, lengths)
- * 2. Choose objective function (min SWR, max gain, max F/B)
- * 3. Run optimization
- * 4. View convergence chart
+ * Uses WebSocket for real-time progress streaming with:
+ * 1. Live progress bar
+ * 2. Live best cost value
+ * 3. Convergence chart (updates live)
+ * 4. Cancel button
  * 5. Apply optimized parameters to the editor
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useRef } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -19,7 +19,6 @@ import {
   CartesianGrid,
   Tooltip,
 } from "recharts";
-import { api } from "../../api/client";
 import { useEditorStore } from "../../stores/editorStore";
 import { useChartTheme } from "../../hooks/useChartTheme";
 import { Button } from "../ui/Button";
@@ -54,6 +53,15 @@ interface OptResult {
   message: string;
 }
 
+interface ProgressData {
+  iteration: number;
+  total_iterations: number;
+  current_cost: number;
+  best_cost: number;
+  best_values: Record<string, number>;
+  status: string;
+}
+
 const OBJECTIVES: { key: Objective; label: string }[] = [
   { key: "min_swr", label: "Min SWR" },
   { key: "min_swr_band", label: "Min SWR (band)" },
@@ -62,6 +70,12 @@ const OBJECTIVES: { key: Objective; label: string }[] = [
 ];
 
 const WIRE_FIELDS = ["x1", "y1", "z1", "x2", "y2", "z2"];
+
+/** Derive WS URL from the current API URL */
+function getWsUrl(): string {
+  const apiBase = import.meta.env.VITE_API_URL || "http://localhost:8000";
+  return apiBase.replace(/^http/, "ws");
+}
 
 export function OptimizerPanel() {
   const wires = useEditorStore((s) => s.wires);
@@ -80,6 +94,13 @@ export function OptimizerPanel() {
   const [isRunning, setIsRunning] = useState(false);
   const [result, setResult] = useState<OptResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Live progress state
+  const [progress, setProgress] = useState<ProgressData | null>(null);
+  const [liveHistory, setLiveHistory] = useState<{ iteration: number; cost: number }[]>([]);
+
+  // WebSocket ref for cancellation
+  const wsRef = useRef<WebSocket | null>(null);
 
   // Add a variable
   const addVariable = useCallback(() => {
@@ -111,16 +132,33 @@ export function OptimizerPanel() {
     []
   );
 
-  // Run optimization
-  const handleOptimize = useCallback(async () => {
+  // Cancel optimization
+  const handleCancel = useCallback(() => {
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    setIsRunning(false);
+    setProgress(null);
+  }, []);
+
+  // Run optimization via WebSocket
+  const handleOptimize = useCallback(() => {
     if (variables.length === 0 || wires.length === 0) return;
 
     setIsRunning(true);
     setError(null);
     setResult(null);
+    setProgress(null);
+    setLiveHistory([]);
 
-    try {
-      const resp = await api.post<OptResult>("/api/v1/optimize", {
+    const wsUrl = `${getWsUrl()}/api/v1/ws/optimize`;
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      // Send optimization request
+      const payload = {
         wires: wires.map((w) => ({
           tag: w.tag,
           segments: w.segments,
@@ -137,7 +175,7 @@ export function OptimizerPanel() {
         ground: { ground_type: ground.type },
         frequency_start_mhz: frequencyRange.start_mhz,
         frequency_stop_mhz: frequencyRange.stop_mhz,
-        frequency_steps: Math.min(frequencyRange.steps, 21), // Limit for speed
+        frequency_steps: Math.min(frequencyRange.steps, 21),
         loads,
         transmission_lines: transmissionLines,
         variables: variables.map((v) => ({
@@ -150,15 +188,56 @@ export function OptimizerPanel() {
         method: "nelder_mead",
         max_iterations: maxIterations,
         target_frequency_mhz: (frequencyRange.start_mhz + frequencyRange.stop_mhz) / 2,
-      }, { timeout: 300000 }); // 5 min timeout
+      };
+      ws.send(JSON.stringify(payload));
+    };
 
-      setResult(resp);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Optimization failed");
-    } finally {
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data) as {
+          type: "progress" | "result" | "error";
+          data: ProgressData | OptResult | { message: string };
+        };
+
+        if (msg.type === "progress") {
+          const p = msg.data as ProgressData;
+          setProgress(p);
+          setLiveHistory((prev) => [
+            ...prev,
+            { iteration: p.iteration, cost: p.current_cost },
+          ]);
+        } else if (msg.type === "result") {
+          setResult(msg.data as OptResult);
+          setIsRunning(false);
+          setProgress(null);
+          wsRef.current = null;
+        } else if (msg.type === "error") {
+          setError((msg.data as { message: string }).message);
+          setIsRunning(false);
+          setProgress(null);
+          wsRef.current = null;
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    };
+
+    ws.onerror = () => {
+      setError("WebSocket connection failed. Falling back not available.");
       setIsRunning(false);
-    }
-  }, [variables, wires, excitations, ground, frequencyRange, loads, transmissionLines, objective, maxIterations]);
+      setProgress(null);
+      wsRef.current = null;
+    };
+
+    ws.onclose = () => {
+      if (isRunning) {
+        // Connection closed unexpectedly
+        setIsRunning(false);
+        setProgress(null);
+      }
+      wsRef.current = null;
+    };
+  }, [variables, wires, excitations, ground, frequencyRange, loads, transmissionLines, objective, maxIterations, isRunning]);
 
   // Apply optimized values back to editor
   const handleApply = useCallback(() => {
@@ -171,11 +250,15 @@ export function OptimizerPanel() {
     }
   }, [result, updateWire]);
 
-  // Convergence chart data
-  const chartData = result?.history.map((h) => ({
-    iteration: h.iteration,
-    cost: h.cost,
-  })) ?? [];
+  // Chart data — use live history during optimization, final history after
+  const chartData = isRunning
+    ? liveHistory
+    : (result?.history.map((h) => ({ iteration: h.iteration, cost: h.cost })) ?? []);
+
+  // Progress percentage
+  const progressPct = progress
+    ? Math.min(100, Math.round((progress.iteration / progress.total_iterations) * 100))
+    : 0;
 
   return (
     <div className="space-y-2">
@@ -281,16 +364,70 @@ export function OptimizerPanel() {
         )}
       </div>
 
-      {/* Run button */}
-      <Button
-        onClick={handleOptimize}
-        loading={isRunning}
-        disabled={isRunning || variables.length === 0 || wires.length === 0}
-        className="w-full"
-        size="sm"
-      >
-        {isRunning ? "Optimizing..." : "Run Optimizer"}
-      </Button>
+      {/* Run / Cancel buttons */}
+      {isRunning ? (
+        <Button
+          onClick={handleCancel}
+          className="w-full"
+          size="sm"
+          variant="danger"
+        >
+          Cancel
+        </Button>
+      ) : (
+        <Button
+          onClick={handleOptimize}
+          disabled={variables.length === 0 || wires.length === 0}
+          className="w-full"
+          size="sm"
+        >
+          Run Optimizer
+        </Button>
+      )}
+
+      {/* Live progress bar */}
+      {isRunning && progress && (
+        <div className="space-y-1">
+          <div className="flex items-center justify-between text-[9px] text-text-secondary">
+            <span>Iteration {progress.iteration}/{progress.total_iterations}</span>
+            <span className="font-mono">Best: {progress.best_cost.toFixed(4)}</span>
+          </div>
+          <div className="w-full bg-background rounded-full h-1.5 overflow-hidden">
+            <div
+              className="bg-accent h-full rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Live convergence chart during optimization */}
+      {isRunning && liveHistory.length > 2 && (
+        <div className="h-20">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={liveHistory}>
+              <CartesianGrid stroke={ct.grid} strokeDasharray="3 3" />
+              <XAxis
+                dataKey="iteration"
+                stroke={ct.axis}
+                tick={{ fontSize: 7, fill: ct.tick }}
+              />
+              <YAxis
+                stroke={ct.axis}
+                tick={{ fontSize: 7, fill: ct.tick }}
+              />
+              <Line
+                type="monotone"
+                dataKey="cost"
+                stroke="#3B82F6"
+                strokeWidth={1.5}
+                dot={false}
+                isAnimationActive={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {/* Error */}
       {error && (
@@ -322,7 +459,7 @@ export function OptimizerPanel() {
             ))}
           </div>
 
-          {/* Convergence chart */}
+          {/* Convergence chart (final) */}
           {chartData.length > 2 && (
             <div className="h-24">
               <ResponsiveContainer width="100%" height="100%">

@@ -7,6 +7,7 @@ Supports optimization of wire coordinates, lengths, spacings, and heights.
 import copy
 import logging
 import time
+from collections.abc import Callable
 
 from scipy.optimize import minimize
 
@@ -15,6 +16,7 @@ from src.models.optimization import (
     OptimizationVariable,
     OptimizationObjective,
     OptimizationResult,
+    OptimizationProgress,
 )
 from src.simulation.nec_input import build_card_deck
 from src.simulation.nec_runner import run_nec2c, NecExecutionError
@@ -159,7 +161,10 @@ def _evaluate_objective(
     return 1e6
 
 
-def run_optimization(request: OptimizationRequest) -> OptimizationResult:
+def run_optimization(
+    request: OptimizationRequest,
+    on_progress: Callable[[OptimizationProgress], None] | None = None,
+) -> OptimizationResult:
     """Run the optimizer.
 
     Uses scipy.optimize.minimize with Nelder-Mead method.
@@ -167,6 +172,7 @@ def run_optimization(request: OptimizationRequest) -> OptimizationResult:
 
     Args:
         request: Optimization configuration.
+        on_progress: Optional callback invoked after each iteration with progress data.
 
     Returns:
         OptimizationResult with optimized wire values and history.
@@ -174,6 +180,7 @@ def run_optimization(request: OptimizationRequest) -> OptimizationResult:
     variables = request.variables
     history: list[dict] = []
     best_cost = float("inf")
+    best_values: dict[str, float] = {}
     iteration_count = 0
 
     # Initial values
@@ -217,13 +224,15 @@ def run_optimization(request: OptimizationRequest) -> OptimizationResult:
         cost = _evaluate_objective(request, modified_wires)
 
         # Track history
+        current_values = {name: round(val, 6) for name, val in zip(var_names, x_clamped)}
         if cost < best_cost:
             best_cost = cost
+            best_values.update(current_values)
 
         history.append({
             "iteration": iteration_count,
             "cost": round(cost, 4),
-            "values": {name: round(val, 6) for name, val in zip(var_names, x_clamped)},
+            "values": current_values,
         })
 
         if iteration_count % 10 == 0:
@@ -231,6 +240,20 @@ def run_optimization(request: OptimizationRequest) -> OptimizationResult:
                 "Optimizer iteration %d: cost=%.4f, best=%.4f",
                 iteration_count, cost, best_cost,
             )
+
+        # Emit progress callback
+        if on_progress is not None:
+            try:
+                on_progress(OptimizationProgress(
+                    iteration=iteration_count,
+                    total_iterations=request.max_iterations,
+                    current_cost=round(cost, 4),
+                    best_cost=round(best_cost, 4),
+                    best_values=best_values,
+                    status="running",
+                ))
+            except Exception:
+                pass  # Don't let callback errors break optimization
 
         return cost
 
