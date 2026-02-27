@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs Welcome">
 </p>
 
-# AntSim
+# AntennaSim
 
 **A free, open-source, web-based amateur radio antenna simulator powered by the NEC2 electromagnetic engine.**
 
@@ -17,10 +17,10 @@ No installation required. Just `docker compose up` and go.
 ---
 
 <p align="center">
-  <img src="screenshots/simulator.png" alt="AntSim — 3D viewport with radiation pattern, current flow, and real-time simulation" width="100%">
+  <img src="screenshots/simulator.png" alt="AntennaSim — 3D viewport with radiation pattern, current flow, and real-time simulation" width="100%">
 </p>
 <p align="center">
-  <img src="screenshots/editor.png" alt="AntSim — Wire editor with optimizer" width="100%">
+  <img src="screenshots/editor.png" alt="AntennaSim — Wire editor with optimizer" width="100%">
 </p>
 
 ---
@@ -116,7 +116,7 @@ No installation required. Just `docker compose up` and go.
 
 ## Antenna Templates
 
-AntSim ships with **16 ready-to-simulate templates** organized by category:
+AntennaSim ships with **16 ready-to-simulate templates** organized by category:
 
 | Category | Templates |
 |---|---|
@@ -140,8 +140,8 @@ Every template includes configurable parameters (frequency, height, element leng
 ### Run
 
 ```bash
-git clone https://github.com/AntSim-App/antsim.git
-cd antsim
+git clone https://github.com/AntennaSim-App/AntennaSim.git
+cd AntennaSim
 cp .env.example .env
 docker compose up --build
 ```
@@ -158,8 +158,8 @@ For active development with hot-reload on both frontend and backend:
 
 ```bash
 # Clone and configure
-git clone https://github.com/AntSim-App/antsim.git
-cd antsim
+git clone https://github.com/AntennaSim-App/AntennaSim.git
+cd AntennaSim
 cp .env.example .env
 
 # Start with dev overrides
@@ -191,8 +191,8 @@ Source directories are volume-mounted so changes are reflected immediately:
 
 ```bash
 # On your VPS/server:
-git clone https://github.com/AntSim-App/antsim.git
-cd antsim
+git clone https://github.com/AntennaSim-App/AntennaSim.git
+cd AntennaSim
 cp .env.example .env
 
 # Edit .env for production:
@@ -269,7 +269,7 @@ The nginx config is ready for SSL. To enable:
 ## Project Structure
 
 ```
-antsim/
+AntennaSim/
 |-- frontend/                   # React 19 + TypeScript + Vite
 |   |-- src/
 |   |   |-- components/
@@ -479,7 +479,7 @@ Contributions are welcome. This is a free and open-source project for the amateu
 
 ### Reporting bugs
 
-Open an [issue](https://github.com/AntSim-App/antsim/issues) with:
+Open an [issue](https://github.com/AntennaSim-App/AntennaSim/issues) with:
 - What you expected vs. what happened
 - Browser, OS, and device
 - Steps to reproduce
@@ -487,16 +487,16 @@ Open an [issue](https://github.com/AntSim-App/antsim/issues) with:
 
 ### Ideas & feature requests
 
-Open a [discussion](https://github.com/AntSim-App/antsim/discussions) -- we'd love to hear what antennas, features, or improvements would be most useful to you.
+Open a [discussion](https://github.com/AntennaSim-App/AntennaSim/discussions) -- we'd love to hear what antennas, features, or improvements would be most useful to you.
 
 ---
 
 ## License
 
-AntSim is free software released under the [GNU General Public License v3.0](LICENSE).
+AntennaSim is free software released under the [GNU General Public License v3.0](LICENSE).
 
 ```
-Copyright (C) 2025 AntSim Contributors
+Copyright (C) 2025 AntennaSim Contributors
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -524,5 +524,5 @@ You are free to use, modify, and distribute this software. If you distribute mod
 <p align="center">
   <sub>Built for amateur radio operators, by amateur radio operators.</sub>
   <br>
-  <sub>73 de AntSim</sub>
+  <sub>73 de AntennaSim</sub>
 </p>
