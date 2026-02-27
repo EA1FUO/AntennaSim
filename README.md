@@ -464,7 +464,7 @@ Contributions are welcome. This is a free and open-source project for the amateu
 - TypeScript `strict: true` -- no `any` types
 - `useMemo` / `useCallback` in all R3F components -- no allocations in render loops
 - Pydantic validation on all backend inputs with `Field(ge=..., le=...)`
-- `subprocess.run(shell=False, timeout=180)` -- always
+- `subprocess.run(shell=False, timeout=30)` -- always
 - Mobile responsive: test at 375px, 768px, 1024px, 1440px
 - Don't add dependencies unless absolutely necessary
 
