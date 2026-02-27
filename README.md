@@ -47,7 +47,7 @@ No installation required. Just `docker compose up` and go.
 - **GA/GM/GR cards** -- wire arcs, coordinate transformations, and cylindrical symmetry for complex geometries
 - **Redis caching** -- simulation results cached with SHA-256 keys and zlib compression (1h TTL)
 - **Rate limiting** -- 30 sims/hour, 5 concurrent per IP
-- **Sandboxed execution** -- `subprocess.run(shell=False, timeout=30)`, isolated temp dirs, non-root container
+- **Sandboxed execution** -- `subprocess.run(shell=False, timeout=180)`, isolated temp dirs, non-root container
 
 ### Interactive 3D Viewport
 
@@ -371,7 +371,7 @@ ALLOWED_ORIGINS=http://localhost:5173  # CORS origins (comma-separated)
 REDIS_URL=redis://redis:6379     # Redis connection
 LOG_LEVEL=debug                  # debug | info | warning | error
 MAX_CONCURRENT_SIMS=4            # Max parallel nec2c processes
-SIM_TIMEOUT_SECONDS=30           # Per-simulation timeout
+SIM_TIMEOUT_SECONDS=180          # Per-simulation timeout (seconds)
 NEC_WORKDIR=/tmp/nec_workdir     # Temp directory for .nec files
 
 # Frontend (Vite)
@@ -464,7 +464,7 @@ Contributions are welcome. This is a free and open-source project for the amateu
 - TypeScript `strict: true` -- no `any` types
 - `useMemo` / `useCallback` in all R3F components -- no allocations in render loops
 - Pydantic validation on all backend inputs with `Field(ge=..., le=...)`
-- `subprocess.run(shell=False, timeout=30)` -- always
+- `subprocess.run(shell=False, timeout=180)` -- always
 - Mobile responsive: test at 375px, 768px, 1024px, 1440px
 - Don't add dependencies unless absolutely necessary
 

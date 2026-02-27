@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://redis:6379"
     log_level: str = "info"
     max_concurrent_sims: int = 4
-    sim_timeout_seconds: int = 30
+    sim_timeout_seconds: int = 180
     nec_workdir: str = "/tmp/nec_workdir"
 
     @property
