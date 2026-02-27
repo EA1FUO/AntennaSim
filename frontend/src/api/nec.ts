@@ -211,6 +211,14 @@ export async function runSimulation(
       phi_stop: 360 - step,
       phi_step: step,
     },
+    compute_currents: true,
+    near_field: {
+      enabled: true,
+      plane: "horizontal",
+      height_m: 1.8,
+      extent_m: 20.0,
+      resolution_m: 0.5,
+    },
     comment: "AntSim simulation",
   };
 
@@ -273,7 +281,14 @@ export async function runAdvancedSimulation(
     arcs: options.arcs ?? [],
     transforms: options.transforms ?? [],
     ...(options.symmetry ? { symmetry: options.symmetry } : {}),
-    compute_currents: options.compute_currents ?? false,
+    compute_currents: options.compute_currents ?? true,
+    near_field: {
+      enabled: true,
+      plane: "horizontal",
+      height_m: 1.8,
+      extent_m: 20.0,
+      resolution_m: 0.5,
+    },
     comment: options.comment ?? "AntSim V2 simulation",
   };
 
