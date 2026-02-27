@@ -171,7 +171,7 @@ function ChartModal({ title, onClose, onExportPng, children }: ChartModalProps) 
         </div>
 
         {/* Chart content — fills remaining space */}
-        <div className="flex-1 p-4 overflow-hidden min-h-0">
+        <div className="flex-1 p-4 min-h-0 relative">
           {children}
         </div>
       </div>

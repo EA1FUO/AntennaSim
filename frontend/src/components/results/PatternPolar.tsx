@@ -18,8 +18,10 @@ interface PatternPolarProps {
   pattern: PatternData;
   /** "azimuth" = horizontal plane (theta=max gain), "elevation" = vertical plane (phi=max gain) */
   mode: "azimuth" | "elevation";
-  /** Size in pixels */
+  /** Size in pixels (used for internal viewBox calculation) */
   size?: number;
+  /** When true, SVG fills its container instead of using fixed pixel dimensions */
+  responsive?: boolean;
 }
 
 /** Extract a cut from the 2D gain array */
@@ -99,7 +101,7 @@ function polarToXY(
   };
 }
 
-export function PatternPolar({ pattern, mode, size = 200 }: PatternPolarProps) {
+export function PatternPolar({ pattern, mode, size = 200, responsive = false }: PatternPolarProps) {
   const ct = useChartTheme();
   const cut = useMemo(() => extractCut(pattern, mode), [pattern, mode]);
 
@@ -212,10 +214,11 @@ export function PatternPolar({ pattern, mode, size = 200 }: PatternPolarProps) {
 
   return (
     <svg
-      width={size}
-      height={size}
+      width={responsive ? "100%" : size}
+      height={responsive ? "100%" : size}
       viewBox={`0 0 ${size} ${size}`}
-      className="mx-auto"
+      className={responsive ? "" : "mx-auto"}
+      preserveAspectRatio="xMidYMid meet"
     >
       {/* Grid circles */}
       {gridCircles.map((r) => (

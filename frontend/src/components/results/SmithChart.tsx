@@ -10,7 +10,7 @@
  * - Theme-aware (dark/light)
  */
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useRef } from "react";
 import type { FrequencyResult } from "../../api/nec";
 import { useUIStore } from "../../stores/uiStore";
 import { formatFrequency, formatImpedance } from "../../utils/units";
@@ -19,12 +19,14 @@ interface SmithChartProps {
   data: FrequencyResult[];
   /** Reference impedance (default 50) */
   z0?: number;
-  /** Chart size in pixels */
+  /** Chart size in pixels (used for internal viewBox calculation) */
   size?: number;
   /** Selected frequency index */
   selectedIndex?: number;
   /** Callback when a frequency point is clicked */
   onFrequencyClick?: (index: number) => void;
+  /** When true, SVG fills its container instead of using fixed pixel dimensions */
+  responsive?: boolean;
 }
 
 /** Convert impedance Z to reflection coefficient Gamma */
@@ -90,15 +92,80 @@ function swrCirclePath(swr: number, cx: number, cy: number, radius: number): str
   return `M ${cx - svgR} ${cy} A ${svgR} ${svgR} 0 1 1 ${cx + svgR} ${cy} A ${svgR} ${svgR} 0 1 1 ${cx - svgR} ${cy}`;
 }
 
+/** Tooltip component that handles coordinate mapping for both fixed and responsive modes */
+function SmithTooltip({
+  data,
+  svgRef,
+  size,
+  responsive,
+}: {
+  data: { svgX: number; svgY: number; freq: number; zReal: number; zImag: number; swr: number; gamma: { real: number; imag: number } };
+  svgRef: React.RefObject<SVGSVGElement | null>;
+  size: number;
+  responsive: boolean;
+  z0: number;
+}) {
+  // Compute actual pixel position in the container
+  const pos = useMemo(() => {
+    if (!responsive) {
+      return {
+        left: Math.min(data.svgX + 10, size - 140),
+        top: Math.max(data.svgY - 70, 0),
+      };
+    }
+    // For responsive mode, map SVG coordinates to actual rendered coordinates
+    const svg = svgRef.current;
+    if (!svg) {
+      return { left: data.svgX + 10, top: Math.max(data.svgY - 70, 0) };
+    }
+    const rect = svg.getBoundingClientRect();
+    const scaleX = rect.width / size;
+    const scaleY = rect.height / size;
+    // preserveAspectRatio="xMidYMid meet" — use the smaller scale
+    const scale = Math.min(scaleX, scaleY);
+    const offsetX = (rect.width - size * scale) / 2;
+    const offsetY = (rect.height - size * scale) / 2;
+    return {
+      left: Math.min(offsetX + data.svgX * scale + 10, rect.width - 160),
+      top: Math.max(offsetY + data.svgY * scale - 70, 0),
+    };
+  }, [data.svgX, data.svgY, svgRef, size, responsive]);
+
+  return (
+    <div
+      className="absolute bg-surface border border-border rounded-md px-2 py-1.5 shadow-lg pointer-events-none z-20"
+      style={{ left: pos.left, top: pos.top }}
+    >
+      <div className="text-[10px] font-mono space-y-0.5">
+        <div className="text-accent font-bold">
+          {formatFrequency(data.freq)}
+        </div>
+        <div className="text-text-primary">
+          Z = {formatImpedance(data.zReal, data.zImag)}
+        </div>
+        <div className="text-text-secondary">
+          SWR = {data.swr.toFixed(2)}
+        </div>
+        <div className="text-text-secondary">
+          {"\u0393"} = {data.gamma.real.toFixed(3)} {data.gamma.imag >= 0 ? "+" : ""}{data.gamma.imag.toFixed(3)}j
+          {" "}|{"\u0393"}| = {Math.sqrt(data.gamma.real ** 2 + data.gamma.imag ** 2).toFixed(3)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SmithChart({
   data,
   z0 = 50,
   size = 280,
   selectedIndex,
   onFrequencyClick,
+  responsive = false,
 }: SmithChartProps) {
   const theme = useUIStore((s) => s.theme);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
 
   const isDark = theme === "dark";
   const margin = 30;
@@ -167,12 +234,14 @@ export function SmithChart({
   }, [gammaPoints.length]);
 
   return (
-    <div className="relative">
+    <div className={responsive ? "relative w-full h-full" : "relative"}>
       <svg
-        width={size}
-        height={size}
+        ref={svgRef}
+        width={responsive ? "100%" : size}
+        height={responsive ? "100%" : size}
         viewBox={`0 0 ${size} ${size}`}
-        className="mx-auto"
+        className={responsive ? "" : "mx-auto"}
+        preserveAspectRatio="xMidYMid meet"
       >
         <defs>
           <clipPath id="smith-clip">
@@ -345,29 +414,13 @@ export function SmithChart({
 
       {/* Tooltip */}
       {tooltipData && (
-        <div
-          className="absolute bg-surface border border-border rounded-md px-2 py-1.5 shadow-lg pointer-events-none z-20"
-          style={{
-            left: Math.min(tooltipData.svgX + 10, size - 140),
-            top: Math.max(tooltipData.svgY - 70, 0),
-          }}
-        >
-          <div className="text-[10px] font-mono space-y-0.5">
-            <div className="text-accent font-bold">
-              {formatFrequency(tooltipData.freq)}
-            </div>
-            <div className="text-text-primary">
-              Z = {formatImpedance(tooltipData.zReal, tooltipData.zImag)}
-            </div>
-            <div className="text-text-secondary">
-              SWR = {tooltipData.swr.toFixed(2)}
-            </div>
-            <div className="text-text-secondary">
-              {"\u0393"} = {tooltipData.gamma.real.toFixed(3)} {tooltipData.gamma.imag >= 0 ? "+" : ""}{tooltipData.gamma.imag.toFixed(3)}j
-              {" "}|{"\u0393"}| = {Math.sqrt(tooltipData.gamma.real ** 2 + tooltipData.gamma.imag ** 2).toFixed(3)}
-            </div>
-          </div>
-        </div>
+        <SmithTooltip
+          data={tooltipData}
+          svgRef={svgRef}
+          size={size}
+          responsive={responsive}
+          z0={z0}
+        />
       )}
     </div>
   );

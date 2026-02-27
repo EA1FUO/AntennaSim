@@ -191,13 +191,15 @@ export function ResultsPanel() {
                   <ChartExpandable
                     title="SWR vs Frequency"
                     expandedChildren={
-                      <SWRChart
-                        data={result.frequency_data}
-                        onFrequencyClick={handleFreqClick}
-                        selectedIndex={selectedFreqIndex}
-                        s1pData={s1pFile?.data}
-                        heightClass="h-full"
-                      />
+                      <div className="w-full h-full">
+                        <SWRChart
+                          data={result.frequency_data}
+                          onFrequencyClick={handleFreqClick}
+                          selectedIndex={selectedFreqIndex}
+                          s1pData={s1pFile?.data}
+                          heightClass="h-full"
+                        />
+                      </div>
                     }
                   >
                     <SWRChart
@@ -218,7 +220,9 @@ export function ResultsPanel() {
                   <ChartExpandable
                     title="Impedance vs Frequency"
                     expandedChildren={
-                      <ImpedanceChart data={result.frequency_data} heightClass="h-full" />
+                      <div className="w-full h-full">
+                        <ImpedanceChart data={result.frequency_data} heightClass="h-full" />
+                      </div>
                     }
                   >
                     <ImpedanceChart data={result.frequency_data} />
@@ -239,7 +243,8 @@ export function ResultsPanel() {
                           data={result.frequency_data}
                           selectedIndex={selectedFreqIndex}
                           onFrequencyClick={handleFreqClick}
-                          size={560}
+                          size={600}
+                          responsive
                         />
                       </div>
                     }
@@ -268,6 +273,7 @@ export function ResultsPanel() {
                               pattern={selectedFreqResult.pattern}
                               mode="azimuth"
                               size={500}
+                              responsive
                             />
                           </div>
                         }
@@ -286,6 +292,7 @@ export function ResultsPanel() {
                               pattern={selectedFreqResult.pattern}
                               mode="elevation"
                               size={500}
+                              responsive
                             />
                           </div>
                         }
