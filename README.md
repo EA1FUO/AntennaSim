@@ -10,7 +10,7 @@
 
 **A free, open-source, web-based amateur radio antenna simulator powered by the NEC2 electromagnetic engine.**
 
-Design antennas from 16 built-in templates or build your own from scratch in the wire editor. Run NEC2 simulations and instantly visualize SWR, impedance, Smith chart, 3D radiation patterns, current distribution, and near-field heatmaps -- all in your browser.
+Design antennas from 17 built-in templates or build your own from scratch in the wire editor. Run NEC2 simulations and instantly visualize SWR, impedance, Smith chart, 3D radiation patterns, current distribution, and near-field heatmaps -- all in your browser.
 
 No installation required. Just `docker compose up` and go.
 
@@ -105,7 +105,7 @@ No installation required. Just `docker compose up` and go.
 
 ### Other
 
-- **16 antenna templates** spanning wire, vertical, multiband, loop, and directional categories
+- **17 antenna templates** spanning wire, vertical, multiband, loop, and directional categories
 - **Template library page** -- browse and compare all templates with descriptions and difficulty ratings
 - **Learn page** -- educational content on NEC2, SWR, impedance, radiation patterns, and simulation tips
 - **Mobile responsive** -- usable on phones and tablets with touch-friendly controls
@@ -116,14 +116,14 @@ No installation required. Just `docker compose up` and go.
 
 ## Antenna Templates
 
-AntennaSim ships with **16 ready-to-simulate templates** organized by category:
+AntennaSim ships with **17 ready-to-simulate templates** organized by category:
 
 | Category | Templates |
 |---|---|
 | **Wire** | Half-Wave Dipole, Inverted V, End-Fed Half-Wave |
 | **Vertical** | Ground Plane Vertical, J-Pole, Slim Jim |
 | **Multiband** | Off-Center Fed Dipole, G5RV, Fan Dipole |
-| **Loop** | Delta Loop, Cubical Quad, Small Magnetic Loop |
+| **Loop** | Delta Loop, Horizontal Delta Loop, Cubical Quad, Small Magnetic Loop |
 | **Directional** | Yagi-Uda (2-6 el.), Moxon Rectangle, Hex Beam, Log-Periodic Dipole Array |
 
 Every template includes configurable parameters (frequency, height, element lengths, spacing, wire diameter, etc.) with sensible defaults and validation ranges.
@@ -281,7 +281,7 @@ AntennaSim/
 |   |   |   +-- common/         # Shared utilities, keyboard shortcuts
 |   |   |-- hooks/              # Custom hooks (chart theme, debounce, etc.)
 |   |   |-- stores/             # Zustand stores (antenna, simulation, editor, UI)
-|   |   |-- templates/          # 16 antenna template definitions
+|   |   |-- templates/          # 17 antenna template definitions
 |   |   |-- engine/             # Client-side NEC card generation & validation
 |   |   |-- utils/              # Units, formatting, .s1p parser, matching
 |   |   |-- pages/              # Route pages (Simulator, Editor, Library, Learn, About)
