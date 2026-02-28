@@ -13,6 +13,7 @@ import { moxonTemplate } from "./moxon";
 import { jPoleTemplate } from "./j-pole";
 import { slimJimTemplate } from "./slim-jim";
 import { deltaLoopTemplate } from "./delta-loop";
+import { horizontalDeltaLoopTemplate } from "./horizontal-delta-loop";
 import { g5rvTemplate } from "./g5rv";
 import { logPeriodicTemplate } from "./log-periodic";
 import { hexBeamTemplate } from "./hex-beam";
@@ -36,6 +37,7 @@ export const templates: AntennaTemplate[] = [
   fanDipoleTemplate,
   // Loops
   deltaLoopTemplate,
+  horizontalDeltaLoopTemplate,
   quadTemplate,
   magneticLoopTemplate,
   // Directional
