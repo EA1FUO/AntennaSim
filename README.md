@@ -162,8 +162,8 @@ git clone https://github.com/AntennaSim-App/AntennaSim.git
 cd AntennaSim
 cp .env.example .env
 
-# Start with dev overrides
-docker compose -f docker-compose.dev.yml up --build
+# Start with base + dev overrides (same behavior as ./scripts/dev.sh)
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
 Or use the dev script:
