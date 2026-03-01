@@ -372,9 +372,6 @@ export function EditorPage() {
                 {/* === Wires section: table + properties, both always visible === */}
                 {editorSection === "wires" && (
                   <div className="flex flex-col">
-                    <div className="px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
-                      Wires ({wires.length})
-                    </div>
                     <div className="min-h-[150px] max-h-[300px] overflow-y-auto">
                       <WireTable />
                     </div>
@@ -521,20 +518,10 @@ export function EditorPage() {
                     </div>
 
                     {/* Ground */}
-                    <div>
-                      <label className="text-[10px] text-text-secondary font-semibold uppercase tracking-wider block mb-1">
-                        Ground
-                      </label>
-                      <GroundEditor ground={ground} onChange={setGround} />
-                    </div>
+                    <GroundEditor ground={ground} onChange={setGround} />
 
                     {/* Matching / Balun */}
-                    <div>
-                      <label className="text-[10px] text-text-secondary font-semibold uppercase tracking-wider block mb-1">
-                        Matching
-                      </label>
-                      <BalunEditor matching={matching} onChange={setMatching} />
-                    </div>
+                    <BalunEditor matching={matching} onChange={setMatching} />
 
                     {/* Pattern resolution */}
                     <div>

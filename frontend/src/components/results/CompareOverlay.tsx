@@ -84,10 +84,7 @@ export function CompareOverlay({ className = "" }: CompareOverlayProps) {
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <div className="flex items-center justify-between">
-        <h4 className="text-[10px] font-medium text-text-secondary uppercase tracking-wider">
-          Compare
-        </h4>
+      <div className="flex items-center justify-end">
         <div className="flex items-center gap-1">
           <button
             onClick={handleSave}
