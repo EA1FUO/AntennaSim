@@ -1,4 +1,4 @@
-"""Parse MMANA-GAL .maa files into AntSim models.
+"""Parse MMANA-GAL .maa files into AntennaSim models.
 
 MMANA-GAL .maa file format:
   Line 1: Comment/title

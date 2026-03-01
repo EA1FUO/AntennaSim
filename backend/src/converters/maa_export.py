@@ -1,4 +1,4 @@
-"""Export AntSim antenna data to MMANA-GAL .maa format.
+"""Export AntennaSim antenna data to MMANA-GAL .maa format.
 
 Generates a .maa file that can be opened in MMANA-GAL, MMANA-GAL basic, etc.
 """
@@ -30,7 +30,7 @@ def export_maa(
     loads = loads or []
 
     # Line 0: Title
-    lines.append(title or "AntSim export")
+    lines.append(title or "AntennaSim export")
 
     # Line 1: Frequency info
     lines.append(f"{frequency_mhz:.6f}")

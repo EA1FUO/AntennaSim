@@ -70,7 +70,7 @@ class SimulationRequest(BaseModel):
     ground: GroundConfig = Field(default_factory=GroundConfig)
     frequency: FrequencyConfig
     pattern: PatternConfig = Field(default_factory=PatternConfig)
-    comment: str = Field(default="AntSim simulation", max_length=200)
+    comment: str = Field(default="AntennaSim simulation", max_length=200)
 
     # V2 optional advanced fields
     loads: list[LumpedLoad] = Field(default_factory=list, max_length=100,

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# AntSim Development Environment
+# AntennaSim Development Environment
 # Usage: ./scripts/dev.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,7 +15,7 @@ if [ ! -f .env ]; then
     cp .env.example .env
 fi
 
-echo "Starting AntSim development environment..."
+echo "Starting AntennaSim development environment..."
 echo "  Frontend: http://localhost:5173"
 echo "  Backend:  http://localhost:8000/docs"
 echo "  Redis:    localhost:6379"

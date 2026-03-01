@@ -28,10 +28,10 @@ export function Navbar() {
         {/* Logo */}
         <a href="/" className="flex items-center gap-2">
           <span className="text-accent font-bold text-lg tracking-tight">
-            AntSim
+            AntennaSim
           </span>
           <span className="text-text-secondary text-[10px] font-mono">
-            v0.2
+            v{__APP_VERSION__}
           </span>
         </a>
 

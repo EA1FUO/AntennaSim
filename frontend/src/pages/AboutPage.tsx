@@ -66,10 +66,10 @@ export function AboutPage() {
           {/* Hero */}
           <div>
             <h1 className="text-3xl font-bold text-text-primary mb-2">
-              About AntSim
+              About AntennaSim
             </h1>
             <p className="text-text-secondary leading-relaxed">
-              AntSim is a modern, free, open-source web-based antenna simulator
+              AntennaSim is a modern, free, open-source web-based antenna simulator
               powered by the NEC2 electromagnetic engine. It replaces outdated
               desktop tools like MMANA-GAL, 4NEC2, and EZNEC with a beautiful,
               accessible web experience that works on any device without
@@ -106,7 +106,7 @@ export function AboutPage() {
             </h2>
             <div className="space-y-3 text-sm text-text-secondary leading-relaxed">
               <p>
-                AntSim uses the <strong className="text-text-primary">Method of Moments (MoM)</strong> via
+                AntennaSim uses the <strong className="text-text-primary">Method of Moments (MoM)</strong> via
                 the NEC2 engine to solve Maxwell's equations for thin-wire structures.
                 Your antenna geometry is broken into segments, and NEC2 computes the
                 current distribution, impedance, radiation pattern, and other parameters.

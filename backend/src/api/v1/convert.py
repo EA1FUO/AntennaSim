@@ -52,7 +52,7 @@ class ImportResponse(BaseModel):
 class ExportRequest(BaseModel):
     """Export antenna data to .maa or .nec format."""
     format: str = Field(description="Output format: 'maa' or 'nec'")
-    title: str = Field(default="AntSim export")
+    title: str = Field(default="AntennaSim export")
     wires: list[Wire]
     excitations: list[Excitation]
     loads: list[LumpedLoad] = Field(default_factory=list)

@@ -1,4 +1,4 @@
-"""AntSim Backend — FastAPI application factory with lifespan events."""
+"""AntennaSim Backend — FastAPI application factory with lifespan events."""
 
 import logging
 from contextlib import asynccontextmanager
@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         level=getattr(logging, settings.log_level.upper(), logging.INFO),
         format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
     )
-    logger.info("AntSim backend starting — env=%s", settings.environment)
+    logger.info("AntennaSim backend starting — env=%s", settings.environment)
     logger.info("CORS origins: %s", settings.cors_origins)
 
     # Verify nec2c is available
@@ -45,13 +45,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     # Shutdown: close Redis
     await close_redis()
-    logger.info("AntSim backend shutting down")
+    logger.info("AntennaSim backend shutting down")
 
 
 app = FastAPI(
-    title="AntSim API",
+    title="AntennaSim API",
     description="Web Antenna Simulator — NEC2 Engine",
-    version="0.2.0",
+    version=settings.version,
     lifespan=lifespan,
     docs_url="/docs" if settings.is_dev else None,
     redoc_url="/redoc" if settings.is_dev else None,

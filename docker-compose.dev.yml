@@ -1,26 +1,28 @@
 services:
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile.dev
+      context: .
+      dockerfile: frontend/Dockerfile.dev
     ports:
       - "5173:5173"
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
       - ./frontend/index.html:/app/index.html
+      - ./VERSION:/VERSION:ro
     environment:
       - VITE_API_URL=http://localhost:8000
       - VITE_WS_URL=ws://localhost:8000
 
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.dev
+      context: .
+      dockerfile: backend/Dockerfile.dev
     ports:
       - "8000:8000"
     volumes:
       - ./backend/src:/app/src
+      - ./VERSION:/app/VERSION:ro
     environment:
       - ENVIRONMENT=development
       - ALLOWED_ORIGINS=http://localhost:5173
