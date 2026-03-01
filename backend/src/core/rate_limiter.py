@@ -1,8 +1,10 @@
 """Redis sliding window rate limiter.
 
-Limits:
-  - 30 simulations per hour per IP
-  - 5 concurrent simulations per IP
+Limits are configured via environment variables (see config.py):
+  - RATE_LIMIT_ENABLED (default: false)
+  - RATE_LIMIT_PER_HOUR (default: 30)
+  - RATE_LIMIT_WINDOW_SECONDS (default: 3600)
+  - MAX_CONCURRENT_PER_IP (default: 5)
 
 Returns 429 Too Many Requests with Retry-After header on limit.
 """
@@ -18,11 +20,6 @@ from src.config import settings
 from src.simulation.cache import get_redis
 
 logger = logging.getLogger("antsim.rate_limiter")
-
-# Rate limit config
-RATE_LIMIT_PER_HOUR = 30
-RATE_WINDOW_SECONDS = 3600
-MAX_CONCURRENT_PER_IP = 5
 
 
 def _get_client_ip(request: Request) -> str:
@@ -42,19 +39,19 @@ async def check_rate_limit(request: Request) -> None:
 
     Uses Redis sorted sets with timestamps as scores for a sliding window.
     Falls back to allowing requests if Redis is unavailable.
-    Bypassed entirely in development mode.
+    Bypassed entirely when rate_limit_enabled is False (default).
     """
-    if settings.is_dev:
+    if not settings.rate_limit_enabled:
         return
 
     r = await get_redis()
     if r is None:
-        # No Redis = no rate limiting (acceptable for dev)
+        # No Redis = no rate limiting
         return
 
     client_ip = _get_client_ip(request)
     now = time.time()
-    window_start = now - RATE_WINDOW_SECONDS
+    window_start = now - settings.rate_limit_window_seconds
 
     rate_key = f"rate:{client_ip}"
     concurrent_key = f"concurrent:{client_ip}"
@@ -75,13 +72,13 @@ async def check_rate_limit(request: Request) -> None:
         concurrent_count = int(concurrent_raw) if concurrent_raw else 0
 
         # Check hourly rate limit
-        if request_count >= RATE_LIMIT_PER_HOUR:
+        if request_count >= settings.rate_limit_per_hour:
             # Find the oldest entry to compute retry-after
             oldest = await r.zrange(rate_key, 0, 0, withscores=True)
-            retry_after = RATE_WINDOW_SECONDS
+            retry_after = settings.rate_limit_window_seconds
             if oldest:
                 oldest_time = oldest[0][1]
-                retry_after = max(1, int(oldest_time + RATE_WINDOW_SECONDS - now))
+                retry_after = max(1, int(oldest_time + settings.rate_limit_window_seconds - now))
 
             logger.warning(
                 "Rate limit exceeded for %s: %d requests in window",
@@ -91,14 +88,14 @@ async def check_rate_limit(request: Request) -> None:
                 status_code=429,
                 detail={
                     "error": "rate_limit_exceeded",
-                    "message": f"Rate limit of {RATE_LIMIT_PER_HOUR} simulations per hour exceeded",
+                    "message": f"Rate limit of {settings.rate_limit_per_hour} simulations per hour exceeded",
                     "retry_after": retry_after,
                 },
                 headers={"Retry-After": str(retry_after)},
             )
 
         # Check concurrent limit
-        if concurrent_count >= MAX_CONCURRENT_PER_IP:
+        if concurrent_count >= settings.max_concurrent_per_ip:
             logger.warning(
                 "Concurrent limit exceeded for %s: %d active",
                 client_ip, concurrent_count,
@@ -107,7 +104,7 @@ async def check_rate_limit(request: Request) -> None:
                 status_code=429,
                 detail={
                     "error": "concurrent_limit_exceeded",
-                    "message": f"Maximum {MAX_CONCURRENT_PER_IP} concurrent simulations exceeded",
+                    "message": f"Maximum {settings.max_concurrent_per_ip} concurrent simulations exceeded",
                     "retry_after": 5,
                 },
                 headers={"Retry-After": "5"},
@@ -115,7 +112,7 @@ async def check_rate_limit(request: Request) -> None:
 
         # Record this request in the sliding window
         await r.zadd(rate_key, {f"{now}": now})
-        await r.expire(rate_key, RATE_WINDOW_SECONDS + 60)
+        await r.expire(rate_key, settings.rate_limit_window_seconds + 60)
 
         # Increment concurrent counter
         await r.incr(concurrent_key)

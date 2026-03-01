@@ -21,9 +21,14 @@ class Settings(BaseSettings):
     allowed_origins: str = "http://localhost:5173"
     redis_url: str = "redis://redis:6379"
     log_level: str = "info"
-    max_concurrent_sims: int = 4
     sim_timeout_seconds: int = 180
     nec_workdir: str = "/tmp/nec_workdir"
+
+    # Rate limiting (disabled by default — enable for public deployments)
+    rate_limit_enabled: bool = False
+    rate_limit_per_hour: int = 30
+    rate_limit_window_seconds: int = 3600
+    max_concurrent_per_ip: int = 5
 
     @property
     def version(self) -> str:
