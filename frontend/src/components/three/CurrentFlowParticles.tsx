@@ -84,7 +84,7 @@ export function CurrentFlowParticles({
     const wires: WireParticleData[] = [];
     let totalCount = 0;
 
-    for (const [_tag, segs] of wireMap) {
+    for (const [, segs] of wireMap) {
       if (segs.length < 1) continue;
 
       // Sort by segment index
