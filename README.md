@@ -1,3 +1,9 @@
+<h1 align="center">AntennaSim</h1>
+
+<p align="center">
+  <strong>Free, open-source antenna simulator for the browser -- powered by NEC2</strong>
+</p>
+
 <p align="center">
   <img src="https://img.shields.io/badge/version-0.6.0-blue?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/license-GPL--3.0-green?style=flat-square" alt="License">
@@ -6,22 +12,34 @@
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs Welcome">
 </p>
 
-# AntennaSim
+<p align="center">
+  <code>docker run -p 80:80 ea1fuo/antennasim</code>
+</p>
 
-**A free, open-source, web-based amateur radio antenna simulator powered by the NEC2 electromagnetic engine.**
-
-Design antennas from 17 built-in templates or build your own from scratch in the wire editor. Run NEC2 simulations and instantly visualize SWR, impedance, Smith chart, 3D radiation patterns, current distribution, and near-field heatmaps -- all in your browser.
-
-No installation required. Just `docker compose up` and go.
-
----
+<br>
 
 <p align="center">
-  <img src="screenshots/simulator.png" alt="AntennaSim — 3D viewport with radiation pattern, current flow, and real-time simulation" width="100%">
+  <img src="screenshots/simulator.png" alt="AntennaSim -- Simulator with 3D radiation pattern" width="100%">
 </p>
+
 <p align="center">
-  <img src="screenshots/editor.png" alt="AntennaSim — Wire editor with optimizer" width="100%">
+  <img src="screenshots/editor.png" alt="AntennaSim -- Wire editor with 3D viewport" width="100%">
 </p>
+
+<br>
+
+<p align="center">
+  <strong>17 antenna templates</strong> &nbsp;&middot;&nbsp;
+  <strong>3D radiation patterns</strong> &nbsp;&middot;&nbsp;
+  <strong>SWR &amp; Smith charts</strong> &nbsp;&middot;&nbsp;
+  <strong>Wire editor + optimizer</strong> &nbsp;&middot;&nbsp;
+  <strong>NanoVNA overlay</strong> &nbsp;&middot;&nbsp;
+  <strong>Dark / light theme</strong>
+</p>
+
+<br>
+
+Design antennas from built-in templates or build your own from scratch in the wire editor. Run NEC2 simulations and instantly visualize SWR, impedance, Smith chart, 3D radiation patterns, current distribution, and near-field heatmaps -- all in your browser.
 
 ---
 
@@ -46,7 +64,10 @@ No installation required. Just `docker compose up` and go.
 
 ## Features
 
-### Simulation Engine
+<details open>
+<summary><strong>Simulation Engine</strong></summary>
+
+<br>
 
 - **Full NEC2 pipeline** -- geometry definition to card deck generation to `nec2c` execution to parsed results, all automated
 - **Frequency sweep** -- simulate across any frequency range with configurable step size
@@ -55,10 +76,15 @@ No installation required. Just `docker compose up` and go.
 - **Transmission lines** -- characteristic impedance, length, velocity factor, and shunt admittance
 - **GA/GM/GR cards** -- wire arcs, coordinate transformations, and cylindrical symmetry for complex geometries
 - **Redis caching** -- simulation results cached with SHA-256 keys and zlib compression (1h TTL)
-- **Rate limiting** -- 30 sims/hour, 5 concurrent per IP
+- **Rate limiting** -- opt-in, configurable (default: 30/hour, 5 concurrent per IP when enabled)
 - **Sandboxed execution** -- `subprocess.run(shell=False, timeout=180)`, isolated temp dirs, non-root container
 
-### Interactive 3D Viewport
+</details>
+
+<details>
+<summary><strong>Interactive 3D Viewport</strong></summary>
+
+<br>
 
 - **Real-time 3D rendering** -- pan, rotate, zoom with orbit controls
 - **Radiation pattern** -- 3D surface mesh with perceptually uniform colormap (gain in dBi)
@@ -69,11 +95,16 @@ No installation required. Just `docker compose up` and go.
 - **Pattern slice** -- animated cutting plane sweeping through the radiation pattern
 - **Ground reflection** -- ghost mirror showing antenna image below ground plane
 - **Hover measurements** -- tooltip follows cursor over any 3D object showing gain, wire dimensions, current magnitude, or field strength
-- **Auto-framing** -- camera automatically fits to antenna bounding box
-- **Camera presets** -- top, front, side, and isometric views (keys `1`-`4`)
-- **Compass rose** and axis helper for spatial orientation
+- **Auto-framing** -- camera automatically fits to antenna bounding box on load and template change
+- **3D orientation gizmo** -- interactive axis cube in the viewport corner; click any face/edge/corner to snap to that camera angle
+- **Compass rose** for spatial orientation
 
-### Charts & Analysis
+</details>
+
+<details>
+<summary><strong>Charts &amp; Analysis</strong></summary>
+
+<br>
 
 - **SWR vs. Frequency** -- color-coded zones (green/amber/red), ham band markers, resonance annotation, crosshair tooltips
 - **Impedance (R + jX)** -- resistance and reactance curves, reference impedance line, resonance crossings where jX=0
@@ -84,7 +115,12 @@ No installation required. Just `docker compose up` and go.
 - **Balun/Unun matching** -- client-side impedance transformation with 10 presets (1:1 to 49:1) for viewing SWR relative to transformed impedance
 - **.s1p overlay** -- import NanoVNA measurement data and overlay on simulation SWR for comparison
 
-### Wire Editor
+</details>
+
+<details>
+<summary><strong>Wire Editor</strong></summary>
+
+<br>
 
 - **Build from scratch** -- click-to-add wires, drag endpoints, snap grid
 - **Move mode** -- drag endpoints or entire wires; Shift+drag for vertical-only movement
@@ -95,7 +131,12 @@ No installation required. Just `docker compose up` and go.
 - **Templates** -- load any built-in template into the editor and modify it
 - **Import/Export** -- open and save `.nec` (NEC2 card deck) and `.maa` (MMANA-GAL) files
 
-### Optimizer
+</details>
+
+<details>
+<summary><strong>Optimizer</strong></summary>
+
+<br>
 
 - **Nelder-Mead** algorithm (scipy, adaptive mode)
 - **5 objective functions** -- minimize SWR (single freq), minimize SWR (band average), maximize gain, maximize front-to-back ratio, weighted combined
@@ -103,7 +144,12 @@ No installation required. Just `docker compose up` and go.
 - **Real-time progress** -- WebSocket streaming of iteration count, current best SWR, convergence chart
 - **Cancel** -- abort optimization mid-run
 
-### Other
+</details>
+
+<details>
+<summary><strong>Other</strong></summary>
+
+<br>
 
 - **17 antenna templates** spanning wire, vertical, multiband, loop, and directional categories
 - **Template library page** -- browse and compare all templates with descriptions and difficulty ratings
@@ -111,6 +157,8 @@ No installation required. Just `docker compose up` and go.
 - **Mobile responsive** -- usable on phones and tablets with touch-friendly controls
 - **Dark/Light theme** -- system-aware with manual toggle
 - **Keyboard shortcuts** -- 17 bindings for fast workflow (press `?` to see them all)
+
+</details>
 
 ---
 
@@ -137,7 +185,15 @@ Every template includes configurable parameters (frequency, height, element leng
 - [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) (v2+)
 - That's it. No Python, Node.js, or nec2c installation needed.
 
-### Run
+### One-liner (Docker Hub)
+
+```bash
+docker run -p 80:80 ea1fuo/antennasim
+```
+
+Open **http://localhost** in your browser. Done. This pulls the all-in-one image from Docker Hub with everything bundled (frontend, backend, Redis, nginx).
+
+### From source
 
 ```bash
 git clone https://github.com/EA1FUO/AntennaSim.git
@@ -145,8 +201,6 @@ cd AntennaSim
 cp .env.example .env
 docker compose up --build
 ```
-
-Open **http://localhost** in your browser. Done.
 
 The first build takes a few minutes (downloading base images, compiling nec2c, installing dependencies). Subsequent starts are fast.
 
@@ -280,7 +334,7 @@ AntennaSim/
 |   |   |   |-- layout/         # App shell, panels, responsive wrappers
 |   |   |   +-- common/         # Shared utilities, keyboard shortcuts
 |   |   |-- hooks/              # Custom hooks (chart theme, debounce, etc.)
-|   |   |-- stores/             # Zustand stores (antenna, simulation, editor, UI)
+|   |   |-- stores/             # Zustand stores (antenna, simulation, editor, UI, compare)
 |   |   |-- templates/          # 17 antenna template definitions
 |   |   |-- engine/             # Client-side NEC card generation & validation
 |   |   |-- utils/              # Units, formatting, .s1p parser, matching
@@ -302,9 +356,21 @@ AntennaSim/
 |   |-- nginx.conf              # Proxy rules, gzip, security headers, WebSocket
 |   +-- Dockerfile              # nginx:alpine
 |
+|-- deploy/
+|   +-- allinone/               # All-in-one Docker image support files
+|       |-- supervisord.conf    # Manages redis, uvicorn, nginx processes
+|       +-- nginx.conf          # Serves frontend + proxies /api/ to uvicorn
+|
+|-- .github/workflows/
+|   |-- ci.yml                  # Lint, type-check, build on PRs and pushes to main
+|   |-- pr-title.yml            # Validates Conventional Commits format on PR titles
+|   +-- docker-publish.yml      # Builds and pushes Docker images on version tags
+|
 |-- scripts/
 |   +-- dev.sh                  # Start development environment
 |
+|-- VERSION                     # Single source of truth for app version (e.g. 0.6.0)
+|-- Dockerfile                  # All-in-one image: frontend + backend + redis + nginx
 |-- docker-compose.yml          # Production stack (4 services)
 |-- docker-compose.dev.yml      # Development overrides (hot-reload, exposed ports)
 |-- .env.example                # Environment variable template
@@ -379,9 +445,13 @@ ENVIRONMENT=development          # development | production
 ALLOWED_ORIGINS=http://localhost:5173  # CORS origins (comma-separated)
 REDIS_URL=redis://redis:6379     # Redis connection
 LOG_LEVEL=debug                  # debug | info | warning | error
-MAX_CONCURRENT_SIMS=4            # Max parallel nec2c processes
 SIM_TIMEOUT_SECONDS=180          # Per-simulation timeout (seconds)
 NEC_WORKDIR=/tmp/nec_workdir     # Temp directory for .nec files
+
+# Rate limiting (opt-in, disabled by default)
+RATE_LIMIT_ENABLED=false         # Set to true for public deployments
+RATE_LIMIT_PER_HOUR=30           # Max simulations per IP per hour
+MAX_CONCURRENT_PER_IP=5          # Max concurrent simulations per IP
 
 # Frontend (Vite)
 VITE_API_URL=http://localhost:8000   # Backend URL
@@ -399,7 +469,6 @@ Press `?` anywhere in the app to see the full shortcuts panel.
 | Key | Action |
 |---|---|
 | `Ctrl + Enter` | Run simulation |
-| `1` / `2` / `3` / `4` | Top / Front / Side / Isometric view |
 | `Scroll` | Zoom |
 | `Left drag` | Rotate |
 | `Right drag` | Pan |
@@ -479,7 +548,7 @@ Contributions are welcome. This is a free and open-source project for the amateu
 
 ### Reporting bugs
 
-Open an [issue](https://github.com/AntennaSim-App/AntennaSim/issues) with:
+Open an [issue](https://github.com/EA1FUO/AntennaSim/issues) with:
 - What you expected vs. what happened
 - Browser, OS, and device
 - Steps to reproduce
@@ -487,7 +556,7 @@ Open an [issue](https://github.com/AntennaSim-App/AntennaSim/issues) with:
 
 ### Ideas & feature requests
 
-Open a [discussion](https://github.com/AntennaSim-App/AntennaSim/discussions) -- we'd love to hear what antennas, features, or improvements would be most useful to you.
+Open a [discussion](https://github.com/EA1FUO/AntennaSim/discussions) -- we'd love to hear what antennas, features, or improvements would be most useful to you.
 
 ---
 
