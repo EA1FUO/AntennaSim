@@ -48,6 +48,8 @@ interface EditorAntennaModelProps {
   onSegmentPick?: (tag: number, segment: number) => void;
   /** Ref to the tooltip DOM element for showing segment info on hover */
   tooltipRef?: { current: HTMLDivElement | null };
+  /** When true, wire becomes semi-transparent so current overlays show through */
+  dimmed?: boolean;
 }
 
 const SELECTED_COLOR = "#FFFFFF";
@@ -99,6 +101,7 @@ export function EditorAntennaModel({
   onWireDragStart,
   onSegmentPick,
   tooltipRef,
+  dimmed = false,
 }: EditorAntennaModelProps) {
   // Pick mode: hovered segment number (null when not hovering)
   const [hoveredSegment, setHoveredSegment] = useState<number | null>(null);
@@ -126,10 +129,13 @@ export function EditorAntennaModel({
       roughness: isSelected ? 0.5 : 0.25,
       emissive: isSelected ? color : "#000000",
       emissiveIntensity: isSelected ? 0.3 : 0,
+      transparent: dimmed,
+      opacity: dimmed ? 0.15 : 1,
+      depthWrite: !dimmed,
     });
 
     return { geometry: tubeGeo, material: mat, start: s, end: e };
-  }, [wire, isSelected]);
+  }, [wire, isSelected, dimmed]);
 
   // Selection outline
   const outlineGeometry = useMemo(() => {
@@ -282,6 +288,9 @@ export function EditorAntennaModel({
           roughness={0.4}
           emissive={mode === "move" ? "#10B981" : "#000000"}
           emissiveIntensity={mode === "move" ? 0.5 : 0}
+          transparent={dimmed}
+          opacity={dimmed ? 0.15 : 1}
+          depthWrite={!dimmed}
         />
       </mesh>
       <mesh
@@ -303,6 +312,9 @@ export function EditorAntennaModel({
           roughness={0.4}
           emissive={mode === "move" ? "#10B981" : "#000000"}
           emissiveIntensity={mode === "move" ? 0.5 : 0}
+          transparent={dimmed}
+          opacity={dimmed ? 0.15 : 1}
+          depthWrite={!dimmed}
         />
       </mesh>
 

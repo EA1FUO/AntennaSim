@@ -121,7 +121,7 @@ export function SimulatorPage() {
       {/* Main content area */}
       <div className="flex-1 flex overflow-hidden">
         {/* === LEFT PANEL (desktop only) === */}
-        <aside className="hidden lg:flex flex-col w-72 xl:w-80 border-r border-border bg-surface overflow-y-auto shrink-0">
+        <aside className="hidden lg:flex flex-col w-80 xl:w-96 border-r border-border bg-surface overflow-y-auto shrink-0">
           <div className="p-3 space-y-4 flex-1">
             <TemplatePicker
               selectedId={template.id}
@@ -255,7 +255,7 @@ export function SimulatorPage() {
         </main>
 
         {/* === RIGHT PANEL (desktop only) === */}
-        <aside className="hidden lg:flex flex-col w-72 xl:w-80 border-l border-border bg-surface overflow-hidden shrink-0">
+        <aside className="hidden lg:flex flex-col w-80 xl:w-96 border-l border-border bg-surface overflow-hidden shrink-0">
           <ErrorBoundary label="Results">
             <ResultsPanel />
           </ErrorBoundary>

@@ -81,8 +81,8 @@ export function CameraControls({ enabled = true, wires = [], hasGround = true }:
     progress: number;
   } | null>(null);
 
-  // Track previous wire count to detect template changes
-  const prevWireCountRef = useRef(wires.length);
+  // Track previous wire count to detect template changes (init to 0 so first mount triggers auto-frame)
+  const prevWireCountRef = useRef(0);
 
   // Auto-frame when wires change significantly (template change) — only when wire count changes
   useEffect(() => {

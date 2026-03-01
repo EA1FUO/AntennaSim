@@ -6,6 +6,8 @@ import { getWireColor } from "./types";
 
 interface AntennaModelProps {
   wire: WireData;
+  /** When true, wire becomes semi-transparent so current overlays show through */
+  dimmed?: boolean;
 }
 
 /**
@@ -15,7 +17,7 @@ interface AntennaModelProps {
  *
  * Includes end cap spheres at both endpoints for clean termination.
  */
-export function AntennaModel({ wire }: AntennaModelProps) {
+export function AntennaModel({ wire, dimmed = false }: AntennaModelProps) {
   const { geometry, material, endCapPositions } = useMemo(() => {
     // NEC2: X=east, Y=north, Z=up -> Three.js: X=east, Y=up, Z=south
     const start = new Vector3(wire.x1, wire.z1, -wire.y1);
@@ -32,11 +34,14 @@ export function AntennaModel({ wire }: AntennaModelProps) {
       color,
       metalness: 0.85,
       roughness: 0.25,
+      transparent: dimmed,
+      opacity: dimmed ? 0.15 : 1,
+      depthWrite: !dimmed,
     });
 
     const caps: [Vector3, Vector3] = [start, end];
     return { geometry: tubeGeo, material: mat, endCapPositions: caps };
-  }, [wire]);
+  }, [wire, dimmed]);
 
   const capRadius = Math.max(wire.radius * 60, 0.04);
 
@@ -69,6 +74,9 @@ export function AntennaModel({ wire }: AntennaModelProps) {
             color={getWireColor(wire.tag)}
             metalness={0.85}
             roughness={0.25}
+            transparent={dimmed}
+            opacity={dimmed ? 0.15 : 1}
+            depthWrite={!dimmed}
           />
         </mesh>
       ))}
@@ -82,9 +90,11 @@ export function AntennaModel({ wire }: AntennaModelProps) {
  */
 interface JunctionSpheresProps {
   wires: WireData[];
+  /** When true, junctions become semi-transparent so current overlays show through */
+  dimmed?: boolean;
 }
 
-export function JunctionSpheres({ wires }: JunctionSpheresProps) {
+export function JunctionSpheres({ wires, dimmed = false }: JunctionSpheresProps) {
   const junctions = useMemo(() => {
     if (wires.length < 2) return [];
 
@@ -135,6 +145,9 @@ export function JunctionSpheres({ wires }: JunctionSpheresProps) {
             color="#E0E0E8"
             metalness={0.9}
             roughness={0.2}
+            transparent={dimmed}
+            opacity={dimmed ? 0.15 : 1}
+            depthWrite={!dimmed}
           />
         </mesh>
       ))}

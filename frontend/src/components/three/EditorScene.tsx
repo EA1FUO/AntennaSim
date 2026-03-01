@@ -88,6 +88,9 @@ function EditorSceneContent({
   const theme = useUIStore((s) => s.theme);
   const accurateFeedpoint = useUIStore((s) => s.accurateFeedpoint);
 
+  // Dim wires when current/flow overlays are active so the colors show through
+  const wiresDimmed = (viewToggles.current || viewToggles.currentFlow) && !!currents && currents.length > 0;
+
   const wires = useEditorStore((s) => s.wires);
   const excitations = useEditorStore((s) => s.excitations);
   const selectedTags = useEditorStore((s) => s.selectedTags);
@@ -415,6 +418,7 @@ function EditorSceneContent({
             onWireDragStart={handleWireDragStart}
             onSegmentPick={handleSegmentPick}
             tooltipRef={tooltipRef}
+            dimmed={wiresDimmed}
           />
         ))}
 
