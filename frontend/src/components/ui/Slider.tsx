@@ -4,7 +4,7 @@
  * Snaps values to the nearest step to eliminate floating-point drift.
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface SliderProps {
   label: string;
@@ -26,6 +26,9 @@ function snapToStep(raw: number, min: number, max: number, step: number): number
   return Math.min(max, Math.max(min, clean));
 }
 
+/** Debounce delay for slider drag updates (ms). */
+const DEBOUNCE_MS = 32;
+
 export function Slider({
   label,
   value,
@@ -39,11 +42,30 @@ export function Slider({
 }: SliderProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState("");
+  const [localValue, setLocalValue] = useState(value);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync local value when the prop changes externally (e.g. template switch)
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current !== null) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   const handleSliderChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const raw = parseFloat(e.target.value);
-      onChange(snapToStep(raw, min, max, step));
+      const snapped = snapToStep(raw, min, max, step);
+      // Update local value immediately for responsive slider
+      setLocalValue(snapped);
+      // Debounce the upstream onChange to avoid recomputing geometry on every pixel
+      if (timerRef.current !== null) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => onChange(snapped), DEBOUNCE_MS);
     },
     [onChange, min, max, step]
   );
@@ -72,7 +94,7 @@ export function Slider({
     [handleEditCommit]
   );
 
-  const displayValue = value.toFixed(decimals);
+  const displayValue = localValue.toFixed(decimals);
 
   return (
     <div className="space-y-1">
@@ -116,7 +138,7 @@ export function Slider({
         min={min}
         max={max}
         step={step}
-        value={value}
+        value={localValue}
         onChange={handleSliderChange}
         className="w-full h-1.5 bg-border rounded-full appearance-none cursor-pointer
           [&::-webkit-slider-thumb]:appearance-none
