@@ -6,7 +6,7 @@ import { GizmoHelper, GizmoViewport } from "@react-three/drei";
  */
 export function AxesHelper() {
   return (
-    <GizmoHelper alignment="top-right" margin={[72, 72]}>
+    <GizmoHelper alignment="top-right" margin={[72, 72]} renderPriority={2}>
       <GizmoViewport
         axisColors={["#EF4444", "#10B981", "#3B82F6"]}
         labelColor="white"
