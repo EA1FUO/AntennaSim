@@ -31,6 +31,8 @@ interface UIState {
   s1pFile: S1PFile | null;
   /** Impedance matching (balun/unun) configuration */
   matching: MatchingConfig;
+  /** Show feedpoint marker at exact NEC2 segment center (true) or snapped to wire edge (false) */
+  accurateFeedpoint: boolean;
 
   // Actions
   setTheme: (theme: Theme) => void;
@@ -46,6 +48,7 @@ interface UIState {
   setMobileTab: (tab: MobileTab) => void;
   setS1PFile: (file: S1PFile | null) => void;
   setMatching: (matching: MatchingConfig) => void;
+  setAccurateFeedpoint: (value: boolean) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -71,6 +74,7 @@ export const useUIStore = create<UIState>((set) => ({
   mobileTab: "antenna",
   s1pFile: null,
   matching: { ...DEFAULT_MATCHING },
+  accurateFeedpoint: false,
 
   setTheme: (theme) => set({ theme }),
   toggleTheme: () =>
@@ -91,4 +95,5 @@ export const useUIStore = create<UIState>((set) => ({
   setMobileTab: (tab) => set({ mobileTab: tab }),
   setS1PFile: (file) => set({ s1pFile: file }),
   setMatching: (matching) => set({ matching }),
+  setAccurateFeedpoint: (value) => set({ accurateFeedpoint: value }),
 }));

@@ -12,7 +12,7 @@
  */
 
 import { Canvas, useThree, ThreeEvent } from "@react-three/fiber";
-import { Suspense, useMemo, useCallback, useState, useRef } from "react";
+import { Suspense, useMemo, useCallback, useState, useRef, type RefObject } from "react";
 import { ACESFilmicToneMapping, SRGBColorSpace, Vector3, Plane, LineCurve3, TubeGeometry, MeshBasicMaterial } from "three";
 import { GroundPlane } from "./GroundPlane";
 import { CompassRose } from "./CompassRose";
@@ -38,6 +38,7 @@ interface EditorSceneProps {
   patternData?: PatternData | null;
   currents?: SegmentCurrent[] | null;
   nearField?: NearFieldResult | null;
+  tooltipRef?: RefObject<HTMLDivElement | null>;
 }
 
 /** Ground plane for raycasting (XZ plane at y=0 in Three.js = z=0 in NEC2) */
@@ -82,8 +83,10 @@ function EditorSceneContent({
   patternData,
   currents,
   nearField,
+  tooltipRef,
 }: EditorSceneProps) {
   const theme = useUIStore((s) => s.theme);
+  const accurateFeedpoint = useUIStore((s) => s.accurateFeedpoint);
 
   const wires = useEditorStore((s) => s.wires);
   const excitations = useEditorStore((s) => s.excitations);
@@ -96,6 +99,27 @@ function EditorSceneContent({
   const updateWire = useEditorStore((s) => s.updateWire);
   const moveWire = useEditorStore((s) => s.moveWire);
   const toggleSelection = useEditorStore((s) => s.toggleSelection);
+  const pickingExcitationForTag = useEditorStore((s) => s.pickingExcitationForTag);
+  const setExcitation = useEditorStore((s) => s.setExcitation);
+  const setPickingExcitationForTag = useEditorStore((s) => s.setPickingExcitationForTag);
+
+  /** Handle segment pick in 3D viewport — sets excitation and exits pick mode */
+  const handleSegmentPick = useCallback(
+    (tag: number, segment: number) => {
+      setExcitation(tag, segment);
+      setPickingExcitationForTag(null);
+    },
+    [setExcitation, setPickingExcitationForTag]
+  );
+
+  /** Build a map from wire tag to excitation segment for quick lookup */
+  const excitationSegmentMap = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const e of excitations) {
+      map.set(e.wire_tag, e.segment);
+    }
+    return map;
+  }, [excitations]);
 
   // Add mode state: first click sets start point, second click sets end
   const [addStart, setAddStart] = useState<[number, number, number] | null>(null);
@@ -382,10 +406,15 @@ function EditorSceneContent({
             wire={wire}
             isSelected={selectedTags.has(wire.tag)}
             hasFeedpoint={feedpointTags.has(wire.tag)}
+            feedSegment={excitationSegmentMap.get(wire.tag)}
+            isPicking={pickingExcitationForTag === wire.tag}
+            accurateFeedpoint={accurateFeedpoint}
             mode={mode}
             onWireClick={handleWireClick}
             onEndpointDragStart={handleEndpointDragStart}
             onWireDragStart={handleWireDragStart}
+            onSegmentPick={handleSegmentPick}
+            tooltipRef={tooltipRef}
           />
         ))}
 
@@ -451,6 +480,7 @@ function EditorSceneContent({
 
 export function EditorScene({ viewToggles, patternData, currents, nearField }: EditorSceneProps) {
   const theme = useUIStore((s) => s.theme);
+  const isPicking = useEditorStore((s) => s.pickingExcitationForTag) !== null;
   const sceneBg = theme === "dark" ? "#0A0A0F" : "#E8E8ED";
 
   // Tooltip ref — direct DOM mutation, no React state
@@ -471,10 +501,10 @@ export function EditorScene({ viewToggles, patternData, currents, nearField }: E
     <Canvas
       gl={glConfig}
       camera={{ position: [15, 12, 15], fov: 50, near: 0.1, far: 500 }}
-      style={{ background: sceneBg }}
+      style={{ background: sceneBg, cursor: isPicking ? "crosshair" : undefined }}
     >
       <Suspense fallback={null}>
-        <EditorSceneContent viewToggles={viewToggles} patternData={patternData} currents={currents} nearField={nearField} />
+        <EditorSceneContent viewToggles={viewToggles} patternData={patternData} currents={currents} nearField={nearField} tooltipRef={tooltipRef} />
         <SceneRaycaster tooltipRef={tooltipRef} />
       </Suspense>
     </Canvas>
