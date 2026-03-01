@@ -65,3 +65,15 @@ jobs:
             ${{ env.DOCKERHUB_USERNAME }}/antennasim-nginx:latest
           cache-from: type=gha,scope=nginx
           cache-to: type=gha,mode=max,scope=nginx
+
+      - name: Build and push all-in-one
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            ${{ env.DOCKERHUB_USERNAME }}/antennasim:${{ steps.version.outputs.version }}
+            ${{ env.DOCKERHUB_USERNAME }}/antennasim:latest
+          cache-from: type=gha,scope=allinone
+          cache-to: type=gha,mode=max,scope=allinone
