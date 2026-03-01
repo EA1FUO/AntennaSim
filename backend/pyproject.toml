@@ -1,6 +1,6 @@
 [project]
 name = "antsim-backend"
-version = "0.5.1"
+version = "0.6.0"
 description = "AntennaSim — Web Antenna Simulator Backend"
 requires-python = ">=3.12"
 dependencies = [
