@@ -15,7 +15,6 @@ import { useUIStore } from "../stores/uiStore";
 import { SceneRoot } from "../components/three/SceneRoot";
 import { ErrorBoundary } from "../components/common/ErrorBoundary";
 import { KeyboardShortcutsPanel } from "../components/common/KeyboardShortcutsPanel";
-import { CameraPresetsOverlay } from "../components/three/CameraPresets";
 import { ViewToggleToolbar } from "../components/three/ViewToggleToolbar";
 import { Navbar } from "../components/layout/Navbar";
 import { StatusBar } from "../components/layout/StatusBar";
@@ -31,7 +30,7 @@ import { PatternFrequencySlider } from "../components/results/PatternFrequencySl
 import { SWRChart } from "../components/results/SWRChart";
 import { formatSwr, formatGain, formatImpedance, swrColorClass, applyMatching } from "../utils/units";
 import type { AntennaTemplate } from "../templates/types";
-import type { CameraPreset, ViewToggles } from "../components/three/types";
+import type { ViewToggles } from "../components/three/types";
 
 /** Mobile bottom sheet tabs */
 const MOBILE_SEGMENTS = [
@@ -68,8 +67,6 @@ export function SimulatorPage() {
   // UI store
   const viewToggles = useUIStore((s) => s.viewToggles);
   const toggleView = useUIStore((s) => s.toggleView);
-  const activePreset = useUIStore((s) => s.activePreset);
-  const setActivePreset = useUIStore((s) => s.setActivePreset);
   const mobileTab = useUIStore((s) => s.mobileTab);
   const setMobileTab = useUIStore((s) => s.setMobileTab);
   const matching = useUIStore((s) => s.matching);
@@ -89,11 +86,6 @@ export function SimulatorPage() {
   const handleTemplateSelect = useCallback(
     (t: AntennaTemplate) => setTemplate(t),
     [setTemplate]
-  );
-
-  const handlePreset = useCallback(
-    (preset: CameraPreset) => setActivePreset(preset),
-    [setActivePreset]
   );
 
   const handleToggle = useCallback(
@@ -129,7 +121,7 @@ export function SimulatorPage() {
       {/* Main content area */}
       <div className="flex-1 flex overflow-hidden">
         {/* === LEFT PANEL (desktop only) === */}
-        <aside className="hidden lg:flex flex-col w-72 xl:w-80 border-r border-border bg-surface overflow-y-auto shrink-0">
+        <aside className="hidden lg:flex flex-col w-80 xl:w-96 border-r border-border bg-surface overflow-y-auto shrink-0">
           <div className="p-3 space-y-4 flex-1">
             <TemplatePicker
               selectedId={template.id}
@@ -232,10 +224,6 @@ export function SimulatorPage() {
           </ErrorBoundary>
 
           {/* Overlays */}
-          <CameraPresetsOverlay
-            onPreset={handlePreset}
-            activePreset={activePreset}
-          />
           <ViewToggleToolbar toggles={viewToggles} onToggle={handleToggle} />
 
           {/* Color scale legend (when pattern is visible) */}
@@ -267,7 +255,7 @@ export function SimulatorPage() {
         </main>
 
         {/* === RIGHT PANEL (desktop only) === */}
-        <aside className="hidden lg:flex flex-col w-72 xl:w-80 border-l border-border bg-surface overflow-hidden shrink-0">
+        <aside className="hidden lg:flex flex-col w-80 xl:w-96 border-l border-border bg-surface overflow-hidden shrink-0">
           <ErrorBoundary label="Results">
             <ResultsPanel />
           </ErrorBoundary>

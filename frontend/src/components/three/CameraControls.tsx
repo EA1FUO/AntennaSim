@@ -1,17 +1,17 @@
 /**
- * Camera orbit controls with smooth damping, preset support, and auto-framing.
+ * Camera orbit controls with smooth damping and auto-framing.
  *
  * Auto-framing: computes bounding box of antenna wires and positions camera
  * to show the complete antenna with ground context. Triggers on template
- * change and camera preset buttons (not on slider tweaks).
+ * change (wire count change), not on slider tweaks.
+ *
+ * Camera view presets are handled by the GizmoViewport in AxesHelper.tsx.
  */
 
 import { useRef, useEffect, useMemo } from "react";
 import { OrbitControls } from "@react-three/drei";
 import { useThree, useFrame } from "@react-three/fiber";
 import { Vector3, Box3 } from "three";
-import { useUIStore } from "../../stores/uiStore";
-import { getPresetCamera } from "./CameraPresets";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import type { WireData } from "./types";
 
@@ -66,14 +66,12 @@ function computeWireBBox(wires: WireData[], hasGround: boolean): Box3 {
 
 export function CameraControls({ enabled = true, wires = [], hasGround = true }: CameraControlsProps) {
   const controlsRef = useRef<OrbitControlsImpl>(null);
-  const activePreset = useUIStore((s) => s.activePreset);
-  const setActivePreset = useUIStore((s) => s.setActivePreset);
   const { camera } = useThree();
 
   // Compute bounding box
   const bbox = useMemo(() => computeWireBBox(wires, hasGround), [wires, hasGround]);
 
-  // Animation state
+  // Animation state for auto-framing
   const animRef = useRef<{
     active: boolean;
     startPos: Vector3;
@@ -83,8 +81,8 @@ export function CameraControls({ enabled = true, wires = [], hasGround = true }:
     progress: number;
   } | null>(null);
 
-  // Track previous wire count to detect template changes
-  const prevWireCountRef = useRef(wires.length);
+  // Track previous wire count to detect template changes (init to 0 so first mount triggers auto-frame)
+  const prevWireCountRef = useRef(0);
 
   // Auto-frame when wires change significantly (template change) — only when wire count changes
   useEffect(() => {
@@ -117,62 +115,7 @@ export function CameraControls({ enabled = true, wires = [], hasGround = true }:
     };
   }, [bbox, wires.length, camera]);
 
-  // When activePreset changes, compute framed preset position based on bbox
-  useEffect(() => {
-    if (!activePreset || !controlsRef.current) return;
-
-    const defaultPreset = getPresetCamera(activePreset);
-    const center = new Vector3();
-    const size = new Vector3();
-    bbox.getCenter(center);
-    bbox.getSize(size);
-    const diagonal = Math.max(size.length(), 3);
-    const dist = diagonal * 1.5;
-
-    let endPos: Vector3;
-    let endTarget: Vector3;
-
-    switch (activePreset) {
-      case "top":
-        endPos = new Vector3(center.x, center.y + dist, center.z + 0.01);
-        endTarget = center.clone();
-        break;
-      case "front":
-        endPos = new Vector3(center.x, center.y, center.z + dist);
-        endTarget = center.clone();
-        break;
-      case "side":
-        endPos = new Vector3(center.x + dist, center.y, center.z);
-        endTarget = center.clone();
-        break;
-      case "isometric":
-      default:
-        endPos = new Vector3(
-          center.x + dist * 0.6,
-          center.y + dist * 0.5,
-          center.z + dist * 0.6
-        );
-        endTarget = center.clone();
-        break;
-    }
-
-    // Fall back to default preset positions if no wires
-    if (wires.length === 0) {
-      endPos = new Vector3(...defaultPreset.position);
-      endTarget = new Vector3(...defaultPreset.target);
-    }
-
-    animRef.current = {
-      active: true,
-      startPos: camera.position.clone(),
-      endPos,
-      startTarget: controlsRef.current.target.clone(),
-      endTarget,
-      progress: 0,
-    };
-  }, [activePreset, camera, bbox, wires.length]);
-
-  // Animate camera each frame
+  // Animate camera each frame (auto-framing only)
   useFrame((_, delta) => {
     const anim = animRef.current;
     if (!anim || !anim.active || !controlsRef.current) return;
@@ -200,16 +143,6 @@ export function CameraControls({ enabled = true, wires = [], hasGround = true }:
     }
   });
 
-  // Clear preset when user manually orbits
-  const handleChange = () => {
-    if (!animRef.current?.active) {
-      const current = useUIStore.getState().activePreset;
-      if (current !== null) {
-        setActivePreset(null);
-      }
-    }
-  };
-
   return (
     <OrbitControls
       ref={controlsRef}
@@ -219,7 +152,7 @@ export function CameraControls({ enabled = true, wires = [], hasGround = true }:
       minDistance={0.5}
       maxDistance={200}
       maxPolarAngle={Math.PI * 0.95}
-      onChange={handleChange}
+      makeDefault
     />
   );
 }

@@ -255,10 +255,6 @@ export function ImportExportPanel({ className = "" }: ImportExportPanelProps) {
         onChange={handleFileChange}
       />
 
-      <h4 className="text-[10px] font-medium text-text-secondary uppercase tracking-wider">
-        Import / Export
-      </h4>
-
       {/* Import */}
       <button
         onClick={handleImport}

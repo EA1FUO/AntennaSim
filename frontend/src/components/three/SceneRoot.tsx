@@ -44,6 +44,9 @@ export function SceneRoot({
   const sceneBg = theme === "dark" ? "#0A0A0F" : "#E8E8ED";
   const fogColor = theme === "dark" ? "#0A0A0F" : "#E8E8ED";
 
+  // Dim wires when current/flow overlays are active so the colors show through
+  const wiresDimmed = (viewToggles.current || viewToggles.currentFlow) && !!currents && currents.length > 0;
+
   // Tooltip ref — direct DOM mutation, no React state
   const tooltipRef = useRef<HTMLDivElement>(null);
 
@@ -106,11 +109,11 @@ export function SceneRoot({
         {/* Antenna Wires */}
         {viewToggles.wires &&
           wires.map((wire) => (
-            <AntennaModel key={wire.tag} wire={wire} />
+            <AntennaModel key={wire.tag} wire={wire} dimmed={wiresDimmed} />
           ))}
 
         {/* Wire junction spheres */}
-        {viewToggles.wires && <JunctionSpheres wires={wires} />}
+        {viewToggles.wires && <JunctionSpheres wires={wires} dimmed={wiresDimmed} />}
 
         {/* Feedpoints */}
         {viewToggles.wires &&

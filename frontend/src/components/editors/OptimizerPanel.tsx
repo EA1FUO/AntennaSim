@@ -264,10 +264,6 @@ export function OptimizerPanel() {
 
   return (
     <div className="space-y-2">
-      <h4 className="text-[10px] font-medium text-text-secondary uppercase tracking-wider">
-        Optimizer
-      </h4>
-
       {/* Objective selection */}
       <div className="flex items-center gap-1.5">
         <span className="text-[10px] text-text-secondary shrink-0">Goal:</span>
