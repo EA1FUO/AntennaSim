@@ -22,8 +22,8 @@ class NearFieldConfig(BaseModel):
 class FrequencyConfig(BaseModel):
     """Frequency sweep configuration."""
 
-    start_mhz: float = Field(ge=0.1, le=500.0, description="Start frequency (MHz)")
-    stop_mhz: float = Field(ge=0.1, le=500.0, description="Stop frequency (MHz)")
+    start_mhz: float = Field(ge=0.1, le=2000.0, description="Start frequency (MHz)")
+    stop_mhz: float = Field(ge=0.1, le=2000.0, description="Stop frequency (MHz)")
     steps: int = Field(ge=1, le=201, description="Number of frequency steps")
 
     @model_validator(mode="after")

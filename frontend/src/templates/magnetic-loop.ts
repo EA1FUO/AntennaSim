@@ -60,7 +60,7 @@ export const magneticLoopTemplate: AntennaTemplate = {
       max: 30,
       step: 0.1,
       defaultValue: 14.1,
-      decimals: 1,
+      decimals: 3,
     },
     {
       key: "radius",
@@ -156,7 +156,7 @@ export const magneticLoopTemplate: AntennaTemplate = {
     const bw = freq * 0.05; // 5% bandwidth
     return {
       start_mhz: Math.max(0.1, freq - bw),
-      stop_mhz: freq + bw,
+      stop_mhz: Math.min(2000, freq + bw),
       steps: 21,
     };
   },

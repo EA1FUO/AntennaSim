@@ -477,7 +477,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const bandwidth = mhz * 0.1;
     const newFreqRange: FrequencyRange = {
       start_mhz: Math.round(Math.max(0.1, mhz - bandwidth / 2) * 1000) / 1000,
-      stop_mhz: Math.round((mhz + bandwidth / 2) * 1000) / 1000,
+      stop_mhz: Math.round(Math.min(2000, mhz + bandwidth / 2) * 1000) / 1000,
       steps: state.frequencyRange.steps,
     };
     set({
