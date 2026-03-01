@@ -52,7 +52,7 @@ export const deltaLoopTemplate: AntennaTemplate = {
     "Perimeter = 1 wavelength; each side = λ/3 for equilateral triangle.",
     "About 1 dB more gain and lower noise than a dipole at the same height.",
   ],
-  relatedTemplates: ["quad", "dipole", "magnetic-loop"],
+  relatedTemplates: ["horizontal-delta-loop", "quad", "dipole", "magnetic-loop"],
 
   parameters: [
     {
