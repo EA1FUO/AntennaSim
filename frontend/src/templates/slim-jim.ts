@@ -64,7 +64,7 @@ export const slimJimTemplate: AntennaTemplate = {
       description: "Center frequency",
       unit: "MHz",
       min: 1,
-      max: 450,
+      max: 2000,
       step: 0.1,
       defaultValue: 145.0,
       decimals: 3,
@@ -224,7 +224,7 @@ export const slimJimTemplate: AntennaTemplate = {
     const bw = freq * 0.08;
     return {
       start_mhz: Math.max(0.1, freq - bw / 2),
-      stop_mhz: Math.min(500, freq + bw / 2),
+      stop_mhz: Math.min(2000, freq + bw / 2),
       steps: 31,
     };
   },

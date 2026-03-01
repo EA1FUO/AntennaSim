@@ -41,7 +41,7 @@ export const verticalTemplate: AntennaTemplate = {
       description: "Center frequency for quarter-wave resonance",
       unit: "MHz",
       min: 1,
-      max: 450,
+      max: 2000,
       step: 0.1,
       defaultValue: 14.2,
       decimals: 3,
@@ -176,7 +176,7 @@ export const verticalTemplate: AntennaTemplate = {
     const bw = freq * 0.15; // verticals tend to have broader bandwidth response
     return {
       start_mhz: Math.max(0.1, freq - bw / 2),
-      stop_mhz: Math.min(500, freq + bw / 2),
+      stop_mhz: Math.min(2000, freq + bw / 2),
       steps: 31,
     };
   },

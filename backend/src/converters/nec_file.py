@@ -225,12 +225,12 @@ def parse_nec_file(content: str) -> NECFileData:
                 start = float(parts[5])
                 step = float(parts[6]) if len(parts) > 6 else 0.0
 
-                data.frequency_start_mhz = max(0.1, min(500.0, start))
+                data.frequency_start_mhz = max(0.1, min(2000.0, start))
                 data.frequency_steps = max(1, min(201, n_freq))
                 if n_freq > 1 and step > 0:
                     data.frequency_stop_mhz = max(
                         data.frequency_start_mhz,
-                        min(500.0, start + step * (n_freq - 1)),
+                        min(2000.0, start + step * (n_freq - 1)),
                     )
                 else:
                     data.frequency_stop_mhz = data.frequency_start_mhz

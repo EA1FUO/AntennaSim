@@ -61,7 +61,7 @@ export const logPeriodicTemplate: AntennaTemplate = {
       description: "Lower edge of the operating range",
       unit: "MHz",
       min: 1,
-      max: 200,
+      max: 1000,
       step: 0.5,
       defaultValue: 14.0,
       decimals: 1,
@@ -72,7 +72,7 @@ export const logPeriodicTemplate: AntennaTemplate = {
       description: "Upper edge of the operating range",
       unit: "MHz",
       min: 2,
-      max: 450,
+      max: 2000,
       step: 0.5,
       defaultValue: 30.0,
       decimals: 1,
@@ -231,7 +231,7 @@ export const logPeriodicTemplate: AntennaTemplate = {
     // Cover the design range with some margin
     return {
       start_mhz: Math.max(0.1, freqLow * 0.9),
-      stop_mhz: Math.min(500, freqHigh * 1.1),
+      stop_mhz: Math.min(2000, freqHigh * 1.1),
       steps: 51,
     };
   },
