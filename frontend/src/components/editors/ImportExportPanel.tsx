@@ -159,7 +159,7 @@ export function ImportExportPanel({ className = "" }: ImportExportPanelProps) {
       // Reset input
       e.target.value = "";
     },
-    [clearAll, addWire, setExcitation, setGround, setFrequencyRange]
+    [clearAll, addWire, addWireRaw, setExcitation, setGround, setFrequencyRange]
   );
 
   const handleExportJSON = useCallback(() => {

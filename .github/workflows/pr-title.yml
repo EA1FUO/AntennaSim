@@ -1,0 +1,54 @@
+name: PR Title
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    branches: [main]
+
+jobs:
+  check-title:
+    name: Conventional Commits
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate PR title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          # Conventional Commits pattern: type(optional-scope): description
+          PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .+'
+
+          if [[ ! "$PR_TITLE" =~ $PATTERN ]]; then
+            echo ""
+            echo "=========================================="
+            echo "  PR title does not follow Conventional Commits"
+            echo "=========================================="
+            echo ""
+            echo "  Your title:  \"$PR_TITLE\""
+            echo ""
+            echo "  Expected format:"
+            echo "    type(scope): description"
+            echo ""
+            echo "  Valid types:"
+            echo "    feat     - A new feature"
+            echo "    fix      - A bug fix"
+            echo "    docs     - Documentation changes"
+            echo "    style    - Code style (formatting, semicolons, etc.)"
+            echo "    refactor - Code refactoring (no feature/fix)"
+            echo "    perf     - Performance improvement"
+            echo "    test     - Adding or updating tests"
+            echo "    build    - Build system or dependencies"
+            echo "    ci       - CI/CD configuration"
+            echo "    chore    - Maintenance tasks"
+            echo "    revert   - Reverting a previous commit"
+            echo ""
+            echo "  Examples:"
+            echo "    feat: add horizontal delta loop template"
+            echo "    fix: resolve simulation timeout on large models"
+            echo "    docs: update README with new screenshots"
+            echo "    feat(templates): add EFHW antenna template"
+            echo ""
+            exit 1
+          fi
+
+          echo "PR title follows Conventional Commits: \"$PR_TITLE\""
