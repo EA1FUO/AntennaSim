@@ -14,7 +14,9 @@ services:
       - ENVIRONMENT=production
       - ALLOWED_ORIGINS=https://antsim.app,https://www.antsim.app,http://localhost,http://localhost:80
       - REDIS_URL=redis://redis:6379
-      - MAX_CONCURRENT_SIMS=4
+      - RATE_LIMIT_ENABLED=false
+      - RATE_LIMIT_PER_HOUR=30
+      - MAX_CONCURRENT_PER_IP=5
       - SIM_TIMEOUT_SECONDS=180
       - NEC_WORKDIR=/tmp/nec_workdir
     restart: unless-stopped
