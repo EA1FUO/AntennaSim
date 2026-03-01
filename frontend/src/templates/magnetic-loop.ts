@@ -60,7 +60,7 @@ export const magneticLoopTemplate: AntennaTemplate = {
       max: 30,
       step: 0.1,
       defaultValue: 14.1,
-      decimals: 1,
+      decimals: 3,
     },
     {
       key: "radius",
