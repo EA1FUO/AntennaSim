@@ -26,6 +26,11 @@ function snapToStep(raw: number, min: number, max: number, step: number): number
   return Math.min(max, Math.max(min, clean));
 }
 
+/** Clamp a value to [min, max] without step snapping (for typed input). */
+function clamp(raw: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, raw));
+}
+
 /** Debounce delay for slider drag updates (ms). */
 const DEBOUNCE_MS = 32;
 
@@ -79,9 +84,9 @@ export function Slider({
     setIsEditing(false);
     const parsed = parseFloat(editText);
     if (!isNaN(parsed)) {
-      onChange(snapToStep(parsed, min, max, step));
+      onChange(clamp(parsed, min, max));
     }
-  }, [editText, onChange, min, max, step]);
+  }, [editText, onChange, min, max]);
 
   const handleEditKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -117,8 +122,8 @@ export function Slider({
             onKeyDown={handleEditKeyDown}
             autoFocus
             className="w-20 text-xs font-mono text-text-primary text-right
-              bg-surface-secondary border border-border rounded px-1 py-0.5
-              focus:outline-none focus:border-accent"
+              bg-background border border-border rounded px-1 py-0.5
+              focus:outline-none focus:border-accent/50"
           />
         ) : (
           <button
