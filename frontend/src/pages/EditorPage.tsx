@@ -95,13 +95,14 @@ export function EditorPage() {
   // Right panel tab state: editor tools vs simulation results
   const [rightPanelTab, setRightPanelTab] = useState<"editor" | "results">("editor");
 
-  // Collapsible panel sections — wire table and properties open by default
-  const [wireTableOpen, setWireTableOpen] = useState(true);
-  const [wirePropsOpen, setWirePropsOpen] = useState(true);
-  const [templateLoaderOpen, setTemplateLoaderOpen] = useState(false);
-  const [importExportOpen, setImportExportOpen] = useState(false);
-  const [compareOpen, setCompareOpen] = useState(false);
-  const [optimizerOpen, setOptimizerOpen] = useState(false);
+  // Editor section dropdown: replaces 6 individual accordion toggles
+  type EditorSection = "wires" | "templates" | "tools" | "settings";
+  const [editorSection, setEditorSection] = useState<EditorSection>("wires");
+
+  // Tools sub-section accordion state (only used within "tools" section)
+  const [toolsImportOpen, setToolsImportOpen] = useState(false);
+  const [toolsCompareOpen, setToolsCompareOpen] = useState(false);
+  const [toolsOptimizerOpen, setToolsOptimizerOpen] = useState(false);
 
   // Template loader state
   const [selectedTemplate, setSelectedTemplate] = useState<AntennaTemplate>(templates[0]!);
@@ -219,8 +220,8 @@ export function EditorPage() {
     // Set ground from template default
     setGround(selectedTemplate.defaultGround);
 
-    // Collapse the template loader
-    setTemplateLoaderOpen(false);
+    // Switch to wires section after loading
+    setEditorSection("wires");
   }, [selectedTemplate, templateParams, clearAll, setWires, setDesignFrequency, setFrequencyRange, setGround]);
 
   const isLoading = simStatus === "loading";
@@ -351,111 +352,210 @@ export function EditorPage() {
           </div>
 
           {rightPanelTab === "editor" ? (
-            <div className="flex-1 overflow-y-auto min-h-0">
-              {/* Wires */}
-              <button
-                onClick={() => setWireTableOpen(!wireTableOpen)}
-                className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover transition-colors"
-              >
-                <span>Wires ({wires.length})</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${wireTableOpen ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
-              </button>
-              {wireTableOpen && (
-                <div className="min-h-[150px] max-h-[300px] overflow-y-auto">
-                  <WireTable />
-                </div>
-              )}
+            <>
+              {/* Section selector dropdown */}
+              <div className="px-2 py-1.5 border-b border-border shrink-0">
+                <select
+                  value={editorSection}
+                  onChange={(e) => setEditorSection(e.target.value as EditorSection)}
+                  className="w-full bg-background text-text-primary text-xs font-medium px-2 py-1 rounded border border-border focus:border-accent/50 outline-none"
+                >
+                  <option value="wires">Wires ({wires.length})</option>
+                  <option value="templates">Templates</option>
+                  <option value="tools">Tools</option>
+                  <option value="settings">Settings</option>
+                </select>
+              </div>
 
-              {/* Properties */}
-              <button
-                onClick={() => setWirePropsOpen(!wirePropsOpen)}
-                className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover transition-colors border-t border-border"
-              >
-                <span>Properties {selectedTags.size > 0 ? `(${selectedTags.size} selected)` : ""}</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${wirePropsOpen ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
-              </button>
-              {wirePropsOpen && (
-                <div className="min-h-[150px] max-h-[480px] overflow-y-auto">
-                  <WirePropertiesPanel />
-                </div>
-              )}
+              {/* Section content — scrollable */}
+              <div className="flex-1 overflow-y-auto min-h-0">
+                {/* === Wires section: table + properties, both always visible === */}
+                {editorSection === "wires" && (
+                  <div className="flex flex-col">
+                    <div className="px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                      Wires ({wires.length})
+                    </div>
+                    <div className="min-h-[150px] max-h-[300px] overflow-y-auto">
+                      <WireTable />
+                    </div>
+                    <div className="border-t border-border">
+                      <div className="px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+                        Properties {selectedTags.size > 0 ? `(${selectedTags.size} selected)` : ""}
+                      </div>
+                      <div className="min-h-[150px] overflow-y-auto">
+                        <WirePropertiesPanel />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-              {/* Load Template */}
-              <button
-                onClick={() => setTemplateLoaderOpen(!templateLoaderOpen)}
-                className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover transition-colors border-t border-border"
-              >
-                <span>Load Template</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${templateLoaderOpen ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
-              </button>
-              {templateLoaderOpen && (
-                <div className="px-2 pb-2 pt-1 space-y-2 min-h-[150px]">
-                  <TemplatePicker
-                    selectedId={selectedTemplate.id}
-                    onSelect={handleTemplateSelect}
-                  />
-                  <ParameterPanel
-                    parameters={selectedTemplate.parameters}
-                    values={templateParams}
-                    onParamChange={handleTemplateParamChange}
-                  />
-                  {wires.length > 0 && (
-                    <p className="text-[10px] text-swr-warning leading-tight px-0.5">
-                      Loading a template will replace all current wires.
-                    </p>
-                  )}
-                  <Button
-                    onClick={handleLoadTemplate}
-                    className="w-full"
-                    size="sm"
-                  >
-                    Load into Editor
-                  </Button>
-                </div>
-              )}
+                {/* === Templates section: picker + params + load button === */}
+                {editorSection === "templates" && (
+                  <div className="px-2 pb-2 pt-1.5 space-y-2">
+                    <TemplatePicker
+                      selectedId={selectedTemplate.id}
+                      onSelect={handleTemplateSelect}
+                    />
+                    <ParameterPanel
+                      parameters={selectedTemplate.parameters}
+                      values={templateParams}
+                      onParamChange={handleTemplateParamChange}
+                    />
+                    {wires.length > 0 && (
+                      <p className="text-[10px] text-swr-warning leading-tight px-0.5">
+                        Loading a template will replace all current wires.
+                      </p>
+                    )}
+                    <Button
+                      onClick={handleLoadTemplate}
+                      className="w-full"
+                      size="sm"
+                    >
+                      Load into Editor
+                    </Button>
+                  </div>
+                )}
 
-              {/* Import/Export */}
-              <button
-                onClick={() => setImportExportOpen(!importExportOpen)}
-                className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover transition-colors border-t border-border"
-              >
-                <span>Import / Export</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${importExportOpen ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
-              </button>
-              {importExportOpen && (
-                <div className="px-2 pb-2 pt-1 min-h-[150px]">
-                  <ImportExportPanel />
-                </div>
-              )}
+                {/* === Tools section: collapsible sub-sections === */}
+                {editorSection === "tools" && (
+                  <div className="flex flex-col">
+                    {/* Import/Export */}
+                    <button
+                      onClick={() => setToolsImportOpen(!toolsImportOpen)}
+                      className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover transition-colors"
+                    >
+                      <span>Import / Export</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${toolsImportOpen ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
+                    </button>
+                    {toolsImportOpen && (
+                      <div className="px-2 pb-2 pt-1 min-h-[150px]">
+                        <ImportExportPanel />
+                      </div>
+                    )}
 
-              {/* Compare */}
-              <button
-                onClick={() => setCompareOpen(!compareOpen)}
-                className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover transition-colors border-t border-border"
-              >
-                <span>Compare</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${compareOpen ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
-              </button>
-              {compareOpen && (
-                <div className="px-2 pb-2 pt-1 min-h-[150px]">
-                  <CompareOverlay />
-                </div>
-              )}
+                    {/* Compare */}
+                    <button
+                      onClick={() => setToolsCompareOpen(!toolsCompareOpen)}
+                      className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover transition-colors border-t border-border"
+                    >
+                      <span>Compare</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${toolsCompareOpen ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
+                    </button>
+                    {toolsCompareOpen && (
+                      <div className="px-2 pb-2 pt-1 min-h-[150px]">
+                        <CompareOverlay />
+                      </div>
+                    )}
 
-              {/* Optimizer */}
-              <button
-                onClick={() => setOptimizerOpen(!optimizerOpen)}
-                className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover transition-colors border-t border-border"
-              >
-                <span>Optimizer</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${optimizerOpen ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
-              </button>
-              {optimizerOpen && (
-                <div className="px-2 pb-2 pt-1 min-h-[150px]">
-                  <OptimizerPanel />
-                </div>
-              )}
-            </div>
+                    {/* Optimizer */}
+                    <button
+                      onClick={() => setToolsOptimizerOpen(!toolsOptimizerOpen)}
+                      className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover transition-colors border-t border-border"
+                    >
+                      <span>Optimizer</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${toolsOptimizerOpen ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
+                    </button>
+                    {toolsOptimizerOpen && (
+                      <div className="px-2 pb-2 pt-1 min-h-[150px]">
+                        <OptimizerPanel />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* === Settings section: height, snap, ground, balun, pattern res === */}
+                {editorSection === "settings" && (
+                  <div className="px-2 py-2 space-y-3">
+                    {/* Antenna height */}
+                    {wires.length > 0 && (
+                      <div>
+                        <label className="text-[10px] text-text-secondary font-semibold uppercase tracking-wider block mb-1">
+                          Antenna Height
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            step="0.5"
+                            value={antennaMinZ}
+                            onChange={(e) => handleHeightChange(parseFloat(e.target.value))}
+                            className="flex-1 h-1 accent-accent"
+                            title={`Lowest point: ${antennaMinZ}m, Highest: ${antennaMaxZ}m`}
+                          />
+                          <input
+                            type="number"
+                            step="0.5"
+                            min="0"
+                            max="200"
+                            value={antennaMinZ}
+                            onChange={(e) => {
+                              const v = parseFloat(e.target.value);
+                              if (!isNaN(v) && v >= 0) handleHeightChange(v);
+                            }}
+                            className="w-14 bg-background text-text-primary text-[10px] font-mono px-1 py-0.5 rounded border border-border focus:border-accent/50 outline-none text-right"
+                          />
+                          <span className="text-[10px] text-text-secondary">m</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Snap size */}
+                    <div>
+                      <label className="text-[10px] text-text-secondary font-semibold uppercase tracking-wider block mb-1">
+                        Snap Size
+                      </label>
+                      <select
+                        value={snapSize}
+                        onChange={(e) => setSnapSize(parseFloat(e.target.value))}
+                        className="w-full bg-background text-text-primary text-[10px] font-mono px-1.5 py-1 rounded border border-border outline-none"
+                      >
+                        <option value="0">Off</option>
+                        <option value="0.01">0.01 m</option>
+                        <option value="0.05">0.05 m</option>
+                        <option value="0.1">0.1 m</option>
+                        <option value="0.25">0.25 m</option>
+                        <option value="0.5">0.5 m</option>
+                        <option value="1">1.0 m</option>
+                      </select>
+                    </div>
+
+                    {/* Ground */}
+                    <div>
+                      <label className="text-[10px] text-text-secondary font-semibold uppercase tracking-wider block mb-1">
+                        Ground
+                      </label>
+                      <GroundEditor ground={ground} onChange={setGround} />
+                    </div>
+
+                    {/* Matching / Balun */}
+                    <div>
+                      <label className="text-[10px] text-text-secondary font-semibold uppercase tracking-wider block mb-1">
+                        Matching
+                      </label>
+                      <BalunEditor matching={matching} onChange={setMatching} />
+                    </div>
+
+                    {/* Pattern resolution */}
+                    <div>
+                      <label className="text-[10px] text-text-secondary font-semibold uppercase tracking-wider block mb-1">
+                        Pattern Resolution
+                      </label>
+                      <select
+                        value={patternStep}
+                        onChange={(e) => setPatternStep(parseInt(e.target.value, 10))}
+                        className="w-full bg-background text-text-primary text-[10px] font-mono px-1.5 py-1 rounded border border-border outline-none"
+                      >
+                        <option value="1">1° (very fine)</option>
+                        <option value="2">2° (fine)</option>
+                        <option value="5">5° (standard)</option>
+                        <option value="10">10° (fast)</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
           ) : (
             /* Results panel — same as the simulator's */
             <div className="flex-1 overflow-hidden flex flex-col">
@@ -465,7 +565,7 @@ export function EditorPage() {
             </div>
           )}
 
-          {/* Bottom: Frequency, Ground, Run button (always visible) */}
+          {/* Bottom: Frequency, Sweep, Run button (always visible) */}
           <div className="p-2 space-y-2 shrink-0 border-t border-border">
             {/* Design frequency */}
             <div className="flex items-center gap-2">
@@ -486,38 +586,6 @@ export function EditorPage() {
               />
               <span className="text-[10px] text-text-secondary">MHz</span>
             </div>
-
-            {/* Antenna height — raise/lower all wires */}
-            {wires.length > 0 && (
-              <div className="flex items-center gap-2">
-                <label className="text-[10px] text-text-secondary shrink-0">
-                  Height:
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="0.5"
-                  value={antennaMinZ}
-                  onChange={(e) => handleHeightChange(parseFloat(e.target.value))}
-                  className="flex-1 h-1 accent-accent"
-                  title={`Lowest point: ${antennaMinZ}m, Highest: ${antennaMaxZ}m`}
-                />
-                <input
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  max="200"
-                  value={antennaMinZ}
-                  onChange={(e) => {
-                    const v = parseFloat(e.target.value);
-                    if (!isNaN(v) && v >= 0) handleHeightChange(v);
-                  }}
-                  className="w-14 bg-background text-text-primary text-[10px] font-mono px-1 py-0.5 rounded border border-border focus:border-accent/50 outline-none text-right"
-                />
-                <span className="text-[10px] text-text-secondary">m</span>
-              </div>
-            )}
 
             {/* Frequency sweep range */}
             <div className="flex items-center gap-1">
@@ -571,49 +639,6 @@ export function EditorPage() {
               <span className="text-[10px] text-text-secondary">pts</span>
             </div>
 
-            {/* Snap size */}
-            <div className="flex items-center gap-2">
-              <label className="text-[10px] text-text-secondary shrink-0">
-                Snap:
-              </label>
-              <select
-                value={snapSize}
-                onChange={(e) => setSnapSize(parseFloat(e.target.value))}
-                className="flex-1 bg-background text-text-primary text-[10px] font-mono px-1 py-0.5 rounded border border-border outline-none"
-              >
-                <option value="0">Off</option>
-                <option value="0.01">0.01 m</option>
-                <option value="0.05">0.05 m</option>
-                <option value="0.1">0.1 m</option>
-                <option value="0.25">0.25 m</option>
-                <option value="0.5">0.5 m</option>
-                <option value="1">1.0 m</option>
-              </select>
-            </div>
-
-            {/* Ground */}
-            <GroundEditor ground={ground} onChange={setGround} />
-
-            {/* Matching */}
-            <BalunEditor matching={matching} onChange={setMatching} />
-
-            {/* Pattern resolution */}
-            <div className="flex items-center gap-2">
-              <label className="text-[10px] text-text-secondary shrink-0">
-                Pattern:
-              </label>
-              <select
-                value={patternStep}
-                onChange={(e) => setPatternStep(parseInt(e.target.value, 10))}
-                className="flex-1 bg-background text-text-primary text-[10px] font-mono px-1 py-0.5 rounded border border-border outline-none"
-              >
-                <option value="1">1° (very fine)</option>
-                <option value="2">2° (fine)</option>
-                <option value="5">5° (standard)</option>
-                <option value="10">10° (fast)</option>
-              </select>
-            </div>
-
             {/* Warning: wires at ground level */}
             {allWiresAtGround && (
               <div className="flex items-start gap-1.5 p-1.5 rounded-md bg-swr-warning/10 border border-swr-warning/30">
@@ -623,7 +648,7 @@ export function EditorPage() {
                   <line x1="12" y1="17" x2="12.01" y2="17" />
                 </svg>
                 <p className="text-[10px] text-swr-warning leading-tight">
-                  All wires are at ground level (Z=0). Use the height slider above to raise the antenna, or results will show no radiation.
+                  All wires are at ground level (Z=0). Go to Settings to raise the antenna, or results will show no radiation.
                 </p>
               </div>
             )}
