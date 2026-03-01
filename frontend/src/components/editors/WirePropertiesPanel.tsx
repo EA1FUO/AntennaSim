@@ -10,6 +10,8 @@ import { useCallback } from "react";
 import { useEditorStore } from "../../stores/editorStore";
 import type { EditorWire } from "../../stores/editorStore";
 import { centerSegment } from "../../engine/segmentation";
+import { useUIStore } from "../../stores/uiStore";
+import type { Excitation } from "../../templates/types";
 
 function CoordField({
   label,
@@ -48,6 +50,10 @@ export function WirePropertiesPanel() {
   const removeExcitation = useEditorStore((s) => s.removeExcitation);
   const splitWire = useEditorStore((s) => s.splitWire);
   const deleteWires = useEditorStore((s) => s.deleteWires);
+  const pickingExcitationForTag = useEditorStore((s) => s.pickingExcitationForTag);
+  const setPickingExcitationForTag = useEditorStore((s) => s.setPickingExcitationForTag);
+  const accurateFeedpoint = useUIStore((s) => s.accurateFeedpoint);
+  const setAccurateFeedpoint = useUIStore((s) => s.setAccurateFeedpoint);
 
   const selectedWires = wires.filter((w) => selectedTags.has(w.tag));
 
@@ -100,7 +106,9 @@ export function WirePropertiesPanel() {
 
   // Single wire selected
   const wire = selectedWires[0]!;
-  const hasExcitation = excitations.some((e) => e.wire_tag === wire.tag);
+  const excitation: Excitation | undefined = excitations.find((e) => e.wire_tag === wire.tag);
+  const hasExcitation = !!excitation;
+  const isPicking = pickingExcitationForTag === wire.tag;
 
   return (
     <div className="p-2 space-y-3">
@@ -192,31 +200,136 @@ export function WirePropertiesPanel() {
       </div>
 
       {/* Excitation */}
-      <div className="border-t border-border pt-2 space-y-1">
+      <div className="border-t border-border pt-2 space-y-1.5">
         <div className="text-[10px] text-text-secondary font-medium">
           Excitation
         </div>
         {hasExcitation ? (
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] text-swr-warning font-mono">
-              Feed @ seg {centerSegment(wire.segments)}
-            </span>
+          <>
+            {/* Segment picker: number input + total */}
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] text-text-secondary">Seg</span>
+              <input
+                type="number"
+                min={1}
+                max={wire.segments}
+                value={excitation.segment}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10);
+                  if (!isNaN(v) && v >= 1 && v <= wire.segments) {
+                    setExcitation(wire.tag, v);
+                  }
+                }}
+                className="w-12 bg-background text-text-primary text-[10px] font-mono px-1 py-0.5 rounded border border-border focus:border-accent/50 outline-none text-center"
+              />
+              <span className="text-[10px] text-text-secondary font-mono">
+                of {wire.segments}
+              </span>
+            </div>
+
+            {/* Quick-pick buttons */}
+            <div className="flex gap-1">
+              <button
+                onClick={() => setExcitation(wire.tag, 1)}
+                className={`flex-1 py-0.5 text-[10px] rounded transition-colors ${
+                  excitation.segment === 1
+                    ? "bg-accent/20 text-accent"
+                    : "bg-surface-hover text-text-secondary hover:text-text-primary"
+                }`}
+              >
+                Start
+              </button>
+              <button
+                onClick={() =>
+                  setExcitation(wire.tag, centerSegment(wire.segments))
+                }
+                className={`flex-1 py-0.5 text-[10px] rounded transition-colors ${
+                  excitation.segment === centerSegment(wire.segments)
+                    ? "bg-accent/20 text-accent"
+                    : "bg-surface-hover text-text-secondary hover:text-text-primary"
+                }`}
+              >
+                Center
+              </button>
+              <button
+                onClick={() => setExcitation(wire.tag, wire.segments)}
+                className={`flex-1 py-0.5 text-[10px] rounded transition-colors ${
+                  excitation.segment === wire.segments
+                    ? "bg-accent/20 text-accent"
+                    : "bg-surface-hover text-text-secondary hover:text-text-primary"
+                }`}
+              >
+                End
+              </button>
+            </div>
+
+            {/* Pick on wire + Remove */}
+            <div className="flex gap-1">
+              <button
+                onClick={() =>
+                  setPickingExcitationForTag(isPicking ? null : wire.tag)
+                }
+                className={`flex-1 py-0.5 text-[10px] rounded transition-colors ${
+                  isPicking
+                    ? "bg-swr-warning/30 text-swr-warning"
+                    : "bg-swr-warning/10 text-swr-warning hover:bg-swr-warning/20"
+                }`}
+              >
+                {isPicking ? "Cancel pick" : "Pick on wire"}
+              </button>
+              <button
+                onClick={() => {
+                  removeExcitation(wire.tag);
+                  if (isPicking) setPickingExcitationForTag(null);
+                }}
+                className="flex-1 py-0.5 text-[10px] rounded bg-swr-bad/10 text-swr-bad hover:bg-swr-bad/20 transition-colors"
+              >
+                Remove
+              </button>
+            </div>
+
+            {/* Accurate feedpoint visualization */}
+            <div className="relative flex items-center gap-1.5 group/feedhelp">
+              <input
+                type="checkbox"
+                checked={accurateFeedpoint}
+                onChange={(e) => setAccurateFeedpoint(e.target.checked)}
+                className="accent-accent w-3 h-3"
+              />
+              <span className="text-[10px] text-text-secondary">
+                Accurate feedpoint
+              </span>
+              <span className="text-[10px] text-text-secondary/50 cursor-help">
+                ?
+              </span>
+              <div className="absolute bottom-full left-0 mb-1 hidden group-hover/feedhelp:block bg-surface border border-border rounded-md px-2.5 py-1.5 shadow-lg text-[10px] text-text-secondary leading-relaxed w-52 z-50 pointer-events-none">
+                NEC2 applies voltage at the segment center, not the wire
+                endpoint. When enabled, the marker shows the exact segment
+                center. When disabled, endpoint segments snap to the wire
+                edge for a cleaner visual at junctions.
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="space-y-1">
             <button
-              onClick={() => removeExcitation(wire.tag)}
-              className="text-[10px] text-swr-bad hover:text-swr-bad/80"
+              onClick={() =>
+                setExcitation(wire.tag, centerSegment(wire.segments))
+              }
+              className="w-full py-0.5 text-[10px] rounded bg-swr-warning/20 text-swr-warning hover:bg-swr-warning/30 transition-colors"
             >
-              Remove
+              Set as feedpoint
+            </button>
+            <button
+              onClick={() => {
+                setExcitation(wire.tag, centerSegment(wire.segments));
+                setPickingExcitationForTag(wire.tag);
+              }}
+              className="w-full py-0.5 text-[10px] rounded bg-swr-warning/10 text-swr-warning hover:bg-swr-warning/20 transition-colors"
+            >
+              Pick on wire
             </button>
           </div>
-        ) : (
-          <button
-            onClick={() =>
-              setExcitation(wire.tag, centerSegment(wire.segments))
-            }
-            className="w-full py-0.5 text-[10px] rounded bg-swr-warning/20 text-swr-warning hover:bg-swr-warning/30 transition-colors"
-          >
-            Set as feedpoint
-          </button>
         )}
       </div>
 

@@ -123,6 +123,9 @@ interface EditorState {
   setDesignFrequency: (mhz: number) => void;
 
   // ---- Excitation ----
+  /** Wire tag currently in "pick segment on viewport" mode, or null */
+  pickingExcitationForTag: number | null;
+  setPickingExcitationForTag: (tag: number | null) => void;
   setExcitation: (wireTag: number, segment: number) => void;
   removeExcitation: (wireTag: number) => void;
 
@@ -184,7 +187,7 @@ function computeSegments(wire: { x1: number; y1: number; z1: number; x2: number;
 }
 
 /** Ensure all excitation segment indices are valid for their wire's segment count.
- *  If an excitation references a segment beyond the wire's count, re-center it. */
+ *  If an excitation references a segment beyond the wire's count, clamp it. */
 function fixExcitations(excitations: Excitation[], wires: EditorWire[]): Excitation[] {
   let changed = false;
   const fixed = excitations.map((e) => {
@@ -192,7 +195,7 @@ function fixExcitations(excitations: Excitation[], wires: EditorWire[]): Excitat
     if (!wire) return e;
     if (e.segment > wire.segments) {
       changed = true;
-      return { ...e, segment: centerSegment(wire.segments) };
+      return { ...e, segment: Math.min(e.segment, wire.segments) };
     }
     return e;
   });
@@ -363,10 +366,24 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       segments: computeSegments({ x1: midX, y1: midY, z1: midZ, x2: wire.x2, y2: wire.y2, z2: wire.z2 }, state.designFrequencyMhz),
     };
 
-    // Update excitations if they reference the split wire
+    // Update excitations if they reference the split wire.
+    // Map segment to the correct half based on its original position.
+    const halfSegment = Math.ceil(wire.segments / 2);
     const newExcitations = state.excitations.map((e) => {
       if (e.wire_tag === tag) {
-        return { ...e, wire_tag: tag1, segment: centerSegment(wire1.segments) };
+        if (e.segment <= halfSegment) {
+          // Falls in first half — scale into wire1's segment range
+          const ratio = e.segment / halfSegment;
+          const newSeg = Math.max(1, Math.min(wire1.segments, Math.round(ratio * wire1.segments)));
+          return { ...e, wire_tag: tag1, segment: newSeg };
+        } else {
+          // Falls in second half — scale into wire2's segment range
+          const offsetInSecondHalf = e.segment - halfSegment;
+          const secondHalfTotal = wire.segments - halfSegment;
+          const ratio = offsetInSecondHalf / secondHalfTotal;
+          const newSeg = Math.max(1, Math.min(wire2.segments, Math.round(ratio * wire2.segments)));
+          return { ...e, wire_tag: tag2, segment: newSeg };
+        }
       }
       return e;
     });
@@ -465,11 +482,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ...w,
       segments: computeSegments(w, mhz),
     }));
-    // Update excitation segments
+    // Scale excitation segments proportionally to preserve relative position
     const newExcitations = state.excitations.map((e) => {
-      const wire = newWires.find((w) => w.tag === e.wire_tag);
-      if (wire) {
-        return { ...e, segment: centerSegment(wire.segments) };
+      const oldWire = state.wires.find((w) => w.tag === e.wire_tag);
+      const newWire = newWires.find((w) => w.tag === e.wire_tag);
+      if (oldWire && newWire && oldWire.segments !== newWire.segments) {
+        const ratio = e.segment / oldWire.segments;
+        const scaled = Math.max(1, Math.min(newWire.segments, Math.round(ratio * newWire.segments)));
+        return { ...e, segment: scaled };
       }
       return e;
     });
@@ -490,6 +510,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   // ---- Excitation ----
+
+  pickingExcitationForTag: null,
+
+  setPickingExcitationForTag: (tag) => set({ pickingExcitationForTag: tag }),
 
   setExcitation: (wireTag, segment) => {
     const state = get();

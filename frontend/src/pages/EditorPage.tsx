@@ -387,7 +387,7 @@ export function EditorPage() {
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${wirePropsOpen ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
               </button>
               {wirePropsOpen && (
-                <div className="min-h-[150px] max-h-[300px] overflow-y-auto">
+                <div className="min-h-[150px] max-h-[480px] overflow-y-auto">
                   <WirePropertiesPanel />
                 </div>
               )}
