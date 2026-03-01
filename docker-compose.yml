@@ -1,10 +1,12 @@
 services:
   frontend:
+    image: ea1fuo/antennasim-frontend:latest
     build:
       context: .
       dockerfile: frontend/Dockerfile
 
   backend:
+    image: ea1fuo/antennasim-backend:latest
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -37,6 +39,7 @@ services:
     restart: unless-stopped
 
   nginx:
+    image: ea1fuo/antennasim-nginx:latest
     build: ./nginx
     ports:
       - "80:80"
