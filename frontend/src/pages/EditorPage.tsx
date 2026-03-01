@@ -14,7 +14,6 @@ import { useSimulationStore } from "../stores/simulationStore";
 import { useUIStore } from "../stores/uiStore";
 import { EditorScene } from "../components/three/EditorScene";
 import { ErrorBoundary } from "../components/common/ErrorBoundary";
-import { CameraPresetsOverlay } from "../components/three/CameraPresets";
 import { ViewToggleToolbar } from "../components/three/ViewToggleToolbar";
 import { Navbar } from "../components/layout/Navbar";
 import { EditorToolbar } from "../components/editors/EditorToolbar";
@@ -35,7 +34,7 @@ import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { templates } from "../templates";
 import { getDefaultParams } from "../templates/types";
 import type { AntennaTemplate } from "../templates/types";
-import type { CameraPreset, ViewToggles } from "../components/three/types";
+import type { ViewToggles } from "../components/three/types";
 
 /** Mobile tab options */
 const MOBILE_SEGMENTS = [
@@ -90,8 +89,6 @@ export function EditorPage() {
   // UI store
   const viewToggles = useUIStore((s) => s.viewToggles);
   const toggleView = useUIStore((s) => s.toggleView);
-  const activePreset = useUIStore((s) => s.activePreset);
-  const setActivePreset = useUIStore((s) => s.setActivePreset);
   const matching = useUIStore((s) => s.matching);
   const setMatching = useUIStore((s) => s.setMatching);
 
@@ -172,11 +169,6 @@ export function EditorPage() {
   }, [wires, excitations, loads, transmissionLines, ground, resetSimulation]);
 
   // Handlers
-  const handlePreset = useCallback(
-    (preset: CameraPreset) => setActivePreset(preset),
-    [setActivePreset]
-  );
-
   const handleToggle = useCallback(
     (key: keyof ViewToggles) => toggleView(key),
     [toggleView]
@@ -292,10 +284,6 @@ export function EditorPage() {
           </ErrorBoundary>
 
           {/* Overlays */}
-          <CameraPresetsOverlay
-            onPreset={handlePreset}
-            activePreset={activePreset}
-          />
           <ViewToggleToolbar toggles={viewToggles} onToggle={handleToggle} />
 
           {/* Mode indicator */}

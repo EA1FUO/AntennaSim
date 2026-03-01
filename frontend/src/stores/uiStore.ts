@@ -3,7 +3,7 @@
  */
 
 import { create } from "zustand";
-import type { ViewToggles, CameraPreset } from "../components/three/types";
+import type { ViewToggles } from "../components/three/types";
 import type { S1PFile } from "../utils/s1p-parser";
 import type { MatchingConfig } from "../utils/units";
 import { DEFAULT_MATCHING } from "../utils/units";
@@ -21,8 +21,6 @@ interface UIState {
   imperial: boolean;
   /** 3D viewport view toggles */
   viewToggles: ViewToggles;
-  /** Active camera preset (null = user-manipulated) */
-  activePreset: CameraPreset | null;
   /** Active results tab */
   resultsTab: ResultsTab;
   /** Active mobile bottom sheet tab */
@@ -43,7 +41,6 @@ interface UIState {
   toggleUnits: () => void;
   setViewToggle: (key: keyof ViewToggles, value: boolean) => void;
   toggleView: (key: keyof ViewToggles) => void;
-  setActivePreset: (preset: CameraPreset | null) => void;
   setResultsTab: (tab: ResultsTab) => void;
   setMobileTab: (tab: MobileTab) => void;
   setS1PFile: (file: S1PFile | null) => void;
@@ -69,7 +66,6 @@ export const useUIStore = create<UIState>((set) => ({
     currentFlow: false,
     slice: false,
   },
-  activePreset: "isometric" as CameraPreset,
   resultsTab: "swr",
   mobileTab: "antenna",
   s1pFile: null,
@@ -90,7 +86,6 @@ export const useUIStore = create<UIState>((set) => ({
     set((s) => ({
       viewToggles: { ...s.viewToggles, [key]: !s.viewToggles[key] },
     })),
-  setActivePreset: (preset) => set({ activePreset: preset }),
   setResultsTab: (tab) => set({ resultsTab: tab }),
   setMobileTab: (tab) => set({ mobileTab: tab }),
   setS1PFile: (file) => set({ s1pFile: file }),

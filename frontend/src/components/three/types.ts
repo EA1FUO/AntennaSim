@@ -39,9 +39,6 @@ export interface ViewToggles {
   slice: boolean;
 }
 
-/** Camera preset names */
-export type CameraPreset = "top" | "front" | "side" | "isometric";
-
 /** Wire colors for multi-wire identification */
 export const WIRE_COLORS = [
   "#3B82F6", // blue
