@@ -8,7 +8,7 @@ RUN which nec2c
 
 WORKDIR /app
 
-COPY pyproject.toml ./
+COPY backend/pyproject.toml ./
 
 # Install dependencies directly with pip for dev simplicity
 RUN pip install --no-cache-dir \
@@ -20,7 +20,8 @@ RUN pip install --no-cache-dir \
     "httpx>=0.28.0" \
     "scipy>=1.14.0"
 
-COPY src/ ./src/
+COPY VERSION ./VERSION
+COPY backend/src/ ./src/
 
 ENV NEC_WORKDIR=/tmp/nec_workdir
 ENV PYTHONUNBUFFERED=1

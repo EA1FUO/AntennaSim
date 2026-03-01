@@ -1,6 +1,6 @@
 {
-  "name": "AntSim — Web Antenna Simulator",
-  "short_name": "AntSim",
+  "name": "AntennaSim — Web Antenna Simulator",
+  "short_name": "AntennaSim",
   "description": "Free web-based antenna simulator powered by NEC2",
   "start_url": "/",
   "display": "standalone",

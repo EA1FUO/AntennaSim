@@ -27,7 +27,7 @@ const SECTIONS: Section[] = [
           structures.
         </p>
         <p>
-          When you run a simulation in AntSim, the antenna geometry is converted into a{" "}
+          When you run a simulation in AntennaSim, the antenna geometry is converted into a{" "}
           <strong>NEC2 card deck</strong> &mdash; a text-based input format describing wires,
           excitations, ground, and requested outputs. The <code>nec2c</code> engine (a C translation
           of the original Fortran code) then computes current distributions on each wire segment and
@@ -55,7 +55,7 @@ const SECTIONS: Section[] = [
             patterns, input impedance, and gain.
           </li>
           <li>
-            <strong>Results</strong> &mdash; AntSim parses the output and presents SWR, impedance,
+            <strong>Results</strong> &mdash; AntennaSim parses the output and presents SWR, impedance,
             radiation patterns, and current distributions in an interactive UI.
           </li>
         </ol>
@@ -137,7 +137,7 @@ const SECTIONS: Section[] = [
         </ul>
         <h4>Reading the impedance chart</h4>
         <p>
-          In AntSim's impedance chart, R is shown as a solid line and X as another. The 50-ohm
+          In AntennaSim's impedance chart, R is shown as a solid line and X as another. The 50-ohm
           reference line shows your target resistance. Where X crosses zero is a resonant frequency.
           The closer R is to 50 ohms at that point, the better your SWR will be.
         </p>
@@ -185,7 +185,7 @@ const SECTIONS: Section[] = [
             plane (takeoff angle). For HF DX, a low takeoff angle (10-20 degrees) is desirable.
           </li>
         </ul>
-        <h4>3D pattern in AntSim</h4>
+        <h4>3D pattern in AntennaSim</h4>
         <p>
           The 3D pattern mesh shows the full radiation solid. The color represents gain (blue = low,
           red = high). The pattern is centered on the antenna. You can toggle between surface mode
@@ -200,7 +200,7 @@ const SECTIONS: Section[] = [
     title: "Antenna Types Overview",
     content: (
       <>
-        <p>AntSim includes templates for many common antenna types. Here's when to use each:</p>
+        <p>AntennaSim includes templates for many common antenna types. Here's when to use each:</p>
         <div className="space-y-3 my-3">
           <div>
             <h4>Dipole / Inverted Vee</h4>
@@ -307,7 +307,7 @@ const SECTIONS: Section[] = [
         <p>
           Each wire is divided into segments for computation. More segments = more accuracy but
           slower. Rule of thumb: at least <strong>10 segments per half-wavelength</strong>. For a
-          20m dipole at 14 MHz, that's about 20 segments total. AntSim's templates use sensible
+          20m dipole at 14 MHz, that's about 20 segments total. AntennaSim's templates use sensible
           defaults.
         </p>
         <h4>Wire radius</h4>

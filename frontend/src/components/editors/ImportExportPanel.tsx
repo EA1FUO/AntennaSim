@@ -165,7 +165,7 @@ export function ImportExportPanel({ className = "" }: ImportExportPanelProps) {
   const handleExportJSON = useCallback(() => {
     const data = {
       version: 1,
-      title: "AntSim Project",
+      title: "AntennaSim Project",
       wires: wires.map((w) => ({
         tag: w.tag,
         segments: w.segments,
@@ -187,7 +187,7 @@ export function ImportExportPanel({ className = "" }: ImportExportPanelProps) {
     try {
       const resp = await api.post<{ content: string }>("/api/v1/convert/export", {
         format: "nec",
-        title: "AntSim export",
+        title: "AntennaSim export",
         wires: wires.map((w) => ({
           tag: w.tag,
           segments: w.segments,
@@ -213,7 +213,7 @@ export function ImportExportPanel({ className = "" }: ImportExportPanelProps) {
     try {
       const resp = await api.post<{ content: string }>("/api/v1/convert/export", {
         format: "maa",
-        title: "AntSim export",
+        title: "AntennaSim export",
         wires: wires.map((w) => ({
           tag: w.tag,
           segments: w.segments,

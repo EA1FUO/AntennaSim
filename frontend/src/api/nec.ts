@@ -219,7 +219,7 @@ export async function runSimulation(
       extent_m: 20.0,
       resolution_m: 0.5,
     },
-    comment: "AntSim simulation",
+    comment: "AntennaSim simulation",
   };
 
   return api.post<SimulationResult>("/api/v1/simulate", body, {
@@ -289,7 +289,7 @@ export async function runAdvancedSimulation(
       extent_m: 20.0,
       resolution_m: 0.5,
     },
-    comment: options.comment ?? "AntSim V2 simulation",
+    comment: options.comment ?? "AntennaSim V2 simulation",
   };
 
   return api.post<SimulationResult>("/api/v1/simulate", body, {

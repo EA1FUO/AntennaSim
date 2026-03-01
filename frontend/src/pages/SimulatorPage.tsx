@@ -1,5 +1,5 @@
 /**
- * Main Simulator page — the core UI of AntSim.
+ * Main Simulator page — the core UI of AntennaSim.
  *
  * Desktop layout:
  *   [Left Panel: Template + Params] [3D Viewport] [Right Panel: Results]
