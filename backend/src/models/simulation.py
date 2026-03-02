@@ -65,7 +65,9 @@ class SimulationRequest(BaseModel):
     V2 fields: loads, transmission_lines, compute_currents
     """
 
-    wires: list[Wire] = Field(min_length=1, max_length=500)
+    # Allow dense geometries with many short wires (e.g., radial meshes),
+    # while actual computational safety is enforced by total segment cap below.
+    wires: list[Wire] = Field(min_length=1, max_length=5000)
     excitations: list[Excitation] = Field(min_length=1, max_length=50)
     ground: GroundConfig = Field(default_factory=GroundConfig)
     frequency: FrequencyConfig

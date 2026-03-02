@@ -4,6 +4,37 @@ interface FetchOptions extends RequestInit {
   timeout?: number;
 }
 
+function getErrorMessage(status: number, data: unknown): string {
+  if (data && typeof data === "object") {
+    const obj = data as Record<string, unknown>;
+
+    if (typeof obj.message === "string" && obj.message.trim()) {
+      return obj.message;
+    }
+
+    if (typeof obj.detail === "string" && obj.detail.trim()) {
+      return obj.detail;
+    }
+
+    if (Array.isArray(obj.detail) && obj.detail.length > 0) {
+      const first = obj.detail[0];
+      if (typeof first === "string" && first.trim()) {
+        return first;
+      }
+      if (first && typeof first === "object") {
+        const firstObj = first as Record<string, unknown>;
+        const msg = typeof firstObj.msg === "string" ? firstObj.msg : null;
+        const loc = Array.isArray(firstObj.loc)
+          ? firstObj.loc.map((v) => String(v)).join(".")
+          : null;
+        if (msg && loc) return `${loc}: ${msg}`;
+        if (msg) return msg;
+      }
+    }
+  }
+  return `HTTP ${status}`;
+}
+
 class ApiError extends Error {
   constructor(
     public status: number,
@@ -38,7 +69,7 @@ async function request<T>(
       const data = await response.json().catch(() => null);
       throw new ApiError(
         response.status,
-        data?.message || `HTTP ${response.status}`,
+        getErrorMessage(response.status, data),
         data
       );
     }

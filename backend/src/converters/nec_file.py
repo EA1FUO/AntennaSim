@@ -4,6 +4,7 @@ Import: Parse .nec card deck -> Wire, Excitation, Load, Ground models
 Export: Generate .nec card deck from models (uses nec_input.build_card_deck)
 """
 
+import ast
 import logging
 import re
 
@@ -33,14 +34,93 @@ class NECFileData:
         self.frequency_steps: int = 11
 
 
-def _parse_floats(parts: list[str], start: int, count: int) -> list[float]:
+def _coerce_numeric_literal(value: object, expr: str) -> float:
+    """Convert AST literal values to float, rejecting unsupported numeric types."""
+    if isinstance(value, bool):
+        raise ValueError(f"boolean literal is not allowed in '{expr}'")
+    if isinstance(value, (int, float)):
+        return float(value)
+    raise ValueError(f"unsupported numeric literal '{value}' in '{expr}'")
+
+
+def _eval_numeric_expression(expr: str, symbols: dict[str, float]) -> float:
+    """Evaluate a simple numeric expression with symbol support.
+
+    Supported:
+    - numeric literals (including forms like `.15` / `-.15`)
+    - symbols defined by `SY` cards
+    - arithmetic operators: +, -, *, /, **
+    - parentheses
+    """
+    try:
+        node = ast.parse(expr, mode="eval")
+    except SyntaxError as e:
+        raise ValueError(f"invalid expression '{expr}'") from e
+
+    def _eval(node_obj: ast.AST) -> float:
+        if isinstance(node_obj, ast.Expression):
+            return _eval(node_obj.body)
+        if isinstance(node_obj, ast.Constant):
+            return _coerce_numeric_literal(node_obj.value, expr)
+        if isinstance(node_obj, ast.Num):  # pragma: no cover (py<3.8 compatibility path)
+            return _coerce_numeric_literal(node_obj.n, expr)
+        if isinstance(node_obj, ast.Name):
+            key = node_obj.id.upper()
+            if key not in symbols:
+                raise ValueError(f"unknown symbol '{node_obj.id}'")
+            return float(symbols[key])
+        if isinstance(node_obj, ast.UnaryOp):
+            val = _eval(node_obj.operand)
+            if isinstance(node_obj.op, ast.UAdd):
+                return val
+            if isinstance(node_obj.op, ast.USub):
+                return -val
+            raise ValueError(f"unsupported unary operator in '{expr}'")
+        if isinstance(node_obj, ast.BinOp):
+            left = _eval(node_obj.left)
+            right = _eval(node_obj.right)
+            if isinstance(node_obj.op, ast.Add):
+                return left + right
+            if isinstance(node_obj.op, ast.Sub):
+                return left - right
+            if isinstance(node_obj.op, ast.Mult):
+                return left * right
+            if isinstance(node_obj.op, ast.Div):
+                return left / right
+            if isinstance(node_obj.op, ast.Pow):
+                return left ** right
+            raise ValueError(f"unsupported binary operator in '{expr}'")
+        raise ValueError(f"unsupported expression node '{type(node_obj).__name__}'")
+
+    return _eval(node)
+
+
+def _parse_float_token(token: str, symbols: dict[str, float]) -> float:
+    """Parse a float token supporting literal numbers and SY expressions."""
+    token = token.strip()
+    if not token:
+        return 0.0
+    try:
+        return float(token)
+    except ValueError:
+        return _eval_numeric_expression(token, symbols)
+
+
+def _parse_floats(
+    parts: list[str],
+    start: int,
+    count: int,
+    symbols: dict[str, float],
+    line: str,
+) -> list[float]:
     """Parse `count` floats from `parts` starting at index `start`."""
     result: list[float] = []
     for i in range(start, start + count):
         if i < len(parts):
             try:
-                result.append(float(parts[i]))
-            except ValueError:
+                result.append(_parse_float_token(parts[i], symbols))
+            except (ValueError, ZeroDivisionError) as e:
+                logger.warning("Failed to parse numeric token '%s' in line '%s': %s", parts[i], line, e)
                 result.append(0.0)
         else:
             result.append(0.0)
@@ -66,6 +146,7 @@ def parse_nec_file(content: str) -> NECFileData:
     lines = content.strip().replace("\r\n", "\n").replace("\r", "\n").split("\n")
 
     comments: list[str] = []
+    sy_symbols: dict[str, float] = {}
 
     for line in lines:
         line = line.strip()
@@ -85,6 +166,26 @@ def parse_nec_file(content: str) -> NECFileData:
             # Comment
             comments.append(line[2:].strip() if len(line) > 2 else "")
 
+        elif card == "SY":
+            # Symbol assignment: SY NAME=EXPR
+            # Common in 4NEC2-generated files.
+            body = line[2:].strip()
+            if "'" in body:
+                body = body.split("'", 1)[0].strip()
+            if "=" not in body:
+                logger.warning("SY card missing '=': %s", line)
+                continue
+            name_raw, expr_raw = body.split("=", 1)
+            name = name_raw.strip().upper()
+            expr = expr_raw.strip()
+            if not name:
+                logger.warning("SY card with empty symbol name: %s", line)
+                continue
+            try:
+                sy_symbols[name] = _parse_float_token(expr, sy_symbols)
+            except (ValueError, ZeroDivisionError) as e:
+                logger.warning("Failed to parse SY assignment '%s': %s", line, e)
+
         elif card == "CE":
             # Comment end
             data.comment = " ".join(comments).strip()
@@ -97,7 +198,7 @@ def parse_nec_file(content: str) -> NECFileData:
             try:
                 tag = int(parts[1])
                 segments = int(parts[2])
-                vals = _parse_floats(parts, 3, 7)
+                vals = _parse_floats(parts, 3, 7, sy_symbols, line)
 
                 wire = Wire(
                     tag=tag,
@@ -121,8 +222,8 @@ def parse_nec_file(content: str) -> NECFileData:
                 elif gn_type == 1:
                     data.ground = GroundConfig(ground_type=GroundType.PERFECT)
                 elif gn_type == 2:
-                    eps_r = float(parts[5]) if len(parts) > 5 else 13.0
-                    sigma = float(parts[6]) if len(parts) > 6 else 0.005
+                    eps_r = _parse_float_token(parts[5], sy_symbols) if len(parts) > 5 else 13.0
+                    sigma = _parse_float_token(parts[6], sy_symbols) if len(parts) > 6 else 0.005
                     data.ground = GroundConfig(
                         ground_type=GroundType.CUSTOM,
                         dielectric_constant=eps_r,
@@ -141,8 +242,8 @@ def parse_nec_file(content: str) -> NECFileData:
                     continue  # Only voltage sources for now
                 tag = int(parts[2])
                 segment = int(parts[3])
-                v_real = float(parts[5]) if len(parts) > 5 else 1.0
-                v_imag = float(parts[6]) if len(parts) > 6 else 0.0
+                v_real = _parse_float_token(parts[5], sy_symbols) if len(parts) > 5 else 1.0
+                v_imag = _parse_float_token(parts[6], sy_symbols) if len(parts) > 6 else 0.0
                 data.excitations.append(
                     Excitation(
                         wire_tag=tag,
@@ -163,9 +264,9 @@ def parse_nec_file(content: str) -> NECFileData:
                 tag = int(parts[2])
                 seg_s = int(parts[3])
                 seg_e = int(parts[4])
-                p1 = float(parts[5]) if len(parts) > 5 else 0.0
-                p2 = float(parts[6]) if len(parts) > 6 else 0.0
-                p3 = float(parts[7]) if len(parts) > 7 else 0.0
+                p1 = _parse_float_token(parts[5], sy_symbols) if len(parts) > 5 else 0.0
+                p2 = _parse_float_token(parts[6], sy_symbols) if len(parts) > 6 else 0.0
+                p3 = _parse_float_token(parts[7], sy_symbols) if len(parts) > 7 else 0.0
 
                 # Map NEC2 LD types to our enum
                 if ld_type in (0, 1, 4, 5):
@@ -192,12 +293,12 @@ def parse_nec_file(content: str) -> NECFileData:
                 seg1 = int(parts[2])
                 tag2 = int(parts[3])
                 seg2 = int(parts[4])
-                z0 = float(parts[5])
-                length = float(parts[6])
-                ya_r1 = float(parts[7]) if len(parts) > 7 else 0.0
-                ya_i1 = float(parts[8]) if len(parts) > 8 else 0.0
-                ya_r2 = float(parts[9]) if len(parts) > 9 else 0.0
-                ya_i2 = float(parts[10]) if len(parts) > 10 else 0.0
+                z0 = _parse_float_token(parts[5], sy_symbols)
+                length = _parse_float_token(parts[6], sy_symbols)
+                ya_r1 = _parse_float_token(parts[7], sy_symbols) if len(parts) > 7 else 0.0
+                ya_i1 = _parse_float_token(parts[8], sy_symbols) if len(parts) > 8 else 0.0
+                ya_r2 = _parse_float_token(parts[9], sy_symbols) if len(parts) > 9 else 0.0
+                ya_i2 = _parse_float_token(parts[10], sy_symbols) if len(parts) > 10 else 0.0
 
                 data.transmission_lines.append(
                     TransmissionLine(
@@ -222,8 +323,8 @@ def parse_nec_file(content: str) -> NECFileData:
                 continue
             try:
                 n_freq = int(parts[2])
-                start = float(parts[5])
-                step = float(parts[6]) if len(parts) > 6 else 0.0
+                start = _parse_float_token(parts[5], sy_symbols)
+                step = _parse_float_token(parts[6], sy_symbols) if len(parts) > 6 else 0.0
 
                 data.frequency_start_mhz = max(0.1, min(500.0, start))
                 data.frequency_steps = max(1, min(201, n_freq))
