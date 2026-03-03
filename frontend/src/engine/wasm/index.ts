@@ -138,6 +138,12 @@ export class WasmEngine implements SimulationEngine {
       ground: request.ground,
       frequency: request.frequency,
       compute_currents: true,
+      near_field: {
+        plane: "horizontal",
+        height_m: 1.8,
+        extent_m: 20.0,
+        resolution_m: 0.5,
+      },
       pattern_step: request.patternStep,
       comment: "AntennaSim simulation",
     };

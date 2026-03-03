@@ -8,7 +8,7 @@
  *   [3D Viewport (45%)] [Bottom Sheet: Antenna | Results tabs]
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAntennaStore } from "../stores/antennaStore";
 import { useSimulationStore } from "../stores/simulationStore";
 import { useUIStore } from "../stores/uiStore";
@@ -72,13 +72,9 @@ export function SimulatorPage() {
   const matching = useUIStore((s) => s.matching);
   const setMatching = useUIStore((s) => s.setMatching);
 
-  // Reset stale simulation results when antenna geometry or ground changes
-  const isFirstRender = useRef(true);
+  // Clear stale results on page entry (prevents cross-page state leaks)
+  // and whenever antenna geometry or ground changes.
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
     resetSimulation();
   }, [wireGeometry, ground, resetSimulation]);
 

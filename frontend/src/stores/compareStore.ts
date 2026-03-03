@@ -46,27 +46,28 @@ interface CompareState {
 
 let nextId = 1;
 
-export const useCompareStore = create<CompareState>((set, get) => ({
+export const useCompareStore = create<CompareState>((set) => ({
   savedResults: [],
   isComparing: false,
   maxResults: 6,
 
   saveResult: (result, label) => {
-    const { savedResults, maxResults } = get();
-    if (savedResults.length >= maxResults) {
-      // Remove oldest
-      set({ savedResults: savedResults.slice(1) });
-    }
     const id = `compare-${nextId++}`;
-    const colorIdx = savedResults.length % COMPARE_COLORS.length;
-    const saved: SavedResult = {
-      id,
-      label: label ?? `Run ${nextId - 1}`,
-      timestamp: Date.now(),
-      result,
-      color: COMPARE_COLORS[colorIdx]!,
-    };
-    set((s) => ({ savedResults: [...s.savedResults, saved] }));
+    set((s) => {
+      const trimmed =
+        s.savedResults.length >= s.maxResults
+          ? s.savedResults.slice(1)
+          : s.savedResults;
+      const colorIdx = trimmed.length % COMPARE_COLORS.length;
+      const saved: SavedResult = {
+        id,
+        label: label ?? `Run ${nextId - 1}`,
+        timestamp: Date.now(),
+        result,
+        color: COMPARE_COLORS[colorIdx]!,
+      };
+      return { savedResults: [...trimmed, saved] };
+    });
   },
 
   removeResult: (id) => {

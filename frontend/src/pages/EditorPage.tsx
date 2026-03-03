@@ -8,7 +8,7 @@
  *   [3D Viewport (45%)] [Bottom Sheet: Wires | Properties | Results]
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useEditorStore } from "../stores/editorStore";
 import { useSimulationStore } from "../stores/simulationStore";
 import { useUIStore } from "../stores/uiStore";
@@ -159,13 +159,9 @@ export function EditorPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [setMode, deselectAll, deleteSelected, undo, redo, selectAll]);
 
-  // Reset stale simulation results when antenna geometry or config changes
-  const isFirstRender = useRef(true);
+  // Clear stale results on page entry (prevents cross-page state leaks)
+  // and whenever antenna geometry or config changes.
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
     resetSimulation();
   }, [wires, excitations, loads, transmissionLines, ground, resetSimulation]);
 
@@ -186,6 +182,12 @@ export function EditorPage() {
       loads: loads.length > 0 ? loads : undefined,
       transmission_lines: transmissionLines.length > 0 ? transmissionLines : undefined,
       compute_currents: computeCurrents,
+      near_field: {
+        plane: "horizontal",
+        height_m: 1.8,
+        extent_m: 20.0,
+        resolution_m: 0.5,
+      },
       pattern_step: patternStep,
     });
   }, [wires, excitations, ground, frequencyRange, loads, transmissionLines, computeCurrents, patternStep, simulateAdvanced, getWireGeometry]);

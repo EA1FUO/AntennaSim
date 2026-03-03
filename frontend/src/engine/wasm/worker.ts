@@ -175,9 +175,12 @@ async function runSimulationAsync(
     );
   }
 
-  // 6. Parse near-field if present
+  // 6. Parse near-field if requested
   let nearField: NearFieldResult | null = null;
-  nearField = parseNearFieldOutput(output, "horizontal", 1.8, 20.0, 0.5);
+  if (request.near_field) {
+    const nf = request.near_field;
+    nearField = parseNearFieldOutput(output, nf.plane, nf.height_m, nf.extent_m, nf.resolution_m);
+  }
 
   // 7. Compute total segments
   let totalSegments = 0;
