@@ -43,6 +43,18 @@ export interface SimulateRequest {
   patternStep?: number;
 }
 
+/** Near-field calculation configuration */
+export interface NearFieldConfig {
+  /** Plane orientation: "horizontal" (XY at fixed Z) or "vertical" (XZ at Y=0) */
+  plane: "horizontal" | "vertical";
+  /** Height of the horizontal plane in metres (e.g. 1.8 for eye level) */
+  height_m: number;
+  /** Half-extent of the grid in metres (grid spans -extent to +extent) */
+  extent_m: number;
+  /** Grid resolution in metres */
+  resolution_m: number;
+}
+
 /** V2: Advanced simulation request (editor mode) */
 export interface SimulateAdvancedRequest {
   wires: WireGeometry[];
@@ -55,6 +67,7 @@ export interface SimulateAdvancedRequest {
   transforms?: GeometryTransformDef[];
   symmetry?: CylindricalSymmetryDef;
   compute_currents?: boolean;
+  near_field?: NearFieldConfig;
   pattern_step?: number;
   comment?: string;
 }

@@ -142,8 +142,30 @@ export function buildCardDeck(request: SimulateAdvancedRequest): string {
       `${freq.start_mhz.toFixed(6)} ${stepMhz.toFixed(6)}`
   );
 
-  // NE card (near-field) — not included in advanced request type,
-  // but placeholder kept for card ordering if the type is extended.
+  // NE card (near-field) — generates a grid of E-field sample points
+  if (request.near_field) {
+    const nf = request.near_field;
+    if (nf.plane === "horizontal") {
+      const nx = Math.floor(2 * nf.extent_m / nf.resolution_m) + 1;
+      const ny = nx;
+      const nz = 1;
+      lines.push(
+        `NE 0 ${nx} ${ny} ${nz} ` +
+          `${(-nf.extent_m).toFixed(4)} ${(-nf.extent_m).toFixed(4)} ${nf.height_m.toFixed(4)} ` +
+          `${nf.resolution_m.toFixed(4)} ${nf.resolution_m.toFixed(4)} ${(0.0).toFixed(4)}`
+      );
+    } else {
+      // Vertical plane along X axis
+      const nx = Math.floor(2 * nf.extent_m / nf.resolution_m) + 1;
+      const ny = 1;
+      const nz = Math.floor(nf.extent_m / nf.resolution_m) + 1;
+      lines.push(
+        `NE 0 ${nx} ${ny} ${nz} ` +
+          `${(-nf.extent_m).toFixed(4)} ${(0.0).toFixed(4)} ${(0.0).toFixed(4)} ` +
+          `${nf.resolution_m.toFixed(4)} ${(0.0).toFixed(4)} ${nf.resolution_m.toFixed(4)}`
+      );
+    }
+  }
 
   // RP card (radiation pattern)
   const patternStep = request.pattern_step ?? 5;
