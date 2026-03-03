@@ -6,14 +6,21 @@
  *
  * V1: simulate() for template-based (single excitation)
  * V2: simulateAdvanced() for editor (loads, TL, multiple excitations, currents)
+ *
+ * Uses the SimulationEngine abstraction — backend REST API or local WASM,
+ * selected at build time via VITE_ENGINE.
  */
 
 import { create } from "zustand";
-import type { SimulationResult, FrequencyResult, AdvancedSimulationOptions } from "../api/nec";
-import { runSimulation, runAdvancedSimulation } from "../api/nec";
+import type { SimulationResult, FrequencyResult } from "../api/nec";
 import type { WireGeometry, Excitation, GroundConfig, FrequencyRange } from "../templates/types";
+import type { SimulateAdvancedRequest } from "../engine/types";
+import { getEngine } from "../engine";
 
 export type SimulationStatus = "idle" | "loading" | "success" | "error";
+
+/** V2 advanced simulation options (matches SimulateAdvancedRequest without wires/excitations/ground/frequency duplication) */
+export type AdvancedSimulationOptions = SimulateAdvancedRequest;
 
 interface SimulationState {
   /** Current simulation status */
@@ -81,7 +88,14 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     set({ status: "loading", error: null });
 
     try {
-      const result = await runSimulation(wires, excitation, ground, frequency, patternStep);
+      const engine = getEngine();
+      const result = await engine.simulate({
+        wires,
+        excitation,
+        ground,
+        frequency,
+        patternStep,
+      });
       set({ status: "success", result, selectedFreqIndex: findBestSwrIndex(result) });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Simulation failed";
@@ -93,7 +107,8 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     set({ status: "loading", error: null });
 
     try {
-      const result = await runAdvancedSimulation(options);
+      const engine = getEngine();
+      const result = await engine.simulateAdvanced(options);
       set({ status: "success", result, selectedFreqIndex: findBestSwrIndex(result) });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Simulation failed";

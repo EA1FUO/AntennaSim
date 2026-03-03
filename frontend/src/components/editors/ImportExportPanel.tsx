@@ -5,10 +5,12 @@
  * Supports:
  * - Import: .maa, .nec, .json (native)
  * - Export: .maa, .nec, .json, .csv (results)
+ *
+ * Uses the SimulationEngine abstraction for .nec/.maa conversion.
  */
 
 import { useCallback, useRef } from "react";
-import { api } from "../../api/client";
+import { getEngine } from "../../engine";
 import { useEditorStore } from "../../stores/editorStore";
 import { useSimulationStore } from "../../stores/simulationStore";
 import { downloadTextFile } from "../../utils/csv-export";
@@ -108,28 +110,10 @@ export function ImportExportPanel({ className = "" }: ImportExportPanelProps) {
           // Invalid JSON
         }
       } else if (ext === "maa" || ext === "nec") {
-        // Use backend converter
+        // Use engine converter
         try {
-          const resp = await api.post<{
-            title: string;
-            wires: Array<{
-              tag: number; segments: number;
-              x1: number; y1: number; z1: number;
-              x2: number; y2: number; z2: number;
-              radius: number;
-            }>;
-            excitations: Array<{
-              wire_tag: number; segment: number;
-              voltage_real: number; voltage_imag: number;
-            }>;
-            ground_type: string;
-            frequency_start_mhz: number;
-            frequency_stop_mhz: number;
-            frequency_steps: number;
-          }>("/api/v1/convert/import", {
-            content,
-            format: ext,
-          });
+          const engine = getEngine();
+          const resp = await engine.importFile(content, ext);
 
           clearAll();
           for (const w of resp.wires) {
@@ -152,7 +136,7 @@ export function ImportExportPanel({ className = "" }: ImportExportPanelProps) {
             steps: resp.frequency_steps,
           });
         } catch {
-          // API error
+          // Engine error
         }
       }
 
@@ -185,52 +169,58 @@ export function ImportExportPanel({ className = "" }: ImportExportPanelProps) {
 
   const handleExportNEC = useCallback(async () => {
     try {
-      const resp = await api.post<{ content: string }>("/api/v1/convert/export", {
-        format: "nec",
-        title: "AntennaSim export",
-        wires: wires.map((w) => ({
-          tag: w.tag,
-          segments: w.segments,
-          x1: w.x1, y1: w.y1, z1: w.z1,
-          x2: w.x2, y2: w.y2, z2: w.z2,
-          radius: w.radius,
-        })),
-        excitations,
-        loads,
-        transmission_lines: transmissionLines,
-        ground: { ground_type: ground.type },
-        frequency_start_mhz: frequencyRange.start_mhz,
-        frequency_stop_mhz: frequencyRange.stop_mhz,
-        frequency_steps: frequencyRange.steps,
-      });
-      downloadTextFile(resp.content, "antenna.nec", "text/plain");
+      const engine = getEngine();
+      const content = await engine.exportFile(
+        {
+          title: "AntennaSim export",
+          wires: wires.map((w) => ({
+            tag: w.tag,
+            segments: w.segments,
+            x1: w.x1, y1: w.y1, z1: w.z1,
+            x2: w.x2, y2: w.y2, z2: w.z2,
+            radius: w.radius,
+          })),
+          excitations,
+          loads,
+          transmission_lines: transmissionLines,
+          ground,
+          frequency_start_mhz: frequencyRange.start_mhz,
+          frequency_stop_mhz: frequencyRange.stop_mhz,
+          frequency_steps: frequencyRange.steps,
+        },
+        "nec",
+      );
+      downloadTextFile(content, "antenna.nec", "text/plain");
     } catch {
-      // API error
+      // Engine error
     }
   }, [wires, excitations, loads, transmissionLines, ground, frequencyRange]);
 
   const handleExportMAA = useCallback(async () => {
     try {
-      const resp = await api.post<{ content: string }>("/api/v1/convert/export", {
-        format: "maa",
-        title: "AntennaSim export",
-        wires: wires.map((w) => ({
-          tag: w.tag,
-          segments: w.segments,
-          x1: w.x1, y1: w.y1, z1: w.z1,
-          x2: w.x2, y2: w.y2, z2: w.z2,
-          radius: w.radius,
-        })),
-        excitations,
-        loads,
-        ground: { ground_type: ground.type },
-        frequency_start_mhz: frequencyRange.start_mhz,
-        frequency_stop_mhz: frequencyRange.stop_mhz,
-        frequency_steps: frequencyRange.steps,
-      });
-      downloadTextFile(resp.content, "antenna.maa", "text/plain");
+      const engine = getEngine();
+      const content = await engine.exportFile(
+        {
+          title: "AntennaSim export",
+          wires: wires.map((w) => ({
+            tag: w.tag,
+            segments: w.segments,
+            x1: w.x1, y1: w.y1, z1: w.z1,
+            x2: w.x2, y2: w.y2, z2: w.z2,
+            radius: w.radius,
+          })),
+          excitations,
+          loads,
+          ground,
+          frequency_start_mhz: frequencyRange.start_mhz,
+          frequency_stop_mhz: frequencyRange.stop_mhz,
+          frequency_steps: frequencyRange.steps,
+        },
+        "maa",
+      );
+      downloadTextFile(content, "antenna.maa", "text/plain");
     } catch {
-      // API error
+      // Engine error
     }
   }, [wires, excitations, loads, ground, frequencyRange]);
 

@@ -1,7 +1,11 @@
 /**
  * OptimizerPanel — V2 antenna parameter optimization UI.
  *
- * Uses WebSocket for real-time progress streaming with:
+ * Uses the SimulationEngine abstraction for optimization:
+ * - BackendEngine: WebSocket to backend
+ * - WasmEngine: Web Worker running locally (future)
+ *
+ * Features:
  * 1. Live progress bar
  * 2. Live best cost value
  * 3. Convergence chart (updates live)
@@ -22,6 +26,11 @@ import {
 import { useEditorStore } from "../../stores/editorStore";
 import { useChartTheme } from "../../hooks/useChartTheme";
 import { Button } from "../ui/Button";
+import { getEngine } from "../../engine";
+import type {
+  OptimizationProgress,
+  OptimizationResult,
+} from "../../engine/types";
 
 type Objective = "min_swr" | "min_swr_band" | "max_gain" | "max_fb";
 
@@ -32,36 +41,6 @@ interface Variable {
   maxValue: number;
 }
 
-interface HistoryEntry {
-  iteration: number;
-  cost: number;
-  values: Record<string, number>;
-}
-
-interface OptResult {
-  status: string;
-  iterations_used: number;
-  final_cost: number;
-  optimized_values: Record<string, number>;
-  optimized_wires: Array<{
-    tag: number; segments: number;
-    x1: number; y1: number; z1: number;
-    x2: number; y2: number; z2: number;
-    radius: number;
-  }>;
-  history: HistoryEntry[];
-  message: string;
-}
-
-interface ProgressData {
-  iteration: number;
-  total_iterations: number;
-  current_cost: number;
-  best_cost: number;
-  best_values: Record<string, number>;
-  status: string;
-}
-
 const OBJECTIVES: { key: Objective; label: string }[] = [
   { key: "min_swr", label: "Min SWR" },
   { key: "min_swr_band", label: "Min SWR (band)" },
@@ -70,14 +49,6 @@ const OBJECTIVES: { key: Objective; label: string }[] = [
 ];
 
 const WIRE_FIELDS = ["x1", "y1", "z1", "x2", "y2", "z2"];
-
-/** Derive WS URL from the current API URL or page origin */
-function getWsUrl(): string {
-  const apiBase = import.meta.env.VITE_API_URL;
-  if (apiBase) return apiBase.replace(/^http/, "ws");
-  const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${proto}//${window.location.host}`;
-}
 
 export function OptimizerPanel() {
   const wires = useEditorStore((s) => s.wires);
@@ -94,15 +65,15 @@ export function OptimizerPanel() {
   const [maxIterations, setMaxIterations] = useState(50);
   const [variables, setVariables] = useState<Variable[]>([]);
   const [isRunning, setIsRunning] = useState(false);
-  const [result, setResult] = useState<OptResult | null>(null);
+  const [result, setResult] = useState<OptimizationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Live progress state
-  const [progress, setProgress] = useState<ProgressData | null>(null);
+  const [progress, setProgress] = useState<OptimizationProgress | null>(null);
   const [liveHistory, setLiveHistory] = useState<{ iteration: number; cost: number }[]>([]);
 
-  // WebSocket ref for cancellation
-  const wsRef = useRef<WebSocket | null>(null);
+  // Cancel function ref
+  const cancelRef = useRef<(() => void) | null>(null);
 
   // Add a variable
   const addVariable = useCallback(() => {
@@ -136,15 +107,15 @@ export function OptimizerPanel() {
 
   // Cancel optimization
   const handleCancel = useCallback(() => {
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
+    if (cancelRef.current) {
+      cancelRef.current();
+      cancelRef.current = null;
     }
     setIsRunning(false);
     setProgress(null);
   }, []);
 
-  // Run optimization via WebSocket
+  // Run optimization via engine
   const handleOptimize = useCallback(() => {
     if (variables.length === 0 || wires.length === 0) return;
 
@@ -154,92 +125,75 @@ export function OptimizerPanel() {
     setProgress(null);
     setLiveHistory([]);
 
-    const wsUrl = `${getWsUrl()}/api/v1/ws/optimize`;
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+    const engine = getEngine();
 
-    ws.onopen = () => {
-      // Send optimization request
-      const payload = {
-        wires: wires.map((w) => ({
-          tag: w.tag,
-          segments: w.segments,
-          x1: w.x1, y1: w.y1, z1: w.z1,
-          x2: w.x2, y2: w.y2, z2: w.z2,
-          radius: w.radius,
-        })),
-        excitations: excitations.map((e) => ({
-          wire_tag: e.wire_tag,
-          segment: e.segment,
-          voltage_real: e.voltage_real,
-          voltage_imag: e.voltage_imag,
-        })),
-        ground: { ground_type: ground.type },
-        frequency_start_mhz: frequencyRange.start_mhz,
-        frequency_stop_mhz: frequencyRange.stop_mhz,
-        frequency_steps: Math.min(frequencyRange.steps, 21),
-        loads,
-        transmission_lines: transmissionLines,
-        variables: variables.map((v) => ({
-          wire_tag: v.wireTag,
-          field: v.field,
-          min_value: v.minValue,
-          max_value: v.maxValue,
-        })),
-        objective,
-        method: "nelder_mead",
-        max_iterations: maxIterations,
-        target_frequency_mhz: (frequencyRange.start_mhz + frequencyRange.stop_mhz) / 2,
-      };
-      ws.send(JSON.stringify(payload));
+    const request = {
+      wires: wires.map((w) => ({
+        tag: w.tag,
+        segments: w.segments,
+        x1: w.x1, y1: w.y1, z1: w.z1,
+        x2: w.x2, y2: w.y2, z2: w.z2,
+        radius: w.radius,
+      })),
+      excitations: excitations.map((e) => ({
+        wire_tag: e.wire_tag,
+        segment: e.segment,
+        voltage_real: e.voltage_real,
+        voltage_imag: e.voltage_imag,
+      })),
+      ground,
+      frequency_start_mhz: frequencyRange.start_mhz,
+      frequency_stop_mhz: frequencyRange.stop_mhz,
+      frequency_steps: Math.min(frequencyRange.steps, 21),
+      loads,
+      transmission_lines: transmissionLines,
+      variables: variables.map((v) => ({
+        wire_tag: v.wireTag,
+        field: v.field,
+        min_value: v.minValue,
+        max_value: v.maxValue,
+      })),
+      objective,
+      method: "nelder_mead",
+      max_iterations: maxIterations,
+      target_frequency_mhz: (frequencyRange.start_mhz + frequencyRange.stop_mhz) / 2,
     };
 
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data) as {
-          type: "progress" | "result" | "error";
-          data: ProgressData | OptResult | { message: string };
-        };
+    engine
+      .optimize(request, (p) => {
+        setProgress(p);
+        setLiveHistory((prev) => [
+          ...prev,
+          { iteration: p.iteration, cost: p.current_cost },
+        ]);
+      })
+      .then(({ result: resultPromise, cancel }) => {
+        cancelRef.current = cancel;
 
-        if (msg.type === "progress") {
-          const p = msg.data as ProgressData;
-          setProgress(p);
-          setLiveHistory((prev) => [
-            ...prev,
-            { iteration: p.iteration, cost: p.current_cost },
-          ]);
-        } else if (msg.type === "result") {
-          setResult(msg.data as OptResult);
-          setIsRunning(false);
-          setProgress(null);
-          wsRef.current = null;
-        } else if (msg.type === "error") {
-          setError((msg.data as { message: string }).message);
-          setIsRunning(false);
-          setProgress(null);
-          wsRef.current = null;
-        }
-      } catch {
-        // Ignore parse errors
-      }
-    };
-
-    ws.onerror = () => {
-      setError("WebSocket connection failed. Falling back not available.");
-      setIsRunning(false);
-      setProgress(null);
-      wsRef.current = null;
-    };
-
-    ws.onclose = () => {
-      if (isRunning) {
-        // Connection closed unexpectedly
+        resultPromise
+          .then((optResult) => {
+            setResult(optResult);
+            setIsRunning(false);
+            setProgress(null);
+            cancelRef.current = null;
+          })
+          .catch((err) => {
+            const msg = err instanceof Error ? err.message : "Optimization failed";
+            if (msg !== "Optimization cancelled") {
+              setError(msg);
+            }
+            setIsRunning(false);
+            setProgress(null);
+            cancelRef.current = null;
+          });
+      })
+      .catch((err) => {
+        const msg = err instanceof Error ? err.message : "Failed to start optimization";
+        setError(msg);
         setIsRunning(false);
         setProgress(null);
-      }
-      wsRef.current = null;
-    };
-  }, [variables, wires, excitations, ground, frequencyRange, loads, transmissionLines, objective, maxIterations, isRunning]);
+      });
+  }, [variables, wires, excitations, ground, frequencyRange, loads, transmissionLines, objective, maxIterations]);
 
   // Apply optimized values back to editor
   const handleApply = useCallback(() => {
