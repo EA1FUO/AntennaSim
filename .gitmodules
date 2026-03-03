@@ -1,0 +1,3 @@
+[submodule "wasm/nec2c"]
+	path = wasm/nec2c
+	url = https://github.com/KJ7LNW/nec2c.git

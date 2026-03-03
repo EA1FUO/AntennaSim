@@ -1,0 +1,97 @@
+diff --git a/main.c b/main.c
+index 5e0900b..91c6d7b 100644
+--- a/main.c
++++ b/main.c
+@@ -30,8 +30,10 @@
+ #include "nec2c.h"
+ #include "shared.h"
+ 
++#ifndef __EMSCRIPTEN__
+ /* signal handler */
+ static void sig_handler( int signal );
++#endif
+ 
+ /*-------------------------------------------------------------------*/
+ 
+@@ -79,6 +81,7 @@ int main( int argc, char **argv )
+   /* getopt() variables */
+   int option;
+ 
++#ifndef __EMSCRIPTEN__
+   /*** signal handler related code ***/
+   /* new and old actions for sigaction() */
+   struct sigaction sa_new, sa_old;
+@@ -95,6 +98,7 @@ int main( int argc, char **argv )
+   sigaction( SIGFPE,  &sa_new, 0 );
+   sigaction( SIGTERM, &sa_new, 0 );
+   sigaction( SIGABRT, &sa_new, 0 );
++#endif
+ 
+   /*** command line arguments handler ***/
+   if( argc == 1 )
+@@ -1978,6 +1982,7 @@ void prnt( int in1, int in2, int in3, double fl1, double fl2,
+ 
+ /*-----------------------------------------------------------------------*/
+ 
++#ifndef __EMSCRIPTEN__
+ static void sig_handler( int signal )
+ {
+   fprintf( stderr, "\n" );
+@@ -2006,6 +2011,7 @@ static void sig_handler( int signal )
+   }
+ 
+ } /* end of sig_handler() */
++#endif
+ 
+ /*------------------------------------------------------------------------*/
+ 
+diff --git a/misc.c b/misc.c
+index 0b7ef68..076ccdd 100644
+--- a/misc.c
++++ b/misc.c
+@@ -74,6 +74,13 @@ void abort_on_error( int why )
+ 
+ /*------------------------------------------------------------------------*/
+ 
++#ifdef __EMSCRIPTEN__
++/* Stub: process timing is not available in WASM */
++void secnds( double *x )
++{
++  *x = 0.0;
++}
++#else
+ /* Returns process time (user+system) BUT in _msec_ */
+ void secnds( double *x)
+ {
+@@ -86,6 +93,7 @@ void secnds( double *x)
+ 
+   return;
+ }
++#endif
+ 
+ /*------------------------------------------------------------------------*/
+ 
+diff --git a/nec2c.h b/nec2c.h
+index 5354032..2b5a8a5 100644
+--- a/nec2c.h
++++ b/nec2c.h
+@@ -3,7 +3,9 @@
+ 
+ #include <complex.h>
+ #include <stdio.h>
++#ifndef __EMSCRIPTEN__
+ #include <signal.h>
++#endif
+ #include <math.h>
+ #include <stdlib.h>
+ #include <unistd.h>
+@@ -12,7 +14,9 @@
+ #include <errno.h>
+ #include <time.h>
+ #include <sys/types.h>
++#ifndef __EMSCRIPTEN__
+ #include <sys/times.h>
++#endif
+ 
+ #ifndef	TRUE
+ #define	TRUE	1
