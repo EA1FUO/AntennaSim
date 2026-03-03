@@ -27,8 +27,6 @@ import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { ColorScale } from "../components/ui/ColorScale";
 import { ResultsPanel } from "../components/results/ResultsTabs";
 import { PatternFrequencySlider } from "../components/results/PatternFrequencySlider";
-import { SWRChart } from "../components/results/SWRChart";
-import { formatSwr, formatGain, formatImpedance, swrColorClass, applyMatching } from "../utils/units";
 import type { AntennaTemplate } from "../templates/types";
 import type { ViewToggles } from "../components/three/types";
 
@@ -58,8 +56,6 @@ export function SimulatorPage() {
   const result = useSimulationStore((s) => s.result);
   const simulate = useSimulationStore((s) => s.simulate);
   const resetSimulation = useSimulationStore((s) => s.reset);
-  const selectedFreqIndex = useSimulationStore((s) => s.selectedFreqIndex);
-  const setSelectedFreqIndex = useSimulationStore((s) => s.setSelectedFreqIndex);
   const selectedFreqResult = useSimulationStore((s) =>
     s.getSelectedFrequencyResult()
   );
@@ -87,11 +83,6 @@ export function SimulatorPage() {
   const handleToggle = useCallback(
     (key: keyof ViewToggles) => toggleView(key),
     [toggleView]
-  );
-
-  const handleFreqClick = useCallback(
-    (index: number) => setSelectedFreqIndex(index),
-    [setSelectedFreqIndex]
   );
 
   // Pattern resolution
@@ -207,7 +198,7 @@ export function SimulatorPage() {
         </aside>
 
         {/* === CENTER: 3D VIEWPORT === */}
-        <main className="flex-1 relative min-w-0">
+        <main className="flex-1 relative min-w-0 min-h-[35vh]">
           <ErrorBoundary label="3D Viewport">
             <SceneRoot
               wires={wireData}
@@ -231,23 +222,10 @@ export function SimulatorPage() {
 
           {/* Pattern frequency slider */}
           {simStatus === "success" && result && result.frequency_data.length > 1 && (
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 w-64 hidden lg:block">
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 w-48 lg:w-64">
               <PatternFrequencySlider />
             </div>
           )}
-
-          {/* Mobile run button (floating) */}
-          <div className="lg:hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-10">
-            <Button
-              onClick={handleRunSimulation}
-              loading={isLoading}
-              disabled={isLoading}
-              size="md"
-              className="shadow-lg shadow-accent/20"
-            >
-              {isLoading ? "Simulating..." : "Run Simulation"}
-            </Button>
-          </div>
         </main>
 
         {/* === RIGHT PANEL (desktop only) === */}
@@ -260,18 +238,27 @@ export function SimulatorPage() {
 
       {/* === MOBILE BOTTOM SHEET === */}
       <div className="lg:hidden border-t border-border bg-surface flex flex-col max-h-[55vh]">
-        {/* Drag handle */}
-        <div className="flex justify-center py-1.5 shrink-0">
-          <div className="w-8 h-1 rounded-full bg-border" />
+        <div className="px-3 pt-2 pb-1 shrink-0 flex items-center gap-2">
+          <div className="flex-1">
+            <SegmentedControl
+              segments={MOBILE_SEGMENTS}
+              activeKey={mobileTab}
+              onChange={(key) => setMobileTab(key as typeof mobileTab)}
+            />
+          </div>
+          <Button
+            onClick={handleRunSimulation}
+            loading={isLoading}
+            disabled={isLoading}
+            size="sm"
+            className="shrink-0"
+          >
+            {isLoading ? "Running..." : "Run"}
+          </Button>
         </div>
-
-        <div className="px-3 pb-1 shrink-0">
-          <SegmentedControl
-            segments={MOBILE_SEGMENTS}
-            activeKey={mobileTab}
-            onChange={(key) => setMobileTab(key as typeof mobileTab)}
-          />
-        </div>
+        {simError && (
+          <p className="text-xs text-swr-bad px-3 pb-1">{simError}</p>
+        )}
         <div className="px-3 py-2 flex-1 overflow-y-auto">
           {mobileTab === "antenna" && (
             <div className="space-y-3">
@@ -286,73 +273,38 @@ export function SimulatorPage() {
               />
               <GroundEditor ground={ground} onChange={setGround} />
               <BalunEditor matching={matching} onChange={setMatching} />
-            </div>
-          )}
-          {mobileTab === "results" && (
-            <div className="space-y-3">
-              {simStatus === "idle" && (
-                <p className="text-xs text-text-secondary text-center py-4">
-                  Run a simulation to see results.
-                </p>
-              )}
-              {simStatus === "success" && selectedFreqResult && (() => {
-                const m = applyMatching(
-                  selectedFreqResult.impedance.real,
-                  selectedFreqResult.impedance.imag,
-                  matching
-                );
-                return (
-                  <>
-                    {/* Quick summary cards */}
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="bg-background rounded-md p-2">
-                        <div className="text-[10px] text-text-secondary">SWR</div>
-                        <div
-                          className={`text-base font-mono font-bold ${swrColorClass(m.swr)}`}
-                        >
-                          {formatSwr(m.swr)}
-                        </div>
-                      </div>
-                      <div className="bg-background rounded-md p-2">
-                        <div className="text-[10px] text-text-secondary">Gain</div>
-                        <div className="text-base font-mono font-bold text-text-primary">
-                          {formatGain(selectedFreqResult.gain_max_dbi)}
-                        </div>
-                      </div>
-                      <div className="bg-background rounded-md p-2">
-                        <div className="text-[10px] text-text-secondary">Z</div>
-                        <div className="text-[10px] font-mono text-text-primary">
-                          {formatImpedance(m.real, m.imag)}
-                        </div>
-                      </div>
-                    </div>
 
-                    {/* SWR chart (compact) */}
-                    {result && (
-                      <div>
-                        <h4 className="text-[10px] text-text-secondary mb-1">SWR vs Frequency</h4>
-                        <SWRChart
-                          data={result.frequency_data}
-                          onFrequencyClick={handleFreqClick}
-                          selectedIndex={selectedFreqIndex}
-                          matching={matching}
-                        />
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
-              {simStatus === "loading" && (
-                <div className="flex items-center justify-center py-6">
-                  <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-                </div>
-              )}
+              {/* Pattern resolution */}
+              <div className="space-y-1">
+                <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider">
+                  Pattern Resolution
+                </h3>
+                <select
+                  value={patternStep}
+                  onChange={(e) => setPatternStep(parseInt(e.target.value, 10))}
+                  className="w-full bg-background text-text-primary text-xs font-mono px-1.5 py-1.5 rounded border border-border outline-none"
+                >
+                  <option value="1">1° (very fine — slow)</option>
+                  <option value="2">2° (fine)</option>
+                  <option value="5">5° (standard)</option>
+                  <option value="10">10° (fast)</option>
+                </select>
+                {patternStep <= 2 && (
+                  <p className="text-[11px] text-swr-warning leading-tight">
+                    Fine resolution increases computation time significantly.
+                  </p>
+                )}
+              </div>
             </div>
           )}
+          {mobileTab === "results" && <ResultsPanel />}
         </div>
       </div>
 
-      <StatusBar />
+      {/* StatusBar (desktop only — mobile has essential info in overlays) */}
+      <div className="hidden lg:block">
+        <StatusBar />
+      </div>
 
       <KeyboardShortcutsPanel
         isOpen={shortcutsOpen}

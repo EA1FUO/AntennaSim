@@ -66,11 +66,11 @@ export function TemplatePicker({ selectedId, onSelect }: TemplatePickerProps) {
               <div className="text-sm font-medium text-text-primary truncate">
                 {selectedTemplate.nameShort}
               </div>
-              <div className="text-[10px] text-text-secondary truncate">
+              <div className="text-[11px] text-text-secondary truncate">
                 {selectedTemplate.description}
               </div>
             </div>
-            <span className="text-[9px] text-text-secondary">Change</span>
+            <span className="text-[10px] text-text-secondary">Change</span>
           </div>
         </Card>
       )}
@@ -93,12 +93,12 @@ export function TemplatePicker({ selectedId, onSelect }: TemplatePickerProps) {
                   <div className="text-sm font-medium text-text-primary truncate">
                     {t.nameShort}
                   </div>
-                  <div className="text-[10px] text-text-secondary truncate">
+                  <div className="text-[11px] text-text-secondary truncate">
                     {t.description}
                   </div>
                 </div>
                 <span
-                  className={`text-[9px] uppercase font-medium ${difficultyColors[t.difficulty] ?? "text-text-secondary"}`}
+                  className={`text-[10px] uppercase font-medium ${difficultyColors[t.difficulty] ?? "text-text-secondary"}`}
                 >
                   {t.difficulty}
                 </span>

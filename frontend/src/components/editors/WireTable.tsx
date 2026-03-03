@@ -1,15 +1,16 @@
 /**
  * WireTable — V2 spreadsheet-style wire list for the wire editor.
  *
- * Displays all wires with editable coordinates, segments, and radius.
- * Clicking a row selects the wire in the 3D viewport.
+ * Desktop: spreadsheet table with editable coordinates, segments, and radius.
+ * Mobile: card-based layout for each wire with tap-to-edit.
+ * Clicking a row/card selects the wire in the 3D viewport.
  */
 
 import { useCallback, useState, useRef, useEffect } from "react";
 import { useEditorStore } from "../../stores/editorStore";
 import type { EditorWire } from "../../stores/editorStore";
 
-/** Column definitions */
+/** Column definitions (used by desktop table) */
 const COLUMNS = [
   { key: "tag", label: "Tag", width: "w-12", editable: false },
   { key: "segments", label: "Segs", width: "w-12", editable: false },
@@ -57,6 +58,15 @@ export function WireTable() {
   );
 
   const handleCellDoubleClick = useCallback(
+    (tag: number, field: EditableKey, currentValue: number) => {
+      setEditCell({ tag, field });
+      setEditValue(String(currentValue));
+    },
+    []
+  );
+
+  // Tap-to-edit for mobile cards
+  const handleCellTap = useCallback(
     (tag: number, field: EditableKey, currentValue: number) => {
       setEditCell({ tag, field });
       setEditValue(String(currentValue));
@@ -113,33 +123,78 @@ export function WireTable() {
     return v.toFixed(decimals);
   };
 
+  // Shared header bar
+  const headerBar = (
+    <div className="flex items-center justify-between px-2 py-1.5 border-b border-border">
+      <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider">
+        Wires ({wires.length})
+      </h3>
+      <div className="flex items-center gap-1.5">
+        {selectedTags.size > 0 && (
+          <button
+            onClick={handleDeleteSelected}
+            className="px-2 py-1 text-[11px] rounded bg-swr-bad/20 text-swr-bad hover:bg-swr-bad/30 transition-colors"
+            title="Delete selected wires"
+          >
+            Del
+          </button>
+        )}
+        <button
+          onClick={handleAddWire}
+          className="px-2 py-1 text-[11px] rounded bg-accent/20 text-accent hover:bg-accent/30 transition-colors"
+          title="Add new wire"
+        >
+          + Wire
+        </button>
+      </div>
+    </div>
+  );
+
+  // Empty state
+  const emptyState = (
+    <div className="flex items-center justify-center py-8 text-text-secondary text-xs">
+      No wires. Click &quot;+ Wire&quot; to add one.
+    </div>
+  );
+
+  // Editable cell inline input for mobile cards
+  const renderEditableValue = (
+    wire: EditorWire,
+    field: EditableKey,
+    decimals: number,
+  ) => {
+    const isEditing = editCell?.tag === wire.tag && editCell?.field === field;
+    const value = wire[field] as number;
+    if (isEditing) {
+      return (
+        <input
+          ref={inputRef}
+          type="text"
+          inputMode="decimal"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={commitEdit}
+          onKeyDown={handleKeyDown}
+          className="w-full bg-accent/20 text-text-primary text-right text-xs font-mono px-1 py-0.5 rounded outline-none border border-accent/40"
+        />
+      );
+    }
+    return (
+      <button
+        onClick={() => handleCellTap(wire.tag, field, value)}
+        className="w-full text-right text-xs font-mono text-text-primary px-1 py-0.5 rounded hover:bg-surface-hover transition-colors"
+      >
+        {formatNum(value, decimals)}
+      </button>
+    );
+  };
+
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-2 py-1.5 border-b border-border">
-        <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider">
-          Wires ({wires.length})
-        </h3>
-        <div className="flex items-center gap-1">
-          {selectedTags.size > 0 && (
-            <button
-              onClick={handleDeleteSelected}
-              className="px-1.5 py-0.5 text-[10px] rounded bg-swr-bad/20 text-swr-bad hover:bg-swr-bad/30 transition-colors"
-              title="Delete selected wires"
-            >
-              Del
-            </button>
-          )}
-          <button
-            onClick={handleAddWire}
-            className="px-1.5 py-0.5 text-[10px] rounded bg-accent/20 text-accent hover:bg-accent/30 transition-colors"
-            title="Add new wire"
-          >
-            + Wire
-          </button>
-        </div>
-      </div>
+      {headerBar}
 
-      <div className="flex-1 overflow-auto">
+      {/* === Desktop table (lg and up) === */}
+      <div className="hidden lg:block flex-1 overflow-auto">
         <table className="w-full text-[10px] font-mono">
           <thead className="sticky top-0 bg-surface z-10">
             <tr>
@@ -223,12 +278,48 @@ export function WireTable() {
             })}
           </tbody>
         </table>
+        {wires.length === 0 && emptyState}
+      </div>
 
-        {wires.length === 0 && (
-          <div className="flex items-center justify-center py-8 text-text-secondary text-xs">
-            No wires. Click "+ Wire" to add one.
-          </div>
-        )}
+      {/* === Mobile card layout (below lg) === */}
+      <div className="lg:hidden flex-1 overflow-y-auto space-y-1.5 p-1.5">
+        {wires.map((wire) => {
+          const isSelected = selectedTags.has(wire.tag);
+          return (
+            <div
+              key={wire.tag}
+              onClick={(e) => handleRowClick(wire.tag, e)}
+              className={`rounded-md border p-2 transition-colors cursor-pointer ${
+                isSelected
+                  ? "border-accent/40 bg-accent/10"
+                  : "border-border bg-background hover:bg-surface-hover"
+              }`}
+            >
+              {/* Card header */}
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-bold text-accent">Wire {wire.tag}</span>
+                <span className="text-[11px] text-text-secondary font-mono">
+                  {wire.segments} segs | R={formatNum(wire.radius, 4)}m
+                </span>
+              </div>
+              {/* Coordinates grid */}
+              <div className="grid grid-cols-6 gap-0.5 text-center">
+                <span className="text-[10px] text-text-secondary">X1</span>
+                <span className="text-[10px] text-text-secondary">Y1</span>
+                <span className="text-[10px] text-text-secondary">Z1</span>
+                <span className="text-[10px] text-text-secondary">X2</span>
+                <span className="text-[10px] text-text-secondary">Y2</span>
+                <span className="text-[10px] text-text-secondary">Z2</span>
+                {(["x1", "y1", "z1", "x2", "y2", "z2"] as const).map((f) => (
+                  <div key={f} onClick={(e) => e.stopPropagation()}>
+                    {renderEditableValue(wire, f, 2)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+        {wires.length === 0 && emptyState}
       </div>
     </div>
   );

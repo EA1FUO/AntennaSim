@@ -123,10 +123,10 @@ export function GroundEditor({ ground, onChange }: GroundEditorProps) {
                   text-sm font-mono text-text-primary focus:outline-none focus:ring-1
                   focus:ring-accent w-20"
               />
-              <span className="text-[10px] text-text-secondary">S/m</span>
+              <span className="text-[11px] text-text-secondary">S/m</span>
             </div>
           </div>
-          <p className="text-[10px] text-text-secondary leading-relaxed px-0.5">
+          <p className="text-[11px] text-text-secondary leading-relaxed px-0.5">
             Typical values: soil {"\u03B5"}r=3-20, {"\u03C3"}=0.0001-0.03.
             Water {"\u03B5"}r=80, concrete {"\u03B5"}r=4-8.
           </p>

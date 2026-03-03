@@ -493,6 +493,7 @@ export function EditorScene({ viewToggles, patternData, currents, nearField }: E
   const glConfig = useMemo(
     () => ({
       antialias: true,
+      preserveDrawingBuffer: true,
       toneMapping: ACESFilmicToneMapping,
       outputColorSpace: SRGBColorSpace,
       toneMappingExposure: 1.0,
