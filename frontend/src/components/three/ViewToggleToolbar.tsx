@@ -66,8 +66,8 @@ export function ViewToggleToolbar({ toggles, onToggle }: ViewToggleToolbarProps)
         setOpen(false);
       }
     };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("pointerdown", handleClick);
+    return () => document.removeEventListener("pointerdown", handleClick);
   }, [open]);
 
   // Close on Escape
@@ -82,9 +82,9 @@ export function ViewToggleToolbar({ toggles, onToggle }: ViewToggleToolbarProps)
 
   return (
     <div ref={containerRef} className="absolute bottom-2 left-2 z-10">
-      {/* Popover */}
+      {/* Popover — max-height prevents overflow on short mobile viewports */}
       {open && (
-        <div className="absolute bottom-full left-0 mb-1 bg-surface/95 backdrop-blur-md border border-border rounded-lg shadow-lg p-2.5 min-w-[200px]">
+        <div className="absolute bottom-full left-0 mb-1 bg-surface/95 backdrop-blur-md border border-border rounded-lg shadow-lg p-2.5 min-w-[200px] max-h-[50vh] lg:max-h-none overflow-y-auto">
           {GROUPS.map((group, gi) => (
             <div key={group.label} className={gi > 0 ? "mt-2 pt-2 border-t border-border/50" : ""}>
               <div className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider mb-1.5 px-0.5">

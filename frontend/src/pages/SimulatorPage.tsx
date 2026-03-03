@@ -102,7 +102,7 @@ export function SimulatorPage() {
   const nearField = result?.near_field ?? null;
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-dvh bg-background">
       <Navbar />
 
       {/* Main content area */}
@@ -198,7 +198,7 @@ export function SimulatorPage() {
         </aside>
 
         {/* === CENTER: 3D VIEWPORT === */}
-        <main className="flex-1 relative min-w-0 min-h-[35vh]">
+        <main className="flex-1 relative min-w-0 min-h-0">
           <ErrorBoundary label="3D Viewport">
             <SceneRoot
               wires={wireData}
@@ -220,11 +220,16 @@ export function SimulatorPage() {
             </div>
           )}
 
-          {/* Pattern frequency slider */}
+          {/* Pattern frequency slider — bottom-right above dBi legend on mobile, centered on desktop */}
           {simStatus === "success" && result && result.frequency_data.length > 1 && (
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 w-48 lg:w-64">
-              <PatternFrequencySlider />
-            </div>
+            <>
+              <div className="absolute bottom-8 right-2 z-10 w-36 lg:hidden">
+                <PatternFrequencySlider compact />
+              </div>
+              <div className="hidden lg:block absolute bottom-2 left-1/2 -translate-x-1/2 z-10 w-64">
+                <PatternFrequencySlider />
+              </div>
+            </>
           )}
         </main>
 
@@ -237,7 +242,7 @@ export function SimulatorPage() {
       </div>
 
       {/* === MOBILE BOTTOM SHEET === */}
-      <div className="lg:hidden border-t border-border bg-surface flex flex-col max-h-[55vh]">
+      <div className="lg:hidden border-t border-border bg-surface flex flex-col max-h-[50%]">
         <div className="px-3 pt-2 pb-1 shrink-0 flex items-center gap-2">
           <div className="flex-1">
             <SegmentedControl
