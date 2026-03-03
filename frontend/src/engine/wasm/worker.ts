@@ -59,13 +59,15 @@ let createNec2cFactory:
  * Module workers don't support importScripts, so we fetch the Emscripten
  * glue code as text and evaluate it. The script defines `createNec2c`
  * on globalThis (self in a worker context).
+ *
+ * Uses `import.meta.env.BASE_URL` (statically replaced by Vite at build time)
+ * to resolve WASM assets under the correct base path (e.g. `/AntennaSim/`).
  */
 async function ensureFactory(): Promise<void> {
   if (createNec2cFactory) return;
 
   // Fetch and evaluate the Emscripten glue code
-  const wasmBase =
-    (self as unknown as Record<string, string>).__WASM_BASE_URL__ ?? "/";
+  const wasmBase = import.meta.env.BASE_URL;
   const url = `${wasmBase}wasm/nec2c.js`;
   const response = await fetch(url);
   if (!response.ok) {
@@ -94,8 +96,7 @@ async function ensureFactory(): Promise<void> {
 async function loadModule(): Promise<Nec2cModule> {
   await ensureFactory();
 
-  const wasmBase =
-    (self as unknown as Record<string, string>).__WASM_BASE_URL__ ?? "/";
+  const wasmBase = import.meta.env.BASE_URL;
 
   const noop = () => {};
   return createNec2cFactory!({
