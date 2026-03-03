@@ -248,7 +248,7 @@ export function ImportExportPanel({ className = "" }: ImportExportPanelProps) {
       {/* Import */}
       <button
         onClick={handleImport}
-        className="w-full px-2 py-1.5 text-[10px] rounded border border-border text-text-secondary hover:text-text-primary hover:border-accent/50 transition-colors text-left"
+        className="w-full px-2 py-1.5 text-[11px] rounded border border-border text-text-secondary hover:text-text-primary hover:border-accent/50 transition-colors text-left"
       >
         Import .maa / .nec / .json
       </button>
@@ -258,28 +258,28 @@ export function ImportExportPanel({ className = "" }: ImportExportPanelProps) {
         <button
           onClick={handleExportJSON}
           disabled={wires.length === 0}
-          className="px-2 py-1 text-[10px] rounded border border-border text-text-secondary hover:text-text-primary hover:border-accent/50 transition-colors disabled:opacity-40"
+          className="px-2 py-1 text-[11px] rounded border border-border text-text-secondary hover:text-text-primary hover:border-accent/50 transition-colors disabled:opacity-40"
         >
           .json
         </button>
         <button
           onClick={handleExportNEC}
           disabled={wires.length === 0}
-          className="px-2 py-1 text-[10px] rounded border border-border text-text-secondary hover:text-text-primary hover:border-accent/50 transition-colors disabled:opacity-40"
+          className="px-2 py-1 text-[11px] rounded border border-border text-text-secondary hover:text-text-primary hover:border-accent/50 transition-colors disabled:opacity-40"
         >
           .nec
         </button>
         <button
           onClick={handleExportMAA}
           disabled={wires.length === 0}
-          className="px-2 py-1 text-[10px] rounded border border-border text-text-secondary hover:text-text-primary hover:border-accent/50 transition-colors disabled:opacity-40"
+          className="px-2 py-1 text-[11px] rounded border border-border text-text-secondary hover:text-text-primary hover:border-accent/50 transition-colors disabled:opacity-40"
         >
           .maa
         </button>
         <button
           onClick={handleExportCSV}
           disabled={!result}
-          className="px-2 py-1 text-[10px] rounded border border-border text-text-secondary hover:text-text-primary hover:border-accent/50 transition-colors disabled:opacity-40"
+          className="px-2 py-1 text-[11px] rounded border border-border text-text-secondary hover:text-text-primary hover:border-accent/50 transition-colors disabled:opacity-40"
         >
           .csv
         </button>
@@ -288,7 +288,7 @@ export function ImportExportPanel({ className = "" }: ImportExportPanelProps) {
       {/* Screenshot */}
       <button
         onClick={handleScreenshot}
-        className="w-full px-2 py-1 text-[10px] rounded border border-border text-text-secondary hover:text-text-primary hover:border-accent/50 transition-colors"
+        className="w-full px-2 py-1 text-[11px] rounded border border-border text-text-secondary hover:text-text-primary hover:border-accent/50 transition-colors"
       >
         Screenshot (.png)
       </button>

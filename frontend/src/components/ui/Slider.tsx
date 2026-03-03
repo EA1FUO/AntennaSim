@@ -145,17 +145,18 @@ export function Slider({
         step={step}
         value={localValue}
         onChange={handleSliderChange}
-        className="w-full h-1.5 bg-border rounded-full appearance-none cursor-pointer
+        className="w-full h-2 bg-border rounded-full appearance-none cursor-pointer
           [&::-webkit-slider-thumb]:appearance-none
-          [&::-webkit-slider-thumb]:w-3.5
-          [&::-webkit-slider-thumb]:h-3.5
+          [&::-webkit-slider-thumb]:w-5
+          [&::-webkit-slider-thumb]:h-5
           [&::-webkit-slider-thumb]:rounded-full
           [&::-webkit-slider-thumb]:bg-accent
           [&::-webkit-slider-thumb]:hover:bg-accent-hover
           [&::-webkit-slider-thumb]:transition-colors
           [&::-webkit-slider-thumb]:cursor-pointer
-          [&::-moz-range-thumb]:w-3.5
-          [&::-moz-range-thumb]:h-3.5
+          [&::-webkit-slider-thumb]:shadow-md
+          [&::-moz-range-thumb]:w-5
+          [&::-moz-range-thumb]:h-5
           [&::-moz-range-thumb]:rounded-full
           [&::-moz-range-thumb]:bg-accent
           [&::-moz-range-thumb]:border-0
@@ -163,7 +164,7 @@ export function Slider({
           [&::-moz-range-thumb]:cursor-pointer
           [&::-moz-range-track]:bg-border
           [&::-moz-range-track]:rounded-full
-          [&::-moz-range-track]:h-1.5"
+          [&::-moz-range-track]:h-2"
       />
     </div>
   );

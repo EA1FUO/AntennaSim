@@ -24,7 +24,7 @@ function CoordField({
 }) {
   return (
     <div className="flex items-center gap-1">
-      <label className="text-[10px] text-text-secondary w-5 text-right shrink-0">
+      <label className="text-[11px] text-text-secondary w-5 text-right shrink-0">
         {label}
       </label>
       <input
@@ -35,7 +35,7 @@ function CoordField({
           const v = parseFloat(e.target.value);
           if (!isNaN(v) && isFinite(v)) onChange(v);
         }}
-        className="flex-1 bg-background text-text-primary text-[10px] font-mono px-1.5 py-0.5 rounded border border-border focus:border-accent/50 outline-none text-right"
+        className="flex-1 bg-background text-text-primary text-[11px] font-mono px-1.5 py-0.5 rounded border border-border focus:border-accent/50 outline-none text-right"
       />
     </div>
   );
@@ -87,7 +87,7 @@ export function WirePropertiesPanel() {
         <h4 className="text-xs font-medium text-text-secondary">
           {selectedWires.length} wires selected
         </h4>
-        <div className="text-[10px] text-text-secondary space-y-0.5 font-mono">
+        <div className="text-[11px] text-text-secondary space-y-0.5 font-mono">
           <div>Tags: {selectedWires.map((w) => w.tag).join(", ")}</div>
           <div>
             Total segments:{" "}
@@ -96,7 +96,7 @@ export function WirePropertiesPanel() {
         </div>
         <button
           onClick={() => deleteWires(selectedWires.map((w) => w.tag))}
-          className="w-full py-1 text-[10px] rounded bg-swr-bad/20 text-swr-bad hover:bg-swr-bad/30 transition-colors"
+          className="w-full py-1 text-[11px] rounded bg-swr-bad/20 text-swr-bad hover:bg-swr-bad/30 transition-colors"
         >
           Delete selected
         </button>
@@ -117,14 +117,14 @@ export function WirePropertiesPanel() {
         <h4 className="text-xs font-medium text-text-primary">
           Wire <span className="text-accent">{wire.tag}</span>
         </h4>
-        <span className="text-[10px] font-mono text-text-secondary">
+        <span className="text-[11px] font-mono text-text-secondary">
           {wire.segments} segs
         </span>
       </div>
 
       {/* Endpoint 1 */}
       <div className="space-y-1">
-        <div className="text-[10px] text-text-secondary font-medium">
+        <div className="text-[11px] text-text-secondary font-medium">
           Point 1
         </div>
         <CoordField
@@ -146,7 +146,7 @@ export function WirePropertiesPanel() {
 
       {/* Endpoint 2 */}
       <div className="space-y-1">
-        <div className="text-[10px] text-text-secondary font-medium">
+        <div className="text-[11px] text-text-secondary font-medium">
           Point 2
         </div>
         <CoordField
@@ -168,7 +168,7 @@ export function WirePropertiesPanel() {
 
       {/* Radius */}
       <div className="space-y-1">
-        <div className="text-[10px] text-text-secondary font-medium">
+        <div className="text-[11px] text-text-secondary font-medium">
           Radius
         </div>
         <div className="flex items-center gap-1">
@@ -182,14 +182,14 @@ export function WirePropertiesPanel() {
               const v = parseFloat(e.target.value);
               if (!isNaN(v)) handleRadiusChange(wire.tag, v);
             }}
-            className="flex-1 bg-background text-text-primary text-[10px] font-mono px-1.5 py-0.5 rounded border border-border focus:border-accent/50 outline-none text-right"
+            className="flex-1 bg-background text-text-primary text-[11px] font-mono px-1.5 py-0.5 rounded border border-border focus:border-accent/50 outline-none text-right"
           />
-          <span className="text-[10px] text-text-secondary">m</span>
+          <span className="text-[11px] text-text-secondary">m</span>
         </div>
       </div>
 
       {/* Wire length (computed) */}
-      <div className="text-[10px] font-mono text-text-secondary border-t border-border pt-2">
+      <div className="text-[11px] font-mono text-text-secondary border-t border-border pt-2">
         Length:{" "}
         {Math.sqrt(
           (wire.x2 - wire.x1) ** 2 +
@@ -201,14 +201,14 @@ export function WirePropertiesPanel() {
 
       {/* Excitation */}
       <div className="border-t border-border pt-2 space-y-1.5">
-        <div className="text-[10px] text-text-secondary font-medium">
+        <div className="text-[11px] text-text-secondary font-medium">
           Excitation
         </div>
         {hasExcitation ? (
           <>
             {/* Segment picker: number input + total */}
             <div className="flex items-center gap-1">
-              <span className="text-[10px] text-text-secondary">Seg</span>
+              <span className="text-[11px] text-text-secondary">Seg</span>
               <input
                 type="number"
                 min={1}
@@ -220,9 +220,9 @@ export function WirePropertiesPanel() {
                     setExcitation(wire.tag, v);
                   }
                 }}
-                className="w-12 bg-background text-text-primary text-[10px] font-mono px-1 py-0.5 rounded border border-border focus:border-accent/50 outline-none text-center"
+                className="w-12 bg-background text-text-primary text-[11px] font-mono px-1 py-0.5 rounded border border-border focus:border-accent/50 outline-none text-center"
               />
-              <span className="text-[10px] text-text-secondary font-mono">
+              <span className="text-[11px] text-text-secondary font-mono">
                 of {wire.segments}
               </span>
             </div>
@@ -231,7 +231,7 @@ export function WirePropertiesPanel() {
             <div className="flex gap-1">
               <button
                 onClick={() => setExcitation(wire.tag, 1)}
-                className={`flex-1 py-0.5 text-[10px] rounded transition-colors ${
+                className={`flex-1 py-0.5 text-[11px] rounded transition-colors ${
                   excitation.segment === 1
                     ? "bg-accent/20 text-accent"
                     : "bg-surface-hover text-text-secondary hover:text-text-primary"
@@ -243,7 +243,7 @@ export function WirePropertiesPanel() {
                 onClick={() =>
                   setExcitation(wire.tag, centerSegment(wire.segments))
                 }
-                className={`flex-1 py-0.5 text-[10px] rounded transition-colors ${
+                className={`flex-1 py-0.5 text-[11px] rounded transition-colors ${
                   excitation.segment === centerSegment(wire.segments)
                     ? "bg-accent/20 text-accent"
                     : "bg-surface-hover text-text-secondary hover:text-text-primary"
@@ -253,7 +253,7 @@ export function WirePropertiesPanel() {
               </button>
               <button
                 onClick={() => setExcitation(wire.tag, wire.segments)}
-                className={`flex-1 py-0.5 text-[10px] rounded transition-colors ${
+                className={`flex-1 py-0.5 text-[11px] rounded transition-colors ${
                   excitation.segment === wire.segments
                     ? "bg-accent/20 text-accent"
                     : "bg-surface-hover text-text-secondary hover:text-text-primary"
@@ -269,7 +269,7 @@ export function WirePropertiesPanel() {
                 onClick={() =>
                   setPickingExcitationForTag(isPicking ? null : wire.tag)
                 }
-                className={`flex-1 py-0.5 text-[10px] rounded transition-colors ${
+                className={`flex-1 py-0.5 text-[11px] rounded transition-colors ${
                   isPicking
                     ? "bg-swr-warning/30 text-swr-warning"
                     : "bg-swr-warning/10 text-swr-warning hover:bg-swr-warning/20"
@@ -282,7 +282,7 @@ export function WirePropertiesPanel() {
                   removeExcitation(wire.tag);
                   if (isPicking) setPickingExcitationForTag(null);
                 }}
-                className="flex-1 py-0.5 text-[10px] rounded bg-swr-bad/10 text-swr-bad hover:bg-swr-bad/20 transition-colors"
+                className="flex-1 py-0.5 text-[11px] rounded bg-swr-bad/10 text-swr-bad hover:bg-swr-bad/20 transition-colors"
               >
                 Remove
               </button>
@@ -296,13 +296,13 @@ export function WirePropertiesPanel() {
                 onChange={(e) => setAccurateFeedpoint(e.target.checked)}
                 className="accent-accent w-3 h-3"
               />
-              <span className="text-[10px] text-text-secondary">
+              <span className="text-[11px] text-text-secondary">
                 Accurate feedpoint
               </span>
-              <span className="text-[10px] text-text-secondary/50 cursor-help">
+              <span className="text-[11px] text-text-secondary/50 cursor-help">
                 ?
               </span>
-              <div className="absolute bottom-full left-0 mb-1 hidden group-hover/feedhelp:block bg-surface border border-border rounded-md px-2.5 py-1.5 shadow-lg text-[10px] text-text-secondary leading-relaxed w-52 z-50 pointer-events-none">
+              <div className="absolute bottom-full left-0 mb-1 hidden group-hover/feedhelp:block bg-surface border border-border rounded-md px-2.5 py-1.5 shadow-lg text-[11px] text-text-secondary leading-relaxed w-52 z-50 pointer-events-none">
                 NEC2 applies voltage at the segment center, not the wire
                 endpoint. When enabled, the marker shows the exact segment
                 center. When disabled, endpoint segments snap to the wire
@@ -316,7 +316,7 @@ export function WirePropertiesPanel() {
               onClick={() =>
                 setExcitation(wire.tag, centerSegment(wire.segments))
               }
-              className="w-full py-0.5 text-[10px] rounded bg-swr-warning/20 text-swr-warning hover:bg-swr-warning/30 transition-colors"
+              className="w-full py-0.5 text-[11px] rounded bg-swr-warning/20 text-swr-warning hover:bg-swr-warning/30 transition-colors"
             >
               Set as feedpoint
             </button>
@@ -325,7 +325,7 @@ export function WirePropertiesPanel() {
                 setExcitation(wire.tag, centerSegment(wire.segments));
                 setPickingExcitationForTag(wire.tag);
               }}
-              className="w-full py-0.5 text-[10px] rounded bg-swr-warning/10 text-swr-warning hover:bg-swr-warning/20 transition-colors"
+              className="w-full py-0.5 text-[11px] rounded bg-swr-warning/10 text-swr-warning hover:bg-swr-warning/20 transition-colors"
             >
               Pick on wire
             </button>
@@ -337,13 +337,13 @@ export function WirePropertiesPanel() {
       <div className="border-t border-border pt-2 flex gap-1">
         <button
           onClick={() => splitWire(wire.tag)}
-          className="flex-1 py-0.5 text-[10px] rounded bg-surface-hover text-text-secondary hover:text-text-primary transition-colors"
+          className="flex-1 py-0.5 text-[11px] rounded bg-surface-hover text-text-secondary hover:text-text-primary transition-colors"
         >
           Split
         </button>
         <button
           onClick={() => deleteWires([wire.tag])}
-          className="flex-1 py-0.5 text-[10px] rounded bg-swr-bad/20 text-swr-bad hover:bg-swr-bad/30 transition-colors"
+          className="flex-1 py-0.5 text-[11px] rounded bg-swr-bad/20 text-swr-bad hover:bg-swr-bad/30 transition-colors"
         >
           Delete
         </button>

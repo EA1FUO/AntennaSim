@@ -30,6 +30,7 @@ import { ImportExportPanel } from "../components/editors/ImportExportPanel";
 import { OptimizerPanel } from "../components/editors/OptimizerPanel";
 import { ColorScale } from "../components/ui/ColorScale";
 import { Button } from "../components/ui/Button";
+import { Slider } from "../components/ui/Slider";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { templates } from "../templates";
 import { getDefaultParams } from "../templates/types";
@@ -40,10 +41,12 @@ import type { ViewToggles } from "../components/three/types";
 const MOBILE_SEGMENTS = [
   { key: "wires", label: "Wires" },
   { key: "properties", label: "Props" },
+  { key: "settings", label: "Settings" },
+  { key: "tools", label: "Tools" },
   { key: "results", label: "Results" },
 ];
 
-type MobileEditorTab = "wires" | "properties" | "results";
+type MobileEditorTab = "wires" | "properties" | "settings" | "tools" | "results";
 
 export function EditorPage() {
   // Editor store
@@ -120,6 +123,7 @@ export function EditorPage() {
   useEffect(() => {
     if (simStatus === "success") {
       setRightPanelTab("results");
+      setMobileTab("results");
     }
   }, [simStatus]);
 
@@ -281,7 +285,7 @@ export function EditorPage() {
         </div>
 
         {/* === CENTER: 3D VIEWPORT === */}
-        <main className="flex-1 relative min-w-0">
+        <main className="flex-1 relative min-w-0 min-h-[35vh]">
           <ErrorBoundary label="3D Viewport">
             <EditorScene viewToggles={viewToggles} patternData={patternData} currents={currentData} nearField={nearFieldData} />
           </ErrorBoundary>
@@ -316,18 +320,30 @@ export function EditorPage() {
 
           {/* Pattern frequency slider */}
           {simStatus === "success" && simResult && simResult.frequency_data.length > 1 && (
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 w-56 hidden lg:block">
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 w-44 lg:w-56">
               <PatternFrequencySlider />
             </div>
           )}
 
-          {/* Mobile toolbar (floating) */}
-          <div className="lg:hidden absolute top-2 right-14 z-10 flex gap-1">
+          {/* Empty-state hint */}
+          {wires.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+              <div className="bg-surface/90 backdrop-blur-sm border border-border rounded-lg px-4 py-3 max-w-[240px] text-center pointer-events-auto">
+                <p className="text-sm text-text-primary font-medium mb-1">No wires yet</p>
+                <p className="text-xs text-text-secondary leading-relaxed">
+                  Switch to <span className="text-accent font-medium">Add</span> mode and click the viewport to place wires, or go to <span className="text-accent font-medium">Tools</span> to import a file or load a template.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Mobile toolbar (floating, below mode indicator) */}
+          <div className="lg:hidden absolute top-10 left-2 z-10 flex gap-1">
             {(["select", "add", "move"] as const).map((m) => (
               <button
                 key={m}
                 onClick={() => setMode(m)}
-                className={`px-2 py-1 text-[10px] rounded-md font-mono ${
+                className={`px-3 py-2 text-xs rounded-md font-mono ${
                   mode === m
                     ? "bg-accent/20 text-accent border border-accent/40"
                     : "bg-surface/80 text-text-secondary border border-border"
@@ -465,40 +481,6 @@ export function EditorPage() {
                 {/* === Settings section: height, snap, ground, balun, pattern res === */}
                 {editorSection === "settings" && (
                   <div className="px-2 py-2 space-y-3">
-                    {/* Antenna height */}
-                    {wires.length > 0 && (
-                      <div>
-                        <label className="text-[10px] text-text-secondary font-semibold uppercase tracking-wider block mb-1">
-                          Antenna Height
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            step="0.5"
-                            value={antennaMinZ}
-                            onChange={(e) => handleHeightChange(parseFloat(e.target.value))}
-                            className="flex-1 h-1 accent-accent"
-                            title={`Lowest point: ${antennaMinZ}m, Highest: ${antennaMaxZ}m`}
-                          />
-                          <input
-                            type="number"
-                            step="0.5"
-                            min="0"
-                            max="200"
-                            value={antennaMinZ}
-                            onChange={(e) => {
-                              const v = parseFloat(e.target.value);
-                              if (!isNaN(v) && v >= 0) handleHeightChange(v);
-                            }}
-                            className="w-14 bg-background text-text-primary text-[10px] font-mono px-1 py-0.5 rounded border border-border focus:border-accent/50 outline-none text-right"
-                          />
-                          <span className="text-[10px] text-text-secondary">m</span>
-                        </div>
-                      </div>
-                    )}
-
                     {/* Snap size */}
                     <div>
                       <label className="text-[10px] text-text-secondary font-semibold uppercase tracking-wider block mb-1">
@@ -628,6 +610,21 @@ export function EditorPage() {
               <span className="text-[10px] text-text-secondary">pts</span>
             </div>
 
+            {/* Antenna height */}
+            {wires.length > 0 && (
+              <Slider
+                label="Antenna Height"
+                value={antennaMinZ}
+                min={0}
+                max={100}
+                step={0.5}
+                unit="m"
+                decimals={1}
+                description={`Lowest point: ${antennaMinZ}m, Highest: ${antennaMaxZ}m`}
+                onChange={handleHeightChange}
+              />
+            )}
+
             {/* Warning: wires at ground level */}
             {allWiresAtGround && (
               <div className="flex items-start gap-1.5 p-1.5 rounded-md bg-swr-warning/10 border border-swr-warning/30">
@@ -637,7 +634,7 @@ export function EditorPage() {
                   <line x1="12" y1="17" x2="12.01" y2="17" />
                 </svg>
                 <p className="text-[10px] text-swr-warning leading-tight">
-                  All wires are at ground level (Z=0). Go to Settings to raise the antenna, or results will show no radiation.
+                  All wires are at ground level (Z=0). Use the height slider above to raise the antenna, or results will show no radiation.
                 </p>
               </div>
             )}
@@ -661,41 +658,191 @@ export function EditorPage() {
 
       {/* === MOBILE BOTTOM SHEET === */}
       <div className="lg:hidden border-t border-border bg-surface flex flex-col max-h-[55vh]">
-        <div className="flex justify-center py-1.5 shrink-0">
-          <div className="w-8 h-1 rounded-full bg-border" />
+        {/* Tab bar + Run button + quick actions */}
+        <div className="px-2 pt-2 pb-1 shrink-0 space-y-1.5">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 overflow-x-auto">
+              <SegmentedControl
+                segments={MOBILE_SEGMENTS}
+                activeKey={mobileTab}
+                onChange={(key) => setMobileTab(key as MobileEditorTab)}
+              />
+            </div>
+            <Button
+              onClick={handleRunSimulation}
+              loading={isLoading}
+              disabled={isLoading || !canRun}
+              size="sm"
+              className="shrink-0"
+            >
+              {isLoading ? "..." : "Run"}
+            </Button>
+          </div>
+          {/* Quick operations bar */}
+          <div className="flex items-center gap-1">
+            <button onClick={undo} className="px-2 py-1 text-[11px] rounded border border-border text-text-secondary hover:bg-surface-hover" title="Undo">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 10h13a4 4 0 010 8H7" /><path d="M3 10l4-4M3 10l4 4" /></svg>
+            </button>
+            <button onClick={redo} className="px-2 py-1 text-[11px] rounded border border-border text-text-secondary hover:bg-surface-hover" title="Redo">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10H8a4 4 0 000 8h10" /><path d="M21 10l-4-4M21 10l-4 4" /></svg>
+            </button>
+            <button onClick={deleteSelected} disabled={selectedTags.size === 0} className="px-2 py-1 text-[11px] rounded border border-border text-text-secondary hover:bg-surface-hover disabled:opacity-30" title="Delete selected">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6l-1 14H6L5 6M8 6V4h8v2" /></svg>
+            </button>
+            <button onClick={selectAll} className="px-2 py-1 text-[11px] rounded border border-border text-text-secondary hover:bg-surface-hover" title="Select all">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 12l2 2 4-4" /></svg>
+            </button>
+            <div className="flex-1" />
+            <span className="text-[11px] text-text-secondary font-mono">
+              {wires.length}W {totalSegments}S
+            </span>
+          </div>
         </div>
+        {simError && (
+          <p className="text-xs text-swr-bad px-3 pb-1">{simError}</p>
+        )}
+        {wires.length > 0 && (
+          <div className="px-3 pb-1 shrink-0">
+            <Slider
+              label="Antenna Height"
+              value={antennaMinZ}
+              min={0}
+              max={100}
+              step={0.5}
+              unit="m"
+              decimals={1}
+              description={`Lowest point: ${antennaMinZ}m, Highest: ${antennaMaxZ}m`}
+              onChange={handleHeightChange}
+            />
+          </div>
+        )}
 
-        <div className="px-3 pb-1 shrink-0">
-          <SegmentedControl
-            segments={MOBILE_SEGMENTS}
-            activeKey={mobileTab}
-            onChange={(key) => setMobileTab(key as MobileEditorTab)}
-
-          />
-        </div>
-
+        {/* Tab content */}
         <div className="px-3 py-2 flex-1 overflow-y-auto">
           {mobileTab === "wires" && <WireTable />}
           {mobileTab === "properties" && <WirePropertiesPanel />}
+          {mobileTab === "settings" && (
+            <div className="space-y-3">
+              {/* Design frequency */}
+              <div className="flex items-center gap-2">
+                <label className="text-[11px] text-text-secondary shrink-0">Design freq:</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0.1"
+                  max="500"
+                  value={designFrequencyMhz}
+                  onChange={(e) => {
+                    const v = parseFloat(e.target.value);
+                    if (!isNaN(v) && v > 0) setDesignFrequency(v);
+                  }}
+                  className="flex-1 bg-background text-text-primary text-xs font-mono px-1.5 py-1 rounded border border-border focus:border-accent/50 outline-none text-right"
+                />
+                <span className="text-[11px] text-text-secondary">MHz</span>
+              </div>
+              {/* Frequency sweep */}
+              <div className="flex items-center gap-1 flex-wrap">
+                <label className="text-[11px] text-text-secondary shrink-0">Sweep:</label>
+                <input
+                  type="number" step="0.1" min="0.1" max="500"
+                  value={frequencyRange.start_mhz}
+                  onChange={(e) => {
+                    const v = parseFloat(e.target.value);
+                    if (!isNaN(v) && v > 0 && v < frequencyRange.stop_mhz) setFrequencyRange({ ...frequencyRange, start_mhz: v });
+                  }}
+                  className="w-16 bg-background text-text-primary text-xs font-mono px-1 py-1 rounded border border-border outline-none text-right"
+                />
+                <span className="text-[11px] text-text-secondary">-</span>
+                <input
+                  type="number" step="0.1" min="0.1" max="500"
+                  value={frequencyRange.stop_mhz}
+                  onChange={(e) => {
+                    const v = parseFloat(e.target.value);
+                    if (!isNaN(v) && v > 0 && v > frequencyRange.start_mhz) setFrequencyRange({ ...frequencyRange, stop_mhz: v });
+                  }}
+                  className="w-16 bg-background text-text-primary text-xs font-mono px-1 py-1 rounded border border-border outline-none text-right"
+                />
+                <span className="text-[11px] text-text-secondary">MHz</span>
+                <input
+                  type="number" step="1" min="1" max="201"
+                  value={frequencyRange.steps}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    if (!isNaN(v) && v >= 1 && v <= 201) setFrequencyRange({ ...frequencyRange, steps: v });
+                  }}
+                  className="w-12 bg-background text-text-primary text-xs font-mono px-1 py-1 rounded border border-border outline-none text-right"
+                />
+                <span className="text-[11px] text-text-secondary">pts</span>
+              </div>
+              {/* Snap size */}
+              <div>
+                <label className="text-[11px] text-text-secondary font-semibold uppercase tracking-wider block mb-1">Snap Size</label>
+                <select value={snapSize} onChange={(e) => setSnapSize(parseFloat(e.target.value))}
+                  className="w-full bg-background text-text-primary text-xs font-mono px-1.5 py-1.5 rounded border border-border outline-none">
+                  <option value="0">Off</option>
+                  <option value="0.01">0.01 m</option>
+                  <option value="0.05">0.05 m</option>
+                  <option value="0.1">0.1 m</option>
+                  <option value="0.25">0.25 m</option>
+                  <option value="0.5">0.5 m</option>
+                  <option value="1">1.0 m</option>
+                </select>
+              </div>
+              {/* Pattern resolution */}
+              <div>
+                <label className="text-[11px] text-text-secondary font-semibold uppercase tracking-wider block mb-1">Pattern Resolution</label>
+                <select value={patternStep} onChange={(e) => setPatternStep(parseInt(e.target.value, 10))}
+                  className="w-full bg-background text-text-primary text-xs font-mono px-1.5 py-1.5 rounded border border-border outline-none">
+                  <option value="1">1 deg (very fine)</option>
+                  <option value="2">2 deg (fine)</option>
+                  <option value="5">5 deg (standard)</option>
+                  <option value="10">10 deg (fast)</option>
+                </select>
+              </div>
+              <GroundEditor ground={ground} onChange={setGround} />
+              <BalunEditor matching={matching} onChange={setMatching} />
+            </div>
+          )}
+          {mobileTab === "tools" && (
+            <div className="space-y-3">
+              {/* Templates */}
+              <div>
+                <h4 className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider mb-1.5">Load Template</h4>
+                <TemplatePicker selectedId={selectedTemplate.id} onSelect={handleTemplateSelect} />
+                <div className="mt-2">
+                  <ParameterPanel parameters={selectedTemplate.parameters} values={templateParams} onParamChange={handleTemplateParamChange} />
+                </div>
+                {wires.length > 0 && (
+                  <p className="text-[11px] text-swr-warning leading-tight mt-1.5">Replaces all current wires.</p>
+                )}
+                <Button onClick={handleLoadTemplate} className="w-full mt-2" size="sm">Load into Editor</Button>
+              </div>
+              <div className="border-t border-border" />
+              {/* Import/Export */}
+              <div>
+                <h4 className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider mb-1.5">Import / Export</h4>
+                <ImportExportPanel />
+              </div>
+              <div className="border-t border-border" />
+              {/* Compare */}
+              <div>
+                <h4 className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider mb-1.5">Compare</h4>
+                <CompareOverlay />
+              </div>
+              <div className="border-t border-border" />
+              {/* Optimizer */}
+              <div>
+                <h4 className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider mb-1.5">Optimizer</h4>
+                <OptimizerPanel />
+              </div>
+            </div>
+          )}
           {mobileTab === "results" && <ResultsPanel />}
-        </div>
-
-        {/* Sticky run button */}
-        <div className="p-2 border-t border-border shrink-0">
-          <Button
-            onClick={handleRunSimulation}
-            loading={isLoading}
-            disabled={isLoading || !canRun}
-            className="w-full"
-            size="sm"
-          >
-            {isLoading ? "Simulating..." : "Run Simulation"}
-          </Button>
         </div>
       </div>
 
-      {/* Status bar */}
-      <div className="flex items-center justify-between px-3 h-6 border-t border-border bg-surface text-[10px] font-mono text-text-secondary shrink-0">
+      {/* Status bar (desktop only) */}
+      <div className="hidden lg:flex items-center justify-between px-3 h-6 border-t border-border bg-surface text-[10px] font-mono text-text-secondary shrink-0">
         <div className="flex items-center gap-3">
           <span>
             Mode: <span className="text-accent">{mode}</span>

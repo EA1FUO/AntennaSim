@@ -32,7 +32,7 @@ export function SegmentedControl({
           key={seg.key}
           onClick={handleClick(seg.key)}
           className={`
-            flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors
+            flex-1 px-2 py-2 text-xs font-medium rounded-md transition-colors
             ${
               activeKey === seg.key
                 ? "bg-surface text-text-primary shadow-sm"

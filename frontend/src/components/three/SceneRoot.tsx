@@ -53,6 +53,7 @@ export function SceneRoot({
   const glConfig = useMemo(
     () => ({
       antialias: true,
+      preserveDrawingBuffer: true,
       toneMapping: ACESFilmicToneMapping,
       outputColorSpace: SRGBColorSpace,
       toneMappingExposure: 1.0,

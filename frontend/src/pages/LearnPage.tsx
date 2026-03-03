@@ -403,22 +403,26 @@ export function LearnPage() {
           id="learn-content"
           className="flex-1 overflow-y-auto"
         >
-          {/* Mobile section selector */}
-          <div className="md:hidden sticky top-0 z-10 bg-surface border-b border-border p-2">
-            <select
-              value={activeSection}
-              onChange={(e) => handleSectionClick(e.target.value)}
-              className="w-full bg-background text-text-primary text-sm px-2 py-1.5 rounded border border-border outline-none"
-            >
+          {/* Mobile section selector — horizontal scrollable pills */}
+          <div className="md:hidden sticky top-0 z-10 bg-surface border-b border-border px-2 py-2 overflow-x-auto">
+            <div className="flex gap-1.5 min-w-max">
               {SECTIONS.map((s) => (
-                <option key={s.id} value={s.id}>
+                <button
+                  key={s.id}
+                  onClick={() => handleSectionClick(s.id)}
+                  className={`px-3 py-1.5 text-xs rounded-full whitespace-nowrap transition-colors ${
+                    activeSection === s.id
+                      ? "bg-accent/15 text-accent font-medium border border-accent/40"
+                      : "bg-background text-text-secondary border border-border hover:text-text-primary"
+                  }`}
+                >
                   {s.title}
-                </option>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
 
-          <div className="max-w-3xl mx-auto px-6 py-8">
+          <div className="max-w-3xl mx-auto px-4 py-5 md:px-6 md:py-8">
             <h1 className="text-2xl font-bold text-text-primary mb-6">
               {active.title}
             </h1>

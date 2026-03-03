@@ -98,7 +98,7 @@ export function BalunEditor({ matching, onChange }: BalunEditorProps) {
 
       {/* Show description for selected preset */}
       {!isCustom && currentPresetIndex >= 0 && (
-        <p className="text-[10px] text-text-secondary px-1 leading-tight">
+        <p className="text-[11px] text-text-secondary px-1 leading-tight">
           {MATCHING_PRESETS[currentPresetIndex]!.description}
         </p>
       )}
@@ -107,7 +107,7 @@ export function BalunEditor({ matching, onChange }: BalunEditorProps) {
       {isCustom && (
         <div className="space-y-1.5 px-1">
           <div className="flex items-center gap-2">
-            <label className="text-[10px] text-text-secondary w-10 shrink-0">
+            <label className="text-[11px] text-text-secondary w-10 shrink-0">
               Type:
             </label>
             <select
@@ -120,7 +120,7 @@ export function BalunEditor({ matching, onChange }: BalunEditorProps) {
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-[10px] text-text-secondary w-10 shrink-0">
+            <label className="text-[11px] text-text-secondary w-10 shrink-0">
               Ratio:
             </label>
             <div className="flex items-center gap-1 flex-1">
@@ -133,11 +133,11 @@ export function BalunEditor({ matching, onChange }: BalunEditorProps) {
                 step={0.1}
                 className="w-16 bg-background text-text-primary text-xs font-mono px-1.5 py-1 rounded border border-border outline-none"
               />
-              <span className="text-[10px] text-text-secondary">: 1</span>
+              <span className="text-[11px] text-text-secondary">: 1</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-[10px] text-text-secondary w-10 shrink-0">
+            <label className="text-[11px] text-text-secondary w-10 shrink-0">
               Coax:
             </label>
             <select
@@ -149,7 +149,7 @@ export function BalunEditor({ matching, onChange }: BalunEditorProps) {
               <option value="75">75 &#937;</option>
             </select>
           </div>
-          <p className="text-[10px] text-text-secondary leading-tight">
+          <p className="text-[11px] text-text-secondary leading-tight">
             Z<sub>transformed</sub> = Z<sub>antenna</sub> / {matching.ratio} &rarr; SWR vs {matching.feedlineZ0}&#937;
           </p>
         </div>
