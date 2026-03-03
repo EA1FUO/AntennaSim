@@ -102,7 +102,7 @@ export function SimulatorPage() {
   const nearField = result?.near_field ?? null;
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-dvh bg-background">
       <Navbar />
 
       {/* Main content area */}
@@ -198,7 +198,7 @@ export function SimulatorPage() {
         </aside>
 
         {/* === CENTER: 3D VIEWPORT === */}
-        <main className="flex-1 relative min-w-0 min-h-[35vh]">
+        <main className="flex-1 relative min-w-0 min-h-0">
           <ErrorBoundary label="3D Viewport">
             <SceneRoot
               wires={wireData}
@@ -237,7 +237,7 @@ export function SimulatorPage() {
       </div>
 
       {/* === MOBILE BOTTOM SHEET === */}
-      <div className="lg:hidden border-t border-border bg-surface flex flex-col max-h-[55vh]">
+      <div className="lg:hidden border-t border-border bg-surface flex flex-col max-h-[50%]">
         <div className="px-3 pt-2 pb-1 shrink-0 flex items-center gap-2">
           <div className="flex-1">
             <SegmentedControl

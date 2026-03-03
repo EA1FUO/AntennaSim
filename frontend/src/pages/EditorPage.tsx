@@ -274,7 +274,7 @@ export function EditorPage() {
   );
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-dvh bg-background">
       <Navbar />
 
       {/* Main content area */}
@@ -285,7 +285,7 @@ export function EditorPage() {
         </div>
 
         {/* === CENTER: 3D VIEWPORT === */}
-        <main className="flex-1 relative min-w-0 min-h-[35vh]">
+        <main className="flex-1 relative min-w-0 min-h-0">
           <ErrorBoundary label="3D Viewport">
             <EditorScene viewToggles={viewToggles} patternData={patternData} currents={currentData} nearField={nearFieldData} />
           </ErrorBoundary>
@@ -657,7 +657,7 @@ export function EditorPage() {
       </div>
 
       {/* === MOBILE BOTTOM SHEET === */}
-      <div className="lg:hidden border-t border-border bg-surface flex flex-col max-h-[55vh]">
+      <div className="lg:hidden border-t border-border bg-surface flex flex-col max-h-[50%]">
         {/* Tab bar + Run button + quick actions */}
         <div className="px-2 pt-2 pb-1 shrink-0 space-y-1.5">
           <div className="flex items-center gap-2">

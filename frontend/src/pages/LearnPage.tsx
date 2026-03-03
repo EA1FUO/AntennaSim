@@ -370,7 +370,7 @@ export function LearnPage() {
   const active = SECTIONS.find((s) => s.id === activeSection) ?? SECTIONS[0]!;
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-dvh bg-background">
       <Navbar />
 
       <div className="flex-1 flex overflow-hidden">
