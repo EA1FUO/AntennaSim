@@ -26,7 +26,7 @@ export function AxesHelper() {
     return () => mq.removeEventListener("change", handler);
   }, []);
 
-  const margin: [number, number] = isMobile ? [30, 30] : [72, 72];
+  const margin: [number, number] = isMobile ? [50, 50] : [72, 72];
 
   return (
     <GizmoHelper alignment="top-right" margin={margin} renderPriority={2}>

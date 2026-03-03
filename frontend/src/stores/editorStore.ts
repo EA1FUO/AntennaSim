@@ -114,6 +114,9 @@ interface EditorState {
 
   // ---- Mode ----
   setMode: (mode: EditorMode) => void;
+  /** Vertical-drag toggle for mobile (replaces Shift key) */
+  verticalDrag: boolean;
+  setVerticalDrag: (on: boolean) => void;
 
   // ---- Settings ----
   setGround: (ground: GroundConfig) => void;
@@ -216,6 +219,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   computeCurrents: false,
   selectedTags: new Set<number>(),
   mode: "select",
+  verticalDrag: false,
   ground: { ...DEFAULT_GROUND },
   frequencyRange: { ...DEFAULT_FREQ },
   snapSize: 0.1,
@@ -467,7 +471,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   // ---- Mode ----
 
-  setMode: (mode) => set({ mode }),
+  setMode: (mode) => set({ mode, verticalDrag: false }),
+  setVerticalDrag: (on) => set({ verticalDrag: on }),
 
   // ---- Settings ----
 

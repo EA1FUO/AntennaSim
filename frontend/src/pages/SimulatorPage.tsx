@@ -220,11 +220,16 @@ export function SimulatorPage() {
             </div>
           )}
 
-          {/* Pattern frequency slider */}
+          {/* Pattern frequency slider — bottom-right above dBi legend on mobile, centered on desktop */}
           {simStatus === "success" && result && result.frequency_data.length > 1 && (
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 w-48 lg:w-64">
-              <PatternFrequencySlider />
-            </div>
+            <>
+              <div className="absolute bottom-8 right-2 z-10 w-36 lg:hidden">
+                <PatternFrequencySlider compact />
+              </div>
+              <div className="hidden lg:block absolute bottom-2 left-1/2 -translate-x-1/2 z-10 w-64">
+                <PatternFrequencySlider />
+              </div>
+            </>
           )}
         </main>
 

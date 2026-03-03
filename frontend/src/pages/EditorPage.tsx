@@ -60,6 +60,8 @@ export function EditorPage() {
   const setDesignFrequency = useEditorStore((s) => s.setDesignFrequency);
   const mode = useEditorStore((s) => s.mode);
   const setMode = useEditorStore((s) => s.setMode);
+  const verticalDrag = useEditorStore((s) => s.verticalDrag);
+  const setVerticalDrag = useEditorStore((s) => s.setVerticalDrag);
   const snapSize = useEditorStore((s) => s.snapSize);
   const setSnapSize = useEditorStore((s) => s.setSnapSize);
   const selectedTags = useEditorStore((s) => s.selectedTags);
@@ -305,7 +307,8 @@ export function EditorPage() {
               )}
               {mode === "move" && (
                 <span className="text-text-secondary ml-1">
-                  (Shift = vertical)
+                  <span className="hidden lg:inline">(Shift = vertical)</span>
+                  <span className="lg:hidden">{verticalDrag ? "(vertical)" : "(horizontal)"}</span>
                 </span>
               )}
             </div>
@@ -318,11 +321,16 @@ export function EditorPage() {
             </div>
           )}
 
-          {/* Pattern frequency slider */}
+          {/* Pattern frequency slider — bottom-right above dBi legend on mobile, centered on desktop */}
           {simStatus === "success" && simResult && simResult.frequency_data.length > 1 && (
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 w-44 lg:w-56">
-              <PatternFrequencySlider />
-            </div>
+            <>
+              <div className="absolute bottom-8 right-2 z-10 w-36 lg:hidden">
+                <PatternFrequencySlider compact />
+              </div>
+              <div className="hidden lg:block absolute bottom-2 left-1/2 -translate-x-1/2 z-10 w-56">
+                <PatternFrequencySlider />
+              </div>
+            </>
           )}
 
           {/* Empty-state hint */}
@@ -352,6 +360,20 @@ export function EditorPage() {
                 {m[0]!.toUpperCase()}
               </button>
             ))}
+            {/* Vertical drag toggle — only in move mode */}
+            {mode === "move" && (
+              <button
+                onClick={() => setVerticalDrag(!verticalDrag)}
+                className={`px-3 py-2 text-xs rounded-md font-mono ${
+                  verticalDrag
+                    ? "bg-orange-500/20 text-orange-400 border border-orange-400/50"
+                    : "bg-surface/80 text-text-secondary border border-border"
+                }`}
+                title="Toggle vertical (Z-axis) drag"
+              >
+                Z
+              </button>
+            )}
           </div>
         </main>
 
@@ -701,28 +723,26 @@ export function EditorPage() {
         {simError && (
           <p className="text-xs text-swr-bad px-3 pb-1">{simError}</p>
         )}
-        {wires.length > 0 && (
-          <div className="px-3 pb-1 shrink-0">
-            <Slider
-              label="Antenna Height"
-              value={antennaMinZ}
-              min={0}
-              max={100}
-              step={0.5}
-              unit="m"
-              decimals={1}
-              description={`Lowest point: ${antennaMinZ}m, Highest: ${antennaMaxZ}m`}
-              onChange={handleHeightChange}
-            />
-          </div>
-        )}
-
         {/* Tab content */}
         <div className="px-3 py-2 flex-1 overflow-y-auto">
           {mobileTab === "wires" && <WireTable />}
           {mobileTab === "properties" && <WirePropertiesPanel />}
           {mobileTab === "settings" && (
             <div className="space-y-3">
+              {/* Antenna height */}
+              {wires.length > 0 && (
+                <Slider
+                  label="Antenna Height"
+                  value={antennaMinZ}
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  unit="m"
+                  decimals={1}
+                  description={`Lowest point: ${antennaMinZ}m, Highest: ${antennaMaxZ}m`}
+                  onChange={handleHeightChange}
+                />
+              )}
               {/* Design frequency */}
               <div className="flex items-center gap-2">
                 <label className="text-[11px] text-text-secondary shrink-0">Design freq:</label>

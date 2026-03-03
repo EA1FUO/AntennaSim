@@ -102,6 +102,7 @@ function EditorSceneContent({
   const updateWire = useEditorStore((s) => s.updateWire);
   const moveWire = useEditorStore((s) => s.moveWire);
   const toggleSelection = useEditorStore((s) => s.toggleSelection);
+  const verticalDrag = useEditorStore((s) => s.verticalDrag);
   const pickingExcitationForTag = useEditorStore((s) => s.pickingExcitationForTag);
   const setExcitation = useEditorStore((s) => s.setExcitation);
   const setPickingExcitationForTag = useEditorStore((s) => s.setPickingExcitationForTag);
@@ -133,7 +134,7 @@ function EditorSceneContent({
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef<DragTarget | null>(null);
 
-  const { raycaster, camera } = useThree();
+  const { raycaster, camera, controls } = useThree();
 
   /** Raycast to ground plane to get NEC2 coordinates (horizontal movement: X/Y) */
   const raycastToGround = useCallback(
@@ -214,9 +215,9 @@ function EditorSceneContent({
       // Drag operations
       if (isDragging && dragRef.current) {
         const target = dragRef.current;
-        const shiftHeld = event.nativeEvent.shiftKey;
+        const shiftHeld = event.nativeEvent.shiftKey || verticalDrag;
 
-        // Shift+drag = vertical (Z-axis in NEC2) movement only
+        // Shift+drag (or vertical-drag toggle on mobile) = vertical (Z-axis in NEC2) movement only
         if (shiftHeld) {
           const yVal = raycastVertical(event);
           if (yVal === null) return;
@@ -265,15 +266,17 @@ function EditorSceneContent({
         }
       }
     },
-    [mode, addStart, isDragging, raycastToGround, raycastVertical, updateWire, moveWire]
+    [mode, addStart, isDragging, verticalDrag, raycastToGround, raycastVertical, updateWire, moveWire]
   );
 
   const handlePointerUp = useCallback(() => {
     if (isDragging) {
+      // Re-enable orbit controls synchronously so the next touch can orbit normally
+      if (controls) (controls as unknown as { enabled: boolean }).enabled = true;
       setIsDragging(false);
       dragRef.current = null;
     }
-  }, [isDragging]);
+  }, [isDragging, controls]);
 
   /** Handle wire click — works in both select and move mode */
   const handleWireClick = useCallback(
@@ -296,11 +299,14 @@ function EditorSceneContent({
         // Capture the endpoint's current NEC2 Z so we can preserve it during horizontal drags
         const wire = wires.find((w) => w.tag === tag);
         const origZ = wire ? (endpoint === "start" ? wire.z1 : wire.z2) : 0;
+        // Imperatively disable orbit controls before the React re-render — prevents
+        // touch devices from simultaneously orbiting the camera during a wire drag.
+        if (controls) (controls as unknown as { enabled: boolean }).enabled = false;
         setIsDragging(true);
         dragRef.current = { type: "endpoint", tag, endpoint, origZ };
       }
     },
-    [mode, wires]
+    [mode, wires, controls]
   );
 
   /** Handle wire body drag start (move mode — whole wire) */
@@ -314,6 +320,8 @@ function EditorSceneContent({
         // Capture wire's average Z so Shift+drag has a baseline
         const wire = wires.find((w) => w.tag === tag);
         const origZ = wire ? (wire.z1 + wire.z2) / 2 : 0;
+        // Imperatively disable orbit controls before the React re-render
+        if (controls) (controls as unknown as { enabled: boolean }).enabled = false;
         setIsDragging(true);
         dragRef.current = {
           type: "wire",
@@ -326,7 +334,7 @@ function EditorSceneContent({
         };
       }
     },
-    [mode, wires, raycastToGround, raycastVertical]
+    [mode, wires, raycastToGround, raycastVertical, controls]
   );
 
   // Convert wires to WireData format

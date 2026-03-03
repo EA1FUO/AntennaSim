@@ -37,17 +37,23 @@ export function Navbar() {
   // Mobile menu state
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
 
   // Close menu on route change
   useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname]);
 
-  // Close menu on outside click
+  // Close menu on outside click (ignore clicks on the toggle button itself —
+  // those are handled by the button's onClick which toggles the state)
   useEffect(() => {
     if (!menuOpen) return;
     const handleOutside = (e: PointerEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        menuRef.current && !menuRef.current.contains(target) &&
+        toggleRef.current && !toggleRef.current.contains(target)
+      ) {
         setMenuOpen(false);
       }
     };
@@ -132,6 +138,7 @@ export function Navbar() {
 
           {/* Hamburger button (mobile only) */}
           <button
+            ref={toggleRef}
             onClick={() => setMenuOpen((o) => !o)}
             className="md:hidden p-2 -mr-2 rounded-md text-text-secondary hover:text-text-primary
               hover:bg-surface-hover transition-colors"
