@@ -86,6 +86,8 @@ export function SceneRoot({
       camera={{ position: [15, 12, 15], fov: 50, near: 0.1, far: 500 }}
       style={{ background: sceneBg }}
     >
+      {/* Scene background as Three.js Color so it appears in screenshots */}
+      <color attach="background" args={[sceneBg]} />
       <Suspense fallback={null}>
         {/* Lighting */}
         <ambientLight intensity={theme === "dark" ? 0.3 : 0.5} />

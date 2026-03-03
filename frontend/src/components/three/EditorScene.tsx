@@ -516,6 +516,8 @@ export function EditorScene({ viewToggles, patternData, currents, nearField }: E
       camera={{ position: [15, 12, 15], fov: 50, near: 0.1, far: 500 }}
       style={{ background: sceneBg, cursor: isPicking ? "crosshair" : undefined }}
     >
+      {/* Scene background as Three.js Color so it appears in screenshots */}
+      <color attach="background" args={[sceneBg]} />
       <Suspense fallback={null}>
         <EditorSceneContent viewToggles={viewToggles} patternData={patternData} currents={currents} nearField={nearField} tooltipRef={tooltipRef} />
         <SceneRaycaster tooltipRef={tooltipRef} />
