@@ -3,6 +3,9 @@ import { BrowserRouter } from "react-router-dom";
 import { AppRoutes } from "./routes";
 import { useUIStore } from "./stores/uiStore";
 
+/** Basename for the router — matches Vite's base path (e.g. "/AntennaSim/" on GitHub Pages). */
+const basename = import.meta.env.BASE_URL;
+
 export function App() {
   const theme = useUIStore((s) => s.theme);
 
@@ -17,7 +20,7 @@ export function App() {
   }, [theme]);
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={basename}>
       <AppRoutes />
     </BrowserRouter>
   );

@@ -3,7 +3,7 @@
  */
 
 import { useCallback } from "react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useUIStore } from "../../stores/uiStore";
 
 export function Navbar() {
@@ -26,19 +26,19 @@ export function Navbar() {
     <header className="flex items-center justify-between px-4 h-11 border-b border-border bg-surface shrink-0">
       <div className="flex items-center gap-6">
         {/* Logo */}
-        <a href="/" className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2">
           <span className="text-accent font-bold text-lg tracking-tight">
             AntennaSim
           </span>
           <span className="text-text-secondary text-[10px] font-mono">
             v{__APP_VERSION__}
           </span>
-        </a>
+        </Link>
 
         {/* Nav links */}
         <nav className="hidden md:flex items-center gap-4 text-sm">
-          <a
-            href="/"
+          <Link
+            to="/"
             className={`hover:text-accent transition-colors ${
               location.pathname === "/"
                 ? "text-text-primary font-medium"
@@ -46,9 +46,9 @@ export function Navbar() {
             }`}
           >
             Simulator
-          </a>
-          <a
-            href="/editor"
+          </Link>
+          <Link
+            to="/editor"
             className={`hover:text-accent transition-colors ${
               location.pathname === "/editor"
                 ? "text-accent font-medium"
@@ -56,9 +56,9 @@ export function Navbar() {
             }`}
           >
             Editor
-          </a>
-          <a
-            href="/library"
+          </Link>
+          <Link
+            to="/library"
             className={`hover:text-accent transition-colors ${
               location.pathname === "/library"
                 ? "text-text-primary font-medium"
@@ -66,9 +66,9 @@ export function Navbar() {
             }`}
           >
             Library
-          </a>
-          <a
-            href="/learn"
+          </Link>
+          <Link
+            to="/learn"
             className={`hover:text-accent transition-colors ${
               location.pathname === "/learn"
                 ? "text-text-primary font-medium"
@@ -76,9 +76,9 @@ export function Navbar() {
             }`}
           >
             Learn
-          </a>
-          <a
-            href="/about"
+          </Link>
+          <Link
+            to="/about"
             className={`hover:text-accent transition-colors ${
               location.pathname === "/about"
                 ? "text-text-primary font-medium"
@@ -86,7 +86,7 @@ export function Navbar() {
             }`}
           >
             About
-          </a>
+          </Link>
         </nav>
       </div>
 

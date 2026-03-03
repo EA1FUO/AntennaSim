@@ -59,6 +59,9 @@ jobs:
           VITE_ENGINE: wasm
         run: npx vite build --base /AntennaSim/
 
+      - name: Create SPA fallback for GitHub Pages
+        run: cp frontend/dist/index.html frontend/dist/404.html
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
