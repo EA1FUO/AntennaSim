@@ -241,8 +241,8 @@ Both deployment modes (Docker and WASM) are functionally equivalent -- same simu
 For active development with hot-reload on both frontend and backend:
 
 ```bash
-# Clone and configure
-git clone https://github.com/EA1FUO/AntennaSim.git
+# Clone (--recursive fetches the nec2c submodule for WASM builds)
+git clone --recursive https://github.com/EA1FUO/AntennaSim.git
 cd AntennaSim
 cp .env.example .env
 
@@ -266,6 +266,26 @@ Or use the dev script:
 Source directories are volume-mounted so changes are reflected immediately:
 - `frontend/src/` -- React components, pages, stores
 - `backend/src/` -- FastAPI endpoints, simulation runner, parsers
+
+### Local WASM Development
+
+To run the WASM engine locally (no Docker needed):
+
+```bash
+git clone --recursive https://github.com/EA1FUO/AntennaSim.git
+cd AntennaSim
+
+# Build nec2c to WebAssembly (requires Emscripten SDK)
+cd wasm && ./build.sh && cd ..
+cp wasm/build/nec2c.js wasm/build/nec2c.wasm frontend/public/wasm/
+
+# Start the frontend in WASM mode
+cd frontend
+npm install
+npm run dev:wasm
+```
+
+> **Note:** If you already cloned without `--recursive`, fetch the submodule with: `git submodule update --init`
 
 ---
 
