@@ -1,7 +1,7 @@
 /**
- * SimulationLoadingOverlay — fullscreen overlay shown over the 3D viewport
- * while a NEC2 simulation is running. Blocks interaction with sliders and
- * the viewport, shows an animated spinner with rotating fun status messages.
+ * SimulationLoadingOverlay — fixed full-page overlay shown while a NEC2
+ * simulation is running. Covers everything (navbar, panels, bottom sheet)
+ * to prevent any interaction until the simulation completes.
  */
 
 import { useEffect, useState } from "react";
@@ -40,7 +40,7 @@ export function SimulationLoadingOverlay() {
   }, []);
 
   return (
-    <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/70 backdrop-blur-[2px]">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/70 backdrop-blur-[2px]">
       <div className="flex flex-col items-center gap-4 px-6 py-5 rounded-xl bg-surface/95 border border-border shadow-xl max-w-[260px] lg:max-w-[300px]">
         {/* Animated spinner — pulsing rings */}
         <div className="relative w-14 h-14 lg:w-16 lg:h-16">

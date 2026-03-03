@@ -233,8 +233,6 @@ export function SimulatorPage() {
             </>
           )}
 
-          {/* Simulation loading overlay — blocks viewport interaction */}
-          {isLoading && <SimulationLoadingOverlay />}
         </main>
 
         {/* === RIGHT PANEL (desktop only) === */}
@@ -320,6 +318,9 @@ export function SimulatorPage() {
         onClose={() => setShortcutsOpen(false)}
         mode="simulator"
       />
+
+      {/* Full-page simulation loading overlay — blocks all interaction */}
+      {isLoading && <SimulationLoadingOverlay />}
     </div>
   );
 }

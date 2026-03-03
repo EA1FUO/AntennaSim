@@ -377,8 +377,6 @@ export function EditorPage() {
             )}
           </div>
 
-          {/* Simulation loading overlay — blocks viewport interaction */}
-          {isLoading && <SimulationLoadingOverlay />}
         </main>
 
         {/* === RIGHT PANEL (desktop only) === */}
@@ -889,6 +887,9 @@ export function EditorPage() {
           )}
         </div>
       </div>
+
+      {/* Full-page simulation loading overlay — blocks all interaction */}
+      {isLoading && <SimulationLoadingOverlay />}
     </div>
   );
 }
