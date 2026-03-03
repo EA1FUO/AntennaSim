@@ -9,11 +9,10 @@ const LG_BREAKPOINT = 1024;
  * Click any axis to snap to that view. Smaller on mobile to avoid covering
  * the viewport and overlapping other controls.
  *
- * The GizmoHelper `margin` prop controls position only (offset from corner).
- * The visual size is controlled via the Hud's orthographic camera frustum,
- * which we cannot configure directly. Instead we reduce `margin` on mobile
- * to bring it tighter to the corner and use `axisScale` + `axisHeadScale`
- * to shrink the axis geometry within the fixed Hud viewport.
+ * GizmoViewport internally sets `scale: 40` on its root <group> (40 units in
+ * the Hud's orthographic pixel-space). Because it spreads `...props` after
+ * this default, we can override it with a smaller value on mobile to genuinely
+ * shrink the widget's screen footprint.
  */
 export function AxesHelper() {
   const [isMobile, setIsMobile] = useState(
@@ -27,15 +26,14 @@ export function AxesHelper() {
     return () => mq.removeEventListener("change", handler);
   }, []);
 
-  const margin: [number, number] = isMobile ? [40, 40] : [72, 72];
+  const margin: [number, number] = isMobile ? [30, 30] : [72, 72];
 
   return (
     <GizmoHelper alignment="top-right" margin={margin} renderPriority={2}>
       <GizmoViewport
         axisColors={["#EF4444", "#10B981", "#3B82F6"]}
         labelColor="white"
-        axisScale={isMobile ? [0.6, 0.6, 0.6] : undefined}
-        axisHeadScale={isMobile ? 0.6 : 1}
+        {...(isMobile ? { scale: 25 } : {})}
       />
     </GizmoHelper>
   );
