@@ -5,15 +5,16 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.6.1-blue?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.7.0-blue?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/license-GPL--3.0-green?style=flat-square" alt="License">
   <img src="https://img.shields.io/badge/NEC2-engine-orange?style=flat-square" alt="NEC2">
   <img src="https://img.shields.io/badge/docker-ready-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker">
+  <img src="https://img.shields.io/badge/WebAssembly-supported-654FF0?style=flat-square&logo=webassembly&logoColor=white" alt="WebAssembly">
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs Welcome">
 </p>
 
 <p align="center">
-  <code>docker run -p 80:80 ea1fuo/antennasim</code>
+  <a href="https://EA1FUO.github.io/AntennaSim/"><strong>Try the live demo</strong></a> &middot; <code>docker run -p 80:80 ea1fuo/antennasim</code>
 </p>
 
 <br>
@@ -41,6 +42,8 @@
 
 Design antennas from built-in templates or build your own from scratch in the wire editor. Run NEC2 simulations and instantly visualize SWR, impedance, Smith chart, 3D radiation patterns, current distribution, and near-field heatmaps -- all in your browser.
 
+**Two deployment modes:** self-hosted with Docker (backend + Redis) or fully static via WebAssembly on GitHub Pages -- zero server required.
+
 ---
 
 ## Table of Contents
@@ -48,6 +51,7 @@ Design antennas from built-in templates or build your own from scratch in the wi
 - [Features](#features)
 - [Antenna Templates](#antenna-templates)
 - [Quick Start](#quick-start)
+- [GitHub Pages (WebAssembly)](#github-pages-webassembly)
 - [Development Setup](#development-setup)
 - [Production Deployment](#production-deployment)
 - [Architecture](#architecture)
@@ -206,6 +210,32 @@ The first build takes a few minutes (downloading base images, compiling nec2c, i
 
 ---
 
+## GitHub Pages (WebAssembly)
+
+AntennaSim can run entirely in the browser -- no backend server needed. The NEC2 engine (`nec2c`) is compiled to WebAssembly and executes locally in a Web Worker.
+
+**Live demo:** https://EA1FUO.github.io/AntennaSim/
+
+This mode is enabled by setting `VITE_ENGINE=wasm` at build time. The GitHub Pages deployment is fully automated via the `deploy-pages.yml` workflow, which:
+
+1. Checks out the repo with the `nec2c` git submodule
+2. Compiles nec2c to WebAssembly using Emscripten
+3. Builds the frontend with `VITE_ENGINE=wasm`
+4. Deploys to GitHub Pages
+
+Both deployment modes (Docker and WASM) are functionally equivalent -- same simulation engine, same UI, same results.
+
+| | Docker | WebAssembly |
+|---|---|---|
+| **Server required** | Yes | No |
+| **Simulation runs on** | Backend (Python + nec2c) | Browser (Web Worker + WASM) |
+| **Caching** | Redis | None |
+| **Optimizer** | Backend (scipy) | Browser (TypeScript Nelder-Mead) |
+| **Rate limiting** | Configurable | N/A |
+| **Best for** | Self-hosted / multi-user | Static hosting / demos |
+
+---
+
 ## Development Setup
 
 For active development with hot-reload on both frontend and backend:
@@ -316,7 +346,9 @@ The nginx config is ready for SSL. To enable:
                                 +---------+
 ```
 
-**Data flow:** User configures antenna in the browser -> React generates NEC2 card deck -> POST to FastAPI -> backend writes `.nec` file, runs `nec2c` subprocess -> output parsed into structured JSON -> results cached in Redis -> response sent to frontend -> charts and 3D viewport update.
+**Data flow (Docker):** User configures antenna in the browser -> React generates NEC2 card deck -> POST to FastAPI -> backend writes `.nec` file, runs `nec2c` subprocess -> output parsed into structured JSON -> results cached in Redis -> response sent to frontend -> charts and 3D viewport update.
+
+**Data flow (WebAssembly):** Same frontend, but simulations run locally: React generates card deck -> Web Worker writes to WASM virtual filesystem -> `nec2c.wasm` executes -> TypeScript parser extracts results -> charts and 3D viewport update. No network requests.
 
 ---
 
@@ -336,7 +368,11 @@ AntennaSim/
 |   |   |-- hooks/              # Custom hooks (chart theme, debounce, etc.)
 |   |   |-- stores/             # Zustand stores (antenna, simulation, editor, UI, compare)
 |   |   |-- templates/          # 17 antenna template definitions
-|   |   |-- engine/             # Client-side NEC card generation & validation
+|   |   |-- engine/             # Simulation engine abstraction (backend + WASM)
+|   |   |   |-- backend/       # BackendEngine: REST API + WebSocket
+|   |   |   |-- wasm/          # WasmEngine: Web Workers + nec2c.wasm
+|   |   |   |-- parsers/       # TypeScript ports of NEC2 input/output parsers
+|   |   |   +-- optimizer/     # TypeScript Nelder-Mead optimizer
 |   |   |-- utils/              # Units, formatting, .s1p parser, matching
 |   |   |-- pages/              # Route pages (Simulator, Editor, Library, Learn, About)
 |   |   +-- api/                # API client (fetch + WebSocket)
@@ -361,10 +397,17 @@ AntennaSim/
 |       |-- supervisord.conf    # Manages redis, uvicorn, nginx processes
 |       +-- nginx.conf          # Serves frontend + proxies /api/ to uvicorn
 |
+|-- wasm/                       # WebAssembly build infrastructure
+|   |-- nec2c/                  # nec2c git submodule (KJ7LNW/nec2c)
+|   |-- patches/                # Emscripten compatibility patches
+|   |-- CMakeLists.txt          # Emscripten build config
+|   +-- build.sh                # Build script (emcmake + emmake)
+|
 |-- .github/workflows/
 |   |-- ci.yml                  # Lint, type-check, build on PRs and pushes to main
 |   |-- pr-title.yml            # Validates Conventional Commits format on PR titles
-|   +-- docker-publish.yml      # Builds and pushes Docker images on version tags
+|   |-- docker-publish.yml      # Builds and pushes Docker images on version tags
+|   +-- deploy-pages.yml        # Build WASM + deploy to GitHub Pages
 |
 |-- scripts/
 |   +-- dev.sh                  # Start development environment
@@ -456,6 +499,7 @@ MAX_CONCURRENT_PER_IP=5          # Max concurrent simulations per IP
 # Frontend (Vite)
 VITE_API_URL=http://localhost:8000   # Backend URL
 VITE_WS_URL=ws://localhost:8000      # WebSocket URL
+# VITE_ENGINE=backend               # "backend" (default) or "wasm" (GitHub Pages)
 ```
 
 ---
