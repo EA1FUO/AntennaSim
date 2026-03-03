@@ -29,6 +29,7 @@ import { CompareOverlay } from "../components/results/CompareOverlay";
 import { ImportExportPanel } from "../components/editors/ImportExportPanel";
 import { OptimizerPanel } from "../components/editors/OptimizerPanel";
 import { ColorScale } from "../components/ui/ColorScale";
+import { SimulationLoadingOverlay } from "../components/ui/SimulationLoadingOverlay";
 import { Button } from "../components/ui/Button";
 import { Slider } from "../components/ui/Slider";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
@@ -375,6 +376,9 @@ export function EditorPage() {
               </button>
             )}
           </div>
+
+          {/* Simulation loading overlay — blocks viewport interaction */}
+          {isLoading && <SimulationLoadingOverlay />}
         </main>
 
         {/* === RIGHT PANEL (desktop only) === */}

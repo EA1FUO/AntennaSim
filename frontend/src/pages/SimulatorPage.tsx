@@ -25,6 +25,7 @@ import { BalunEditor } from "../components/editors/BalunEditor";
 import { Button } from "../components/ui/Button";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { ColorScale } from "../components/ui/ColorScale";
+import { SimulationLoadingOverlay } from "../components/ui/SimulationLoadingOverlay";
 import { ResultsPanel } from "../components/results/ResultsTabs";
 import { PatternFrequencySlider } from "../components/results/PatternFrequencySlider";
 import type { AntennaTemplate } from "../templates/types";
@@ -231,6 +232,9 @@ export function SimulatorPage() {
               </div>
             </>
           )}
+
+          {/* Simulation loading overlay — blocks viewport interaction */}
+          {isLoading && <SimulationLoadingOverlay />}
         </main>
 
         {/* === RIGHT PANEL (desktop only) === */}
