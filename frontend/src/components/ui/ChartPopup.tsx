@@ -50,7 +50,7 @@ export function ChartExpandable({
 
         {/* Expand icon — top-right corner */}
         <button
-          className="absolute top-1 right-1 p-1 rounded bg-surface/80 backdrop-blur-sm border border-border/50 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+          className="absolute top-1 right-1 p-1 rounded bg-surface/80 backdrop-blur-sm border border-border/50 opacity-30 lg:opacity-0 group-hover:opacity-100 transition-opacity z-10"
           onClick={(e) => {
             e.stopPropagation();
             open();

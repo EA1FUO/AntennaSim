@@ -288,7 +288,15 @@ export function WireTable() {
           return (
             <div
               key={wire.tag}
+              role="button"
+              tabIndex={0}
               onClick={(e) => handleRowClick(wire.tag, e)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleRowClick(wire.tag, e as unknown as React.MouseEvent);
+                }
+              }}
               className={`rounded-md border p-2 transition-colors cursor-pointer ${
                 isSelected
                   ? "border-accent/40 bg-accent/10"
