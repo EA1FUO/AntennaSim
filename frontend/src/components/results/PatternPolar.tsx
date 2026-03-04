@@ -71,8 +71,8 @@ function extractCut(
       const theta = theta_start + ti * theta_step;
       const gain = gain_dbi[ti]?.[bestPhi] ?? -999;
       // NEC2 theta: 0=zenith, 90=horizon, 180=nadir
-      // Shift so 0=up (zenith) in polar
-      points.push({ angle: theta + 90, gain });
+      // polarToXY already places 0° at the top, so no shift needed
+      points.push({ angle: theta, gain });
     }
     return points;
   }
@@ -121,8 +121,11 @@ export function PatternPolar({ pattern, mode, size = 200, responsive = false }: 
     return { minGain: min, maxGain: max };
   }, [cut]);
 
-  const cx = size / 2;
-  const cy = size / 2;
+  // Extra padding around the plot so outer labels don't clip the viewBox
+  const pad = size * 0.12;
+  const vbSize = size + pad * 2;
+  const cx = vbSize / 2;
+  const cy = vbSize / 2;
   const plotRadius = (size / 2) * 0.82;
 
   // Build SVG path for the pattern
@@ -205,10 +208,10 @@ export function PatternPolar({ pattern, mode, size = 200, responsive = false }: 
       ];
     }
     return [
-      { angle: 0, label: "Z" },
-      { angle: 90, label: "H" },
-      { angle: 180, label: "-Z" },
-      { angle: 270, label: "H" },
+      { angle: 0, label: "Zen" },
+      { angle: 90, label: "Hor" },
+      { angle: 180, label: "Nad" },
+      { angle: 270, label: "Hor" },
     ];
   }, [mode]);
 
@@ -223,7 +226,7 @@ export function PatternPolar({ pattern, mode, size = 200, responsive = false }: 
     <svg
       width={responsive ? "100%" : size}
       height={responsive ? "100%" : size}
-      viewBox={`0 0 ${size} ${size}`}
+      viewBox={`0 0 ${vbSize} ${vbSize}`}
       className={responsive ? "" : "mx-auto"}
       preserveAspectRatio="xMidYMid meet"
     >
@@ -260,7 +263,7 @@ export function PatternPolar({ pattern, mode, size = 200, responsive = false }: 
 
       {/* Cardinal direction labels */}
       {cardinalLabels.map(({ angle, label }) => {
-        const { x, y } = polarToXY(angle, 1.12, cx, cy, plotRadius);
+        const { x, y } = polarToXY(angle, 1.25, cx, cy, plotRadius);
         return (
           <text
             key={`card-${angle}`}
@@ -282,7 +285,7 @@ export function PatternPolar({ pattern, mode, size = 200, responsive = false }: 
       {radialLines
         .filter((a) => a % 90 !== 0)
         .map((angle) => {
-          const { x, y } = polarToXY(angle, 1.12, cx, cy, plotRadius);
+          const { x, y } = polarToXY(angle, 1.25, cx, cy, plotRadius);
           return (
             <text
               key={`ang-${angle}`}
@@ -299,24 +302,6 @@ export function PatternPolar({ pattern, mode, size = 200, responsive = false }: 
             </text>
           );
         })}
-
-      {/* Gain labels on grid circles */}
-      {gridCircles.map((r) => {
-        const gainVal = minGain + (maxGain - minGain) * r;
-        return (
-          <text
-            key={`gain-${r}`}
-            x={cx + 3}
-            y={cy - plotRadius * r - 2}
-            fill={ct.tick}
-            fontSize={7}
-            fontFamily="JetBrains Mono, monospace"
-            opacity={0.8}
-          >
-            {gainVal.toFixed(1)} dBi
-          </text>
-        );
-      })}
 
       {/* Pattern fill */}
       <path
@@ -366,21 +351,36 @@ export function PatternPolar({ pattern, mode, size = 200, responsive = false }: 
         </g>
       )}
 
-      {/* Bottom label: mode + max gain + beamwidth */}
-      <text
-        x={cx}
-        y={size - 4}
-        textAnchor="middle"
-        fill={ct.tick}
-        fontSize={8}
-        fontFamily="JetBrains Mono, monospace"
-      >
-        {mode === "azimuth" ? "Azimuth (H)" : "Elevation (E)"}
-        {" | Max: "}
-        {maxGain.toFixed(1)} dBi
-        {beamwidthArc ? ` | BW: ${beamwidthArc.beamwidth.toFixed(0)}\u00B0` : ""}
-      </text>
+      {/* Gain labels on grid circles — rendered after pattern so they stay on top */}
+      {gridCircles.map((r) => {
+        const gainVal = minGain + (maxGain - minGain) * r;
+        return (
+          <text
+            key={`gain-${r}`}
+            x={cx + 3}
+            y={cy - plotRadius * r - 2}
+            fill={ct.tick}
+            fontSize={7}
+            fontFamily="JetBrains Mono, monospace"
+            opacity={0.9}
+            style={{ paintOrder: "stroke", stroke: "var(--color-background)", strokeWidth: 3, strokeLinejoin: "round" }}
+          >
+            {gainVal.toFixed(1)} dBi
+          </text>
+        );
+      })}
+
     </svg>
+    </div>
+    {/* Info line: mode + max gain + beamwidth — outside SVG to avoid overlap */}
+    <div
+      className="text-center flex-shrink-0 pt-1"
+      style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px", color: ct.tick }}
+    >
+      {mode === "azimuth" ? "Azimuth (H)" : "Elevation (E)"}
+      {" | Max: "}
+      {maxGain.toFixed(1)} dBi
+      {beamwidthArc ? ` | BW: ${beamwidthArc.beamwidth.toFixed(0)}\u00B0` : ""}
     </div>
     {/* Legend */}
     <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pt-1.5 flex-shrink-0" style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px" }}>
