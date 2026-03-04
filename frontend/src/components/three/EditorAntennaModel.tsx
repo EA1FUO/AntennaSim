@@ -21,6 +21,7 @@ import type { ThreeEvent } from "@react-three/fiber";
 import type { WireData } from "./types";
 import { getWireColor } from "./types";
 import type { EditorMode } from "../../stores/editorStore";
+import { useUIStore } from "../../stores/uiStore";
 
 interface EditorAntennaModelProps {
   wire: WireData;
@@ -103,6 +104,9 @@ export function EditorAntennaModel({
   tooltipRef,
   dimmed = false,
 }: EditorAntennaModelProps) {
+  const theme = useUIStore((s) => s.theme);
+  const isDark = theme === "dark";
+
   // Pick mode: hovered segment number (null when not hovering)
   const [hoveredSegment, setHoveredSegment] = useState<number | null>(null);
   const lastPointerEvent = useRef<{ clientX: number; clientY: number } | null>(null);
@@ -125,8 +129,8 @@ export function EditorAntennaModel({
     const color = isSelected ? SELECTED_COLOR : getWireColor(wire.tag);
     const mat = new MeshStandardMaterial({
       color,
-      metalness: isSelected ? 0.3 : 0.85,
-      roughness: isSelected ? 0.5 : 0.25,
+      metalness: isSelected ? 0.3 : (isDark ? 0.85 : 0.4),
+      roughness: isSelected ? 0.5 : (isDark ? 0.25 : 0.45),
       emissive: isSelected ? color : "#000000",
       emissiveIntensity: isSelected ? 0.3 : 0,
       transparent: dimmed,
@@ -135,7 +139,7 @@ export function EditorAntennaModel({
     });
 
     return { geometry: tubeGeo, material: mat, start: s, end: e };
-  }, [wire, isSelected, dimmed]);
+  }, [wire, isSelected, dimmed, isDark]);
 
   // Selection outline
   const outlineGeometry = useMemo(() => {

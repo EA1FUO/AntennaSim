@@ -21,6 +21,7 @@ import {
 import type { Mesh } from "three";
 import { useFrame } from "@react-three/fiber";
 import type { SegmentCurrent } from "../../api/nec";
+import { useUIStore } from "../../stores/uiStore";
 
 interface CurrentDistribution3DProps {
   /** Current data from simulation (per-segment) */
@@ -32,7 +33,9 @@ interface CurrentDistribution3DProps {
 }
 
 /** Hot colormap for current magnitude: dark blue -> cyan -> green -> yellow -> red */
-const CURRENT_COLORMAP = [
+type ColormapStop = { t: number; color: Color };
+
+const CURRENT_COLORMAP_DARK: ColormapStop[] = [
   { t: 0.0, color: new Color("#1E3A5F") },
   { t: 0.2, color: new Color("#2563EB") },
   { t: 0.4, color: new Color("#10B981") },
@@ -41,17 +44,27 @@ const CURRENT_COLORMAP = [
   { t: 1.0, color: new Color("#EF4444") },
 ];
 
-function sampleCurrentColormap(t: number): Color {
+/** Light mode: brighter low-end so current overlay is visible against light background */
+const CURRENT_COLORMAP_LIGHT: ColormapStop[] = [
+  { t: 0.0, color: new Color("#4A90D9") },
+  { t: 0.2, color: new Color("#2563EB") },
+  { t: 0.4, color: new Color("#059669") },
+  { t: 0.6, color: new Color("#16A34A") },
+  { t: 0.8, color: new Color("#D97706") },
+  { t: 1.0, color: new Color("#DC2626") },
+];
+
+function sampleCurrentColormap(t: number, stops: ColormapStop[]): Color {
   const clamped = Math.max(0, Math.min(1, t));
-  for (let i = 0; i < CURRENT_COLORMAP.length - 1; i++) {
-    const a = CURRENT_COLORMAP[i]!;
-    const b = CURRENT_COLORMAP[i + 1]!;
+  for (let i = 0; i < stops.length - 1; i++) {
+    const a = stops[i]!;
+    const b = stops[i + 1]!;
     if (clamped >= a.t && clamped <= b.t) {
       const local = (clamped - a.t) / (b.t - a.t);
       return new Color().lerpColors(a.color, b.color, local);
     }
   }
-  return CURRENT_COLORMAP[CURRENT_COLORMAP.length - 1]!.color.clone();
+  return stops[stops.length - 1]!.color.clone();
 }
 
 /** Group currents by wire tag */
@@ -74,10 +87,12 @@ function WireCurrentTube({
   segments,
   maxMagnitude,
   tubeRadius,
+  colormapStops,
 }: {
   segments: SegmentCurrent[];
   maxMagnitude: number;
   tubeRadius: number;
+  colormapStops: ColormapStop[];
 }) {
   const geometry = useMemo(() => {
     if (segments.length < 2) return null;
@@ -103,7 +118,7 @@ function WireCurrentTube({
     for (let i = 0; i < points.length; i++) {
       const p = points[i]!;
       const normalized = maxMagnitude > 0 ? magnitudes[i]! / maxMagnitude : 0;
-      const color = sampleCurrentColormap(normalized);
+      const color = sampleCurrentColormap(normalized, colormapStops);
 
       // Variable radius based on current (subtle)
       const r = tubeRadius * (0.5 + 0.5 * normalized);
@@ -161,7 +176,7 @@ function WireCurrentTube({
     geo.setIndex(indices);
     geo.computeVertexNormals();
     return geo;
-  }, [segments, maxMagnitude, tubeRadius]);
+  }, [segments, maxMagnitude, tubeRadius, colormapStops]);
 
   // Tag mesh with current data for hover measurement
   const meshRef = useRef<Mesh>(null);
@@ -262,6 +277,9 @@ export function CurrentDistribution3D({
   showParticles = true,
   tubeRadius = 0.05,
 }: CurrentDistribution3DProps) {
+  const theme = useUIStore((s) => s.theme);
+  const colormapStops = theme === "dark" ? CURRENT_COLORMAP_DARK : CURRENT_COLORMAP_LIGHT;
+
   const { groupedCurrents, maxMagnitude } = useMemo(() => {
     const grouped = groupCurrentsByTag(currents);
     let max = 0;
@@ -281,6 +299,7 @@ export function CurrentDistribution3D({
             segments={segs}
             maxMagnitude={maxMagnitude}
             tubeRadius={tubeRadius}
+            colormapStops={colormapStops}
           />
           {showParticles && (
             <FlowParticles segments={segs} maxMagnitude={maxMagnitude} />

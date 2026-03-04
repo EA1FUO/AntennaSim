@@ -1,19 +1,24 @@
 import { Text } from "@react-three/drei";
 import { useMemo } from "react";
+import { useUIStore } from "../../stores/uiStore";
 
 /**
  * Compass rose on the ground plane showing N/S/E/W with degree markings.
  */
 export function CompassRose() {
+  const theme = useUIStore((s) => s.theme);
+  const isDark = theme === "dark";
+
   const radius = 20;
+  const secondaryColor = isDark ? "#8888A0" : "#505068";
   const labels = useMemo(
     () => [
       { text: "N", angle: 0, color: "#EF4444" },
-      { text: "E", angle: 90, color: "#8888A0" },
-      { text: "S", angle: 180, color: "#8888A0" },
-      { text: "W", angle: 270, color: "#8888A0" },
+      { text: "E", angle: 90, color: secondaryColor },
+      { text: "S", angle: 180, color: secondaryColor },
+      { text: "W", angle: 270, color: secondaryColor },
     ],
-    []
+    [secondaryColor]
   );
 
   const tickMarks = useMemo(() => {
@@ -53,7 +58,7 @@ export function CompassRose() {
       {/* Circle ring */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
         <ringGeometry args={[radius - 0.05, radius + 0.05, 64]} />
-        <meshBasicMaterial color="#2A2A35" transparent opacity={0.6} />
+        <meshBasicMaterial color={isDark ? "#2A2A35" : "#9090A0"} transparent opacity={0.6} />
       </mesh>
 
       {/* 30-degree tick marks */}
@@ -72,7 +77,7 @@ export function CompassRose() {
                 args={[new Float32Array([x1, 0.02, z1, x2, 0.02, z2]), 3]}
               />
             </bufferGeometry>
-            <lineBasicMaterial color="#2A2A35" transparent opacity={0.6} />
+            <lineBasicMaterial color={isDark ? "#2A2A35" : "#9090A0"} transparent opacity={0.6} />
           </line>
         );
       })}
