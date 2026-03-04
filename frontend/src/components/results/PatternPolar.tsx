@@ -157,39 +157,83 @@ export function PatternPolar({ pattern, mode, size = 200, responsive = false }: 
     return best;
   }, [cut, minGain, maxGain, cx, cy, plotRadius]);
 
-  // Find -3dB beamwidth
-  const beamwidthArc = useMemo(() => {
+  // Find -3dB beamwidth arcs for all lobes above threshold.
+  // Splits above-threshold angles into contiguous lobe groups so multi-lobe
+  // patterns (e.g. a dipole's figure-8) get an arc on each lobe instead of
+  // one giant arc spanning across nulls. The beamwidth reported in the info
+  // line is for the main lobe (the one containing the peak gain).
+  const beamwidthArcs = useMemo(() => {
     const threshold = maxGain - 3;
     if (maxGain <= -999 || threshold <= minGain) return null;
 
-    // Find continuous arc above threshold
-    const aboveThreshold = cut.filter((p) => p.gain >= threshold && p.gain > -999);
-    if (aboveThreshold.length < 2) return null;
+    // Collect angles above threshold, sorted
+    const aboveAngles = cut
+      .filter((p) => p.gain >= threshold && p.gain > -999)
+      .map((p) => p.angle)
+      .sort((a, b) => a - b);
+    if (aboveAngles.length < 2) return null;
 
-    // Simple approach: find the angular range
-    const angles = aboveThreshold.map((p) => p.angle);
-    const startAngle = Math.min(...angles);
-    const endAngle = Math.max(...angles);
-    const beamwidth = endAngle - startAngle;
+    // Determine the angular step between data points
+    const stepSize = cut.length >= 2
+      ? Math.abs(cut[1]!.angle - cut[0]!.angle) || 1
+      : 1;
+    // A gap larger than 1.5x the step size indicates separate lobes
+    const gapThreshold = stepSize * 1.5;
 
-    if (beamwidth <= 0 || beamwidth >= 360) return null;
-
-    // Build arc path at the -3dB radius
-    const r3db = gainToRadius(threshold, minGain, maxGain);
-    const arcPoints: string[] = [];
-    for (let a = startAngle; a <= endAngle; a += 1) {
-      const pos = polarToXY(a, r3db, cx, cy, plotRadius);
-      arcPoints.push(`${pos.x.toFixed(1)} ${pos.y.toFixed(1)}`);
+    // Split into contiguous lobe groups
+    const lobes: number[][] = [[aboveAngles[0]!]];
+    for (let i = 1; i < aboveAngles.length; i++) {
+      const gap = aboveAngles[i]! - aboveAngles[i - 1]!;
+      if (gap > gapThreshold) {
+        lobes.push([aboveAngles[i]!]);
+      } else {
+        lobes[lobes.length - 1]!.push(aboveAngles[i]!);
+      }
     }
-    if (arcPoints.length < 2) return null;
 
-    return {
-      path: `M ${arcPoints.join(" L ")}`,
-      beamwidth,
-      startAngle,
-      endAngle,
-    };
-  }, [cut, maxGain, minGain, cx, cy, plotRadius]);
+    // Handle wrap-around: if the first and last lobes are connected across 360°
+    if (lobes.length > 1) {
+      const firstLobe = lobes[0]!;
+      const lastLobe = lobes[lobes.length - 1]!;
+      const wrapGap = (360 - lastLobe[lastLobe.length - 1]!) + firstLobe[0]!;
+      if (wrapGap <= gapThreshold) {
+        lobes[0] = [...lastLobe, ...firstLobe];
+        lobes.pop();
+      }
+    }
+
+    const r3db = gainToRadius(threshold, minGain, maxGain);
+
+    // Build an arc path for each lobe
+    const arcs: { path: string; beamwidth: number }[] = [];
+    let mainLobeBeamwidth = 0;
+    const peakAngle = maxGainPoint.angle;
+
+    for (const lobe of lobes) {
+      if (lobe.length < 2) continue;
+      const start = Math.min(...lobe);
+      const end = Math.max(...lobe);
+      const bw = end - start;
+      if (bw <= 0 || bw >= 360) continue;
+
+      const pts: string[] = [];
+      for (let a = start; a <= end; a += 1) {
+        const pos = polarToXY(a, r3db, cx, cy, plotRadius);
+        pts.push(`${pos.x.toFixed(1)} ${pos.y.toFixed(1)}`);
+      }
+      if (pts.length < 2) continue;
+
+      arcs.push({ path: `M ${pts.join(" L ")}`, beamwidth: bw });
+
+      // Track beamwidth of the lobe containing the peak
+      if (lobe.some((a) => Math.abs(a - peakAngle) < gapThreshold)) {
+        mainLobeBeamwidth = bw;
+      }
+    }
+
+    if (arcs.length === 0) return null;
+    return { arcs, mainLobeBeamwidth };
+  }, [cut, maxGain, maxGainPoint.angle, minGain, cx, cy, plotRadius]);
 
   // Grid circles — 4 even divisions
   const gridCircles = [0.25, 0.5, 0.75, 1.0];
@@ -313,17 +357,18 @@ export function PatternPolar({ pattern, mode, size = 200, responsive = false }: 
         strokeLinejoin="round"
       />
 
-      {/* -3dB beamwidth arc highlight */}
-      {beamwidthArc && (
+      {/* -3dB beamwidth arc highlights — one per lobe */}
+      {beamwidthArcs?.arcs.map((arc, i) => (
         <path
-          d={beamwidthArc.path}
+          key={`bw-${i}`}
+          d={arc.path}
           fill="none"
           stroke="#F59E0B"
           strokeWidth={2.5}
           strokeLinecap="round"
           opacity={0.7}
         />
-      )}
+      ))}
 
       {/* Max gain point marker */}
       {maxGainPoint.gain > -999 && (
@@ -380,7 +425,7 @@ export function PatternPolar({ pattern, mode, size = 200, responsive = false }: 
       {mode === "azimuth" ? "Azimuth (H)" : "Elevation (E)"}
       {" | Max: "}
       {maxGain.toFixed(1)} dBi
-      {beamwidthArc ? ` | BW: ${beamwidthArc.beamwidth.toFixed(0)}\u00B0` : ""}
+      {beamwidthArcs ? ` | BW: ${beamwidthArcs.mainLobeBeamwidth.toFixed(0)}\u00B0` : ""}
     </div>
     {/* Legend */}
     <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pt-1.5 flex-shrink-0" style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px" }}>
