@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.7.4-blue?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.7.5-blue?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/license-GPL--3.0-green?style=flat-square" alt="License">
   <img src="https://img.shields.io/badge/NEC2-engine-orange?style=flat-square" alt="NEC2">
   <img src="https://img.shields.io/badge/docker-ready-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker">
