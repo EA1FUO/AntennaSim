@@ -3,6 +3,7 @@ import { TubeGeometry, LineCurve3, Vector3, MeshStandardMaterial } from "three";
 import type { Mesh } from "three";
 import type { WireData } from "./types";
 import { getWireColor } from "./types";
+import { useUIStore } from "../../stores/uiStore";
 
 interface AntennaModelProps {
   wire: WireData;
@@ -18,6 +19,9 @@ interface AntennaModelProps {
  * Includes end cap spheres at both endpoints for clean termination.
  */
 export function AntennaModel({ wire, dimmed = false }: AntennaModelProps) {
+  const theme = useUIStore((s) => s.theme);
+  const isDark = theme === "dark";
+
   const { geometry, material, endCapPositions } = useMemo(() => {
     // NEC2: X=east, Y=north, Z=up -> Three.js: X=east, Y=up, Z=south
     const start = new Vector3(wire.x1, wire.z1, -wire.y1);
@@ -32,8 +36,8 @@ export function AntennaModel({ wire, dimmed = false }: AntennaModelProps) {
     const color = getWireColor(wire.tag);
     const mat = new MeshStandardMaterial({
       color,
-      metalness: 0.85,
-      roughness: 0.25,
+      metalness: isDark ? 0.85 : 0.4,
+      roughness: isDark ? 0.25 : 0.45,
       transparent: dimmed,
       opacity: dimmed ? 0.15 : 1,
       depthWrite: !dimmed,
@@ -41,7 +45,7 @@ export function AntennaModel({ wire, dimmed = false }: AntennaModelProps) {
 
     const caps: [Vector3, Vector3] = [start, end];
     return { geometry: tubeGeo, material: mat, endCapPositions: caps };
-  }, [wire, dimmed]);
+  }, [wire, dimmed, isDark]);
 
   const capRadius = Math.max(wire.radius * 60, 0.04);
 
@@ -72,8 +76,8 @@ export function AntennaModel({ wire, dimmed = false }: AntennaModelProps) {
           <sphereGeometry args={[capRadius, 8, 8]} />
           <meshStandardMaterial
             color={getWireColor(wire.tag)}
-            metalness={0.85}
-            roughness={0.25}
+            metalness={isDark ? 0.85 : 0.4}
+            roughness={isDark ? 0.25 : 0.45}
             transparent={dimmed}
             opacity={dimmed ? 0.15 : 1}
             depthWrite={!dimmed}
@@ -95,6 +99,9 @@ interface JunctionSpheresProps {
 }
 
 export function JunctionSpheres({ wires, dimmed = false }: JunctionSpheresProps) {
+  const theme = useUIStore((s) => s.theme);
+  const isDark = theme === "dark";
+
   const junctions = useMemo(() => {
     if (wires.length < 2) return [];
 
@@ -142,9 +149,9 @@ export function JunctionSpheres({ wires, dimmed = false }: JunctionSpheresProps)
         <mesh key={i} position={j.pos}>
           <sphereGeometry args={[j.radius, 12, 12]} />
           <meshStandardMaterial
-            color="#E0E0E8"
-            metalness={0.9}
-            roughness={0.2}
+            color={isDark ? "#E0E0E8" : "#606078"}
+            metalness={isDark ? 0.9 : 0.4}
+            roughness={isDark ? 0.2 : 0.45}
             transparent={dimmed}
             opacity={dimmed ? 0.15 : 1}
             depthWrite={!dimmed}

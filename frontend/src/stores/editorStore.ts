@@ -216,7 +216,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   excitations: [],
   loads: [],
   transmissionLines: [],
-  computeCurrents: false,
+  computeCurrents: true,
   selectedTags: new Set<number>(),
   mode: "select",
   verticalDrag: false,

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Grid } from "@react-three/drei";
 import type { WireData } from "./types";
+import { useUIStore } from "../../stores/uiStore";
 
 /**
  * Ground plane visualization with auto-sizing grid at Y=0.
@@ -14,6 +15,9 @@ interface GroundPlaneProps {
 }
 
 export function GroundPlane({ wires = [] }: GroundPlaneProps) {
+  const theme = useUIStore((s) => s.theme);
+  const isDark = theme === "dark";
+
   const { gridSize, cellSize, sectionSize, fadeDistance } = useMemo(() => {
     if (wires.length === 0) {
       return { gridSize: 100, cellSize: 1, sectionSize: 5, fadeDistance: 80 };
@@ -69,10 +73,10 @@ export function GroundPlane({ wires = [] }: GroundPlaneProps) {
         args={[gridSize, gridSize]}
         cellSize={cellSize}
         cellThickness={0.5}
-        cellColor="#1A1A24"
+        cellColor={isDark ? "#1A1A24" : "#C0C0C8"}
         sectionSize={sectionSize}
         sectionThickness={1}
-        sectionColor="#2A2A35"
+        sectionColor={isDark ? "#2A2A35" : "#9090A0"}
         fadeDistance={fadeDistance}
         fadeStrength={1.5}
         infiniteGrid
@@ -81,9 +85,9 @@ export function GroundPlane({ wires = [] }: GroundPlaneProps) {
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]}>
         <planeGeometry args={[gridSize * 2, gridSize * 2]} />
         <meshStandardMaterial
-          color="#1a2a1a"
+          color={isDark ? "#1a2a1a" : "#90a890"}
           transparent
-          opacity={0.15}
+          opacity={isDark ? 0.15 : 0.1}
           roughness={1}
           polygonOffset
           polygonOffsetFactor={1}

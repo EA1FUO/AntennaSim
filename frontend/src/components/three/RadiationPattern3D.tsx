@@ -15,6 +15,7 @@ import {
 } from "three";
 import type { Mesh } from "three";
 import type { PatternData } from "../../api/nec";
+import { useUIStore } from "../../stores/uiStore";
 
 interface RadiationPattern3DProps {
   pattern: PatternData;
@@ -29,7 +30,9 @@ interface RadiationPattern3DProps {
 }
 
 /** Perceptual colormap for gain: blue → cyan → green → yellow → red */
-const COLORMAP_STOPS = [
+type ColormapStop = { t: number; color: Color };
+
+const COLORMAP_DARK: ColormapStop[] = [
   { t: 0.0, color: new Color("#1E3A5F") },
   { t: 0.25, color: new Color("#2563EB") },
   { t: 0.5, color: new Color("#10B981") },
@@ -37,17 +40,26 @@ const COLORMAP_STOPS = [
   { t: 1.0, color: new Color("#EF4444") },
 ];
 
-function sampleColormap(t: number): Color {
+/** Light mode: vivid, saturated colors that pop against the light background */
+const COLORMAP_LIGHT: ColormapStop[] = [
+  { t: 0.0, color: new Color("#3B82F6") },
+  { t: 0.25, color: new Color("#6366F1") },
+  { t: 0.5, color: new Color("#10B981") },
+  { t: 0.75, color: new Color("#F59E0B") },
+  { t: 1.0, color: new Color("#EF4444") },
+];
+
+function sampleColormap(t: number, stops: ColormapStop[]): Color {
   const clamped = Math.max(0, Math.min(1, t));
-  for (let i = 0; i < COLORMAP_STOPS.length - 1; i++) {
-    const a = COLORMAP_STOPS[i]!;
-    const b = COLORMAP_STOPS[i + 1]!;
+  for (let i = 0; i < stops.length - 1; i++) {
+    const a = stops[i]!;
+    const b = stops[i + 1]!;
     if (clamped >= a.t && clamped <= b.t) {
       const local = (clamped - a.t) / (b.t - a.t);
       return new Color().lerpColors(a.color, b.color, local);
     }
   }
-  return COLORMAP_STOPS[COLORMAP_STOPS.length - 1]!.color.clone();
+  return stops[stops.length - 1]!.color.clone();
 }
 
 export function RadiationPattern3D({
@@ -57,6 +69,10 @@ export function RadiationPattern3D({
   wireframe = false,
   center = [0, 0, 0],
 }: RadiationPattern3DProps) {
+  const theme = useUIStore((s) => s.theme);
+  const isDark = theme === "dark";
+  const colormapStops = isDark ? COLORMAP_DARK : COLORMAP_LIGHT;
+
   const geometry = useMemo(() => {
     const {
       gain_dbi,
@@ -129,7 +145,7 @@ export function RadiationPattern3D({
         positions.push(necX, necZ, -necY);
 
         // Color from colormap
-        const color = sampleColormap(normalized);
+        const color = sampleColormap(normalized, colormapStops);
         colors.push(color.r, color.g, color.b);
       }
     }
@@ -177,7 +193,7 @@ export function RadiationPattern3D({
     }
 
     return geo;
-  }, [pattern, scale]);
+  }, [pattern, scale, colormapStops]);
 
   // Tag mesh with pattern data for hover measurement
   const meshRef = useRef<Mesh>(null);
@@ -199,10 +215,11 @@ export function RadiationPattern3D({
           <meshPhysicalMaterial
             vertexColors
             transparent
-            opacity={opacity}
+            opacity={isDark ? opacity : Math.min(opacity + 0.15, 0.9)}
             side={DoubleSide}
-            roughness={0.1}
+            roughness={isDark ? 0.1 : 0.25}
             metalness={0}
+            clearcoat={isDark ? 0 : 0.3}
             depthWrite={false}
           />
         </mesh>
