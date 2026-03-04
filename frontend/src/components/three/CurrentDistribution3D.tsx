@@ -44,14 +44,14 @@ const CURRENT_COLORMAP_DARK: ColormapStop[] = [
   { t: 1.0, color: new Color("#EF4444") },
 ];
 
-/** Light mode: brighter low-end so current overlay is visible against light background */
+/** Light mode: vivid, saturated colors that pop against the light background */
 const CURRENT_COLORMAP_LIGHT: ColormapStop[] = [
-  { t: 0.0, color: new Color("#4A90D9") },
-  { t: 0.2, color: new Color("#2563EB") },
-  { t: 0.4, color: new Color("#059669") },
-  { t: 0.6, color: new Color("#16A34A") },
-  { t: 0.8, color: new Color("#D97706") },
-  { t: 1.0, color: new Color("#DC2626") },
+  { t: 0.0, color: new Color("#3B82F6") },
+  { t: 0.2, color: new Color("#6366F1") },
+  { t: 0.4, color: new Color("#10B981") },
+  { t: 0.6, color: new Color("#22C55E") },
+  { t: 0.8, color: new Color("#F59E0B") },
+  { t: 1.0, color: new Color("#EF4444") },
 ];
 
 function sampleCurrentColormap(t: number, stops: ColormapStop[]): Color {

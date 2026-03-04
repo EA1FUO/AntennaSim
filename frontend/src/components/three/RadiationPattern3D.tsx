@@ -40,13 +40,13 @@ const COLORMAP_DARK: ColormapStop[] = [
   { t: 1.0, color: new Color("#EF4444") },
 ];
 
-/** Light mode: brighter low-end so pattern is visible against light background */
+/** Light mode: vivid, saturated colors that pop against the light background */
 const COLORMAP_LIGHT: ColormapStop[] = [
-  { t: 0.0, color: new Color("#4A90D9") },
-  { t: 0.25, color: new Color("#2563EB") },
-  { t: 0.5, color: new Color("#059669") },
-  { t: 0.75, color: new Color("#D97706") },
-  { t: 1.0, color: new Color("#DC2626") },
+  { t: 0.0, color: new Color("#3B82F6") },
+  { t: 0.25, color: new Color("#6366F1") },
+  { t: 0.5, color: new Color("#10B981") },
+  { t: 0.75, color: new Color("#F59E0B") },
+  { t: 1.0, color: new Color("#EF4444") },
 ];
 
 function sampleColormap(t: number, stops: ColormapStop[]): Color {
@@ -215,10 +215,11 @@ export function RadiationPattern3D({
           <meshPhysicalMaterial
             vertexColors
             transparent
-            opacity={opacity}
+            opacity={isDark ? opacity : Math.min(opacity + 0.15, 0.9)}
             side={DoubleSide}
-            roughness={0.1}
+            roughness={isDark ? 0.1 : 0.25}
             metalness={0}
+            clearcoat={isDark ? 0 : 0.3}
             depthWrite={false}
           />
         </mesh>

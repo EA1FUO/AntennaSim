@@ -16,8 +16,10 @@ import {
   DoubleSide,
   Color,
   AdditiveBlending,
+  NormalBlending,
 } from "three";
 import type { PatternData } from "../../api/nec";
+import { useUIStore } from "../../stores/uiStore";
 
 interface VolumetricShellsProps {
   pattern: PatternData;
@@ -117,6 +119,9 @@ export function VolumetricShells({
   scale = 5,
   center = [0, 0, 0],
 }: VolumetricShellsProps) {
+  const theme = useUIStore((s) => s.theme);
+  const isDark = theme === "dark";
+
   const shells = useMemo(() => {
     const { gain_dbi, theta_count, phi_count } = pattern;
 
@@ -150,10 +155,10 @@ export function VolumetricShells({
           <meshPhysicalMaterial
             color={shell.color}
             transparent
-            opacity={shell.opacity}
+            opacity={isDark ? shell.opacity : shell.opacity * 1.8}
             side={DoubleSide}
             depthWrite={false}
-            blending={AdditiveBlending}
+            blending={isDark ? AdditiveBlending : NormalBlending}
             roughness={0.3}
             metalness={0}
           />
