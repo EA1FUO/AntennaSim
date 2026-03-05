@@ -10,7 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - Ham band frequency presets with ITU Region 1/2/3 support and band analysis utilities
+- Band preset pill buttons integrated into Simulator and Editor pages for quick frequency selection
 - Project save/load (.antennasim JSON format) with schema validation and round-trip integrity
+- Save/Open project buttons with Ctrl+S / Ctrl+O keyboard shortcuts on both pages
+- `setFrequencyRange` action on antennaStore for overriding template-derived frequency range
 - Extracted shared ham band definitions from SWRChart into reusable `utils/ham-bands.ts`
 - 33 new tests for ham bands and project file utilities
 

@@ -48,6 +48,8 @@ interface AntennaState {
   setParams: (params: Record<string, number>) => void;
   /** Set ground configuration */
   setGround: (ground: GroundConfig) => void;
+  /** Override the frequency range (e.g. from band presets) */
+  setFrequencyRange: (range: FrequencyRange) => void;
   /** Recompute derived geometry from current template + params */
   recompute: () => void;
 }
@@ -101,6 +103,10 @@ export const useAntennaStore = create<AntennaState>((set, get) => {
 
     setGround: (ground) => {
       set({ ground });
+    },
+
+    setFrequencyRange: (range) => {
+      set({ frequencyRange: range });
     },
 
     recompute: () => {

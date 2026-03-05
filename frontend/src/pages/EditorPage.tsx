@@ -30,12 +30,17 @@ import { ImportExportPanel } from "../components/editors/ImportExportPanel";
 import { OptimizerPanel } from "../components/editors/OptimizerPanel";
 import { ColorScale } from "../components/ui/ColorScale";
 import { SimulationLoadingOverlay } from "../components/ui/SimulationLoadingOverlay";
+import { BandPresets } from "../components/ui/BandPresets";
+import { ProjectActions } from "../components/ui/ProjectActions";
 import { Button } from "../components/ui/Button";
 import { Slider } from "../components/ui/Slider";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
+import { createEditorProject } from "../utils/project-file";
 import { templates } from "../templates";
 import { getDefaultParams } from "../templates/types";
-import type { AntennaTemplate } from "../templates/types";
+import type { ProjectFile } from "../utils/project-file";
+import type { AntennaTemplate, FrequencyRange } from "../templates/types";
+import type { HamBand } from "../utils/ham-bands";
 import type { ViewToggles } from "../components/three/types";
 
 /** Mobile tab options */
@@ -233,6 +238,48 @@ export function EditorPage() {
     setEditorSection("wires");
   }, [selectedTemplate, templateParams, clearAll, setWires, setDesignFrequency, setFrequencyRange, setGround]);
 
+  const handleBandSelect = useCallback(
+    (range: FrequencyRange, _band: HamBand) => {
+      setFrequencyRange(range);
+      const center = (range.start_mhz + range.stop_mhz) / 2;
+      setDesignFrequency(center);
+    },
+    [setFrequencyRange, setDesignFrequency]
+  );
+
+  const handleProjectSave = useCallback((): ProjectFile => {
+    const wireGeometry = getWireGeometry();
+    return createEditorProject(
+      wireGeometry,
+      excitations,
+      loads,
+      transmissionLines,
+      ground,
+      frequencyRange,
+      designFrequencyMhz,
+      simResult ?? null,
+    );
+  }, [getWireGeometry, excitations, loads, transmissionLines, ground, frequencyRange, designFrequencyMhz, simResult]);
+
+  const handleProjectLoad = useCallback(
+    (project: ProjectFile) => {
+      if (project.mode !== "editor" || !project.editor) {
+        alert("This project was saved from the Simulator. Open it there instead.");
+        return;
+      }
+      const ed = project.editor;
+      clearAll();
+      setWires(
+        ed.wires.map((w) => ({ ...w, selected: false })),
+        ed.excitations,
+      );
+      setGround(ed.ground);
+      setFrequencyRange(ed.frequencyRange);
+      setDesignFrequency(ed.designFrequencyMhz);
+    },
+    [clearAll, setWires, setGround, setFrequencyRange, setDesignFrequency]
+  );
+
   const isLoading = simStatus === "loading";
   const canRun = wires.length > 0 && excitations.length > 0;
   const patternData = selectedFreqResult?.pattern ?? null;
@@ -381,8 +428,8 @@ export function EditorPage() {
 
         {/* === RIGHT PANEL (desktop only) === */}
         <aside className="hidden lg:flex flex-col w-80 xl:w-96 border-l border-border bg-surface overflow-hidden shrink-0">
-          {/* Tab switcher: Editor vs Results */}
-          <div className="p-2 border-b border-border shrink-0">
+          {/* Tab switcher: Editor vs Results + project actions */}
+          <div className="p-2 border-b border-border shrink-0 space-y-1.5">
             <SegmentedControl
               segments={[
                 { key: "editor", label: "Editor" },
@@ -390,6 +437,10 @@ export function EditorPage() {
               ]}
               activeKey={rightPanelTab}
               onChange={(key) => setRightPanelTab(key as "editor" | "results")}
+            />
+            <ProjectActions
+              onSave={handleProjectSave}
+              onLoad={handleProjectLoad}
             />
           </div>
 
@@ -634,6 +685,13 @@ export function EditorPage() {
               <span className="text-[10px] text-text-secondary">pts</span>
             </div>
 
+            {/* Band presets */}
+            <BandPresets
+              currentRange={frequencyRange}
+              onSelectBand={handleBandSelect}
+              hfOnly
+            />
+
             {/* Antenna height */}
             {wires.length > 0 && (
               <Slider
@@ -796,6 +854,12 @@ export function EditorPage() {
                 />
                 <span className="text-[11px] text-text-secondary">pts</span>
               </div>
+              {/* Band presets */}
+              <BandPresets
+                currentRange={frequencyRange}
+                onSelectBand={handleBandSelect}
+                hfOnly
+              />
               {/* Snap size */}
               <div>
                 <label className="text-[11px] text-text-secondary font-semibold uppercase tracking-wider block mb-1">Snap Size</label>

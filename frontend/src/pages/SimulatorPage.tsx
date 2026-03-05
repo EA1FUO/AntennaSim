@@ -26,9 +26,15 @@ import { Button } from "../components/ui/Button";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { ColorScale } from "../components/ui/ColorScale";
 import { SimulationLoadingOverlay } from "../components/ui/SimulationLoadingOverlay";
+import { BandPresets } from "../components/ui/BandPresets";
+import { ProjectActions } from "../components/ui/ProjectActions";
 import { ResultsPanel } from "../components/results/ResultsTabs";
 import { PatternFrequencySlider } from "../components/results/PatternFrequencySlider";
-import type { AntennaTemplate } from "../templates/types";
+import { createSimulatorProject } from "../utils/project-file";
+import { getTemplate, templateMap } from "../templates";
+import type { ProjectFile } from "../utils/project-file";
+import type { AntennaTemplate, FrequencyRange } from "../templates/types";
+import type { HamBand } from "../utils/ham-bands";
 import type { ViewToggles } from "../components/three/types";
 
 /** Mobile bottom sheet tabs */
@@ -50,6 +56,7 @@ export function SimulatorPage() {
   const setTemplate = useAntennaStore((s) => s.setTemplate);
   const setParam = useAntennaStore((s) => s.setParam);
   const setGround = useAntennaStore((s) => s.setGround);
+  const setFrequencyRange = useAntennaStore((s) => s.setFrequencyRange);
 
   // Simulation store
   const simStatus = useSimulationStore((s) => s.status);
@@ -93,6 +100,50 @@ export function SimulatorPage() {
     simulate(wireGeometry, excitation, ground, frequencyRange, patternStep);
   }, [simulate, wireGeometry, excitation, ground, frequencyRange, patternStep]);
 
+  const handleBandSelect = useCallback(
+    (range: FrequencyRange, _band: HamBand) => {
+      setFrequencyRange(range);
+      // Also update the template's frequency param if it has one, using band center
+      const center = (range.start_mhz + range.stop_mhz) / 2;
+      const freqParam = template.parameters.find(
+        (p) => p.key === "frequency" || p.key === "freq"
+      );
+      if (freqParam) {
+        setParam(freqParam.key, Math.round(center * 1000) / 1000);
+      }
+    },
+    [setFrequencyRange, setParam, template.parameters]
+  );
+
+  const handleProjectSave = useCallback((): ProjectFile => {
+    return createSimulatorProject(template.id, params, ground, result ?? null);
+  }, [template.id, params, ground, result]);
+
+  const handleProjectLoad = useCallback(
+    (project: ProjectFile) => {
+      if (project.mode !== "simulator" || !project.simulator) {
+        alert("This project was saved from the Wire Editor. Open it there instead.");
+        return;
+      }
+      const { templateId, params: savedParams, ground: savedGround } = project.simulator;
+      if (!templateMap.has(templateId)) {
+        alert(`Unknown template "${templateId}". It may have been removed in a newer version.`);
+        return;
+      }
+      const t = getTemplate(templateId);
+      setTemplate(t);
+      // setTemplate resets params to defaults — override with saved values
+      // Use a microtask to let setTemplate's state settle first
+      queueMicrotask(() => {
+        const store = useAntennaStore.getState();
+        const merged = { ...store.params, ...savedParams };
+        useAntennaStore.getState().setParams(merged);
+        useAntennaStore.getState().setGround(savedGround);
+      });
+    },
+    [setTemplate]
+  );
+
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   const isLoading = simStatus === "loading";
@@ -111,6 +162,11 @@ export function SimulatorPage() {
         {/* === LEFT PANEL (desktop only) === */}
         <aside className="hidden lg:flex flex-col w-80 xl:w-96 border-r border-border bg-surface overflow-y-auto shrink-0">
           <div className="p-3 space-y-4 flex-1">
+            <ProjectActions
+              onSave={handleProjectSave}
+              onLoad={handleProjectLoad}
+            />
+
             <TemplatePicker
               selectedId={template.id}
               onSelect={handleTemplateSelect}
@@ -131,6 +187,14 @@ export function SimulatorPage() {
             <div className="border-t border-border" />
 
             <BalunEditor matching={matching} onChange={setMatching} />
+
+            <div className="border-t border-border" />
+
+            <BandPresets
+              currentRange={frequencyRange}
+              onSelectBand={handleBandSelect}
+              hfOnly
+            />
 
             <div className="border-t border-border" />
 
@@ -280,6 +344,12 @@ export function SimulatorPage() {
               />
               <GroundEditor ground={ground} onChange={setGround} />
               <BalunEditor matching={matching} onChange={setMatching} />
+
+              <BandPresets
+                currentRange={frequencyRange}
+                onSelectBand={handleBandSelect}
+                hfOnly
+              />
 
               {/* Pattern resolution */}
               <div className="space-y-1">
