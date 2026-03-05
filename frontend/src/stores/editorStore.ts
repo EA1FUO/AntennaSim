@@ -145,6 +145,18 @@ interface EditorState {
   // ---- V2: Currents ----
   setComputeCurrents: (compute: boolean) => void;
 
+  // ---- Clipboard / Transform ----
+  /** Clipboard for copy/paste */
+  clipboard: EditorWire[];
+  /** Copy selected wires to clipboard */
+  copySelected: () => void;
+  /** Paste clipboard wires (offset by 1m in Y) */
+  paste: () => void;
+  /** Duplicate selected wires in place (offset by 0.5m in Y) */
+  duplicateSelected: () => void;
+  /** Mirror selected wires across an axis */
+  mirrorSelected: (axis: "x" | "y" | "z") => void;
+
   // ---- Undo/Redo ----
   undo: () => void;
   redo: () => void;
@@ -226,6 +238,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   showGrid: true,
   nextTag: 1,
   designFrequencyMhz: DEFAULT_FREQUENCY_MHZ,
+  clipboard: [],
 
   undoStack: [],
   redoStack: [],
@@ -583,6 +596,131 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   // ---- V2: Currents ----
 
   setComputeCurrents: (compute) => set({ computeCurrents: compute }),
+
+  // ---- Clipboard / Transform ----
+
+  copySelected: () => {
+    const state = get();
+    const selected = state.wires.filter((w) => state.selectedTags.has(w.tag));
+    if (selected.length === 0) return;
+    set({ clipboard: selected.map((w) => ({ ...w })) });
+  },
+
+  paste: () => {
+    const state = get();
+    if (state.clipboard.length === 0) return;
+
+    let tag = state.nextTag;
+    const newWires: EditorWire[] = state.clipboard.map((w) => ({
+      ...w,
+      tag: tag++,
+      y1: w.y1 + 1, // offset 1m in Y
+      y2: w.y2 + 1,
+      selected: false,
+    }));
+
+    const newSelected = new Set(newWires.map((w) => w.tag));
+
+    set({
+      ...pushUndo(state),
+      wires: [...state.wires, ...newWires],
+      selectedTags: newSelected,
+      nextTag: tag,
+    });
+  },
+
+  duplicateSelected: () => {
+    const state = get();
+    const selected = state.wires.filter((w) => state.selectedTags.has(w.tag));
+    if (selected.length === 0) return;
+
+    let tag = state.nextTag;
+    const newWires: EditorWire[] = selected.map((w) => ({
+      ...w,
+      tag: tag++,
+      y1: w.y1 + 0.5, // offset 0.5m in Y
+      y2: w.y2 + 0.5,
+      selected: false,
+    }));
+
+    // Also duplicate excitations that reference selected wires
+    const newExcitations = [...state.excitations];
+    for (const w of selected) {
+      const exc = state.excitations.find((e) => e.wire_tag === w.tag);
+      if (exc) {
+        const newWire = newWires.find(
+          (nw) =>
+            Math.abs(nw.x1 - w.x1) < 1e-6 &&
+            Math.abs(nw.z1 - w.z1) < 1e-6 &&
+            Math.abs(nw.x2 - w.x2) < 1e-6 &&
+            Math.abs(nw.z2 - w.z2) < 1e-6,
+        );
+        if (newWire) {
+          newExcitations.push({ ...exc, wire_tag: newWire.tag });
+        }
+      }
+    }
+
+    const newSelected = new Set(newWires.map((w) => w.tag));
+
+    set({
+      ...pushUndo(state),
+      wires: [...state.wires, ...newWires],
+      excitations: newExcitations,
+      selectedTags: newSelected,
+      nextTag: tag,
+    });
+  },
+
+  mirrorSelected: (axis) => {
+    const state = get();
+    const selected = state.wires.filter((w) => state.selectedTags.has(w.tag));
+    if (selected.length === 0) return;
+
+    // Compute centroid of selected wires
+    let cx = 0, cy = 0, cz = 0;
+    let count = 0;
+    for (const w of selected) {
+      cx += w.x1 + w.x2;
+      cy += w.y1 + w.y2;
+      cz += w.z1 + w.z2;
+      count += 2;
+    }
+    cx /= count;
+    cy /= count;
+    cz /= count;
+
+    // Mirror function: reflect coordinate across centroid on the given axis
+    const mirror = (val: number, center: number) => 2 * center - val;
+
+    let tag = state.nextTag;
+    const newWires: EditorWire[] = selected.map((w) => {
+      const mirrored: EditorWire = { ...w, tag: tag++, selected: false };
+      if (axis === "x") {
+        mirrored.x1 = mirror(w.x1, cx);
+        mirrored.x2 = mirror(w.x2, cx);
+      } else if (axis === "y") {
+        mirrored.y1 = mirror(w.y1, cy);
+        mirrored.y2 = mirror(w.y2, cy);
+      } else {
+        mirrored.z1 = mirror(w.z1, cz);
+        mirrored.z2 = mirror(w.z2, cz);
+      }
+      return mirrored;
+    });
+
+    const newSelected = new Set([
+      ...state.selectedTags,
+      ...newWires.map((w) => w.tag),
+    ]);
+
+    set({
+      ...pushUndo(state),
+      wires: [...state.wires, ...newWires],
+      selectedTags: newSelected,
+      nextTag: tag,
+    });
+  },
 
   // ---- Undo/Redo ----
 

@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Multi-band analysis results tab showing per-band SWR, gain, bandwidth, and quality rating for all HF bands
 - Impedance matching network calculator with L, Pi, and T network topologies
 - Matching network results tab showing component values, Q factor, bandwidth, and schematic
+- Wire editor power tools: copy (Ctrl+C), paste (Ctrl+V), duplicate (Ctrl+D), and mirror selected wires
+- Copy/paste/duplicate/mirror buttons in editor toolbar
 - `setFrequencyRange` action on antennaStore for overriding template-derived frequency range
 - Extracted shared ham band definitions from SWRChart into reusable `utils/ham-bands.ts`
 - 61 new tests for ham bands, project files, validation engine, and matching networks

@@ -64,6 +64,11 @@ export function EditorToolbar() {
   const selectAll = useEditorStore((s) => s.selectAll);
   const clearAll = useEditorStore((s) => s.clearAll);
   const wires = useEditorStore((s) => s.wires);
+  const copySelected = useEditorStore((s) => s.copySelected);
+  const paste = useEditorStore((s) => s.paste);
+  const duplicateSelected = useEditorStore((s) => s.duplicateSelected);
+  const mirrorSelected = useEditorStore((s) => s.mirrorSelected);
+  const clipboard = useEditorStore((s) => s.clipboard);
 
   const hasSelection = selectedTags.size > 0;
   const singleSelected = selectedTags.size === 1;
@@ -81,7 +86,41 @@ export function EditorToolbar() {
     { id: "move", label: "Move", icon: "M", title: "Move endpoint mode (M)", mode: "move" },
   ];
 
+  const handleMirrorY = useCallback(() => mirrorSelected("y"), [mirrorSelected]);
+
   const operationButtons: ToolButton[] = [
+    {
+      id: "copy",
+      label: "Copy",
+      icon: "\u2398",
+      title: "Copy selected (Ctrl+C)",
+      action: copySelected,
+      disabled: !hasSelection,
+    },
+    {
+      id: "paste",
+      label: "Paste",
+      icon: "\u2399",
+      title: "Paste (Ctrl+V)",
+      action: paste,
+      disabled: clipboard.length === 0,
+    },
+    {
+      id: "dup",
+      label: "Dup",
+      icon: "D",
+      title: "Duplicate selected (Ctrl+D)",
+      action: duplicateSelected,
+      disabled: !hasSelection,
+    },
+    {
+      id: "mirror",
+      label: "Mirror",
+      icon: "\u2194",
+      title: "Mirror selected across Y axis",
+      action: handleMirrorY,
+      disabled: !hasSelection,
+    },
     {
       id: "split",
       label: "Split",

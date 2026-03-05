@@ -78,6 +78,9 @@ export function EditorPage() {
   const deselectAll = useEditorStore((s) => s.deselectAll);
   const deleteSelected = useEditorStore((s) => s.deleteSelected);
   const selectAll = useEditorStore((s) => s.selectAll);
+  const copySelected = useEditorStore((s) => s.copySelected);
+  const paste = useEditorStore((s) => s.paste);
+  const duplicateSelected = useEditorStore((s) => s.duplicateSelected);
   const getWireGeometry = useEditorStore((s) => s.getWireGeometry);
   const getTotalSegments = useEditorStore((s) => s.getTotalSegments);
   const moveAllWiresZ = useEditorStore((s) => s.moveAllWiresZ);
@@ -147,9 +150,9 @@ export function EditorPage() {
       )
         return;
 
-      if (e.key === "v" || e.key === "V") setMode("select");
+      if ((e.key === "v" || e.key === "V") && !e.ctrlKey && !e.metaKey) setMode("select");
       else if (e.key === "a" && !e.ctrlKey && !e.metaKey) setMode("add");
-      else if (e.key === "m" || e.key === "M") setMode("move");
+      else if ((e.key === "m" || e.key === "M") && !e.ctrlKey && !e.metaKey) setMode("move");
       else if (e.key === "Escape") {
         deselectAll();
         setMode("select");
@@ -166,12 +169,22 @@ export function EditorPage() {
       } else if ((e.ctrlKey || e.metaKey) && e.key === "a") {
         e.preventDefault();
         selectAll();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === "c") {
+        e.preventDefault();
+        copySelected();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === "v" && !e.shiftKey) {
+        // Only intercept Ctrl+V when not also pressing shift (which some browsers use for paste-as-text)
+        e.preventDefault();
+        paste();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === "d") {
+        e.preventDefault();
+        duplicateSelected();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [setMode, deselectAll, deleteSelected, undo, redo, selectAll]);
+  }, [setMode, deselectAll, deleteSelected, undo, redo, selectAll, copySelected, paste, duplicateSelected]);
 
   // Clear stale results on page entry (prevents cross-page state leaks)
   // and whenever antenna geometry or config changes.
