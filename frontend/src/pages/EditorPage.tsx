@@ -43,6 +43,7 @@ import { templates } from "../templates";
 import { getDefaultParams } from "../templates/types";
 import type { ProjectFile } from "../utils/project-file";
 import type { AntennaTemplate, FrequencyRange } from "../templates/types";
+import { computeSteps } from "../utils/ham-bands";
 import type { HamBand } from "../utils/ham-bands";
 import type { ViewToggles } from "../components/three/types";
 
@@ -651,7 +652,7 @@ export function EditorPage() {
               <span className="text-[10px] text-text-secondary shrink-0">Sweep:</span>
               <NumberInput
                 value={frequencyRange.start_mhz}
-                onChange={(v) => setFrequencyRange({ ...frequencyRange, start_mhz: v })}
+                onChange={(v) => setFrequencyRange({ start_mhz: v, stop_mhz: frequencyRange.stop_mhz, steps: computeSteps(v, frequencyRange.stop_mhz) })}
                 min={0.1}
                 max={frequencyRange.stop_mhz - 0.1}
                 decimals={1}
@@ -659,7 +660,7 @@ export function EditorPage() {
               <span className="text-[10px] text-text-secondary">-</span>
               <NumberInput
                 value={frequencyRange.stop_mhz}
-                onChange={(v) => setFrequencyRange({ ...frequencyRange, stop_mhz: v })}
+                onChange={(v) => setFrequencyRange({ start_mhz: frequencyRange.start_mhz, stop_mhz: v, steps: computeSteps(frequencyRange.start_mhz, v) })}
                 min={frequencyRange.start_mhz + 0.1}
                 max={500}
                 decimals={1}
@@ -798,7 +799,7 @@ export function EditorPage() {
                 <span className="text-[11px] text-text-secondary shrink-0">Sweep:</span>
                 <NumberInput
                   value={frequencyRange.start_mhz}
-                  onChange={(v) => setFrequencyRange({ ...frequencyRange, start_mhz: v })}
+                  onChange={(v) => setFrequencyRange({ start_mhz: v, stop_mhz: frequencyRange.stop_mhz, steps: computeSteps(v, frequencyRange.stop_mhz) })}
                   min={0.1}
                   max={frequencyRange.stop_mhz - 0.1}
                   decimals={1}
@@ -807,7 +808,7 @@ export function EditorPage() {
                 <span className="text-[11px] text-text-secondary">-</span>
                 <NumberInput
                   value={frequencyRange.stop_mhz}
-                  onChange={(v) => setFrequencyRange({ ...frequencyRange, stop_mhz: v })}
+                  onChange={(v) => setFrequencyRange({ start_mhz: frequencyRange.start_mhz, stop_mhz: v, steps: computeSteps(frequencyRange.start_mhz, v) })}
                   min={frequencyRange.start_mhz + 0.1}
                   max={500}
                   decimals={1}

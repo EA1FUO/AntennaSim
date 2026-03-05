@@ -77,16 +77,27 @@ export function getBandEdges(region: "r1" | "r2" | "r3" = "r1"): Array<{ name: s
 // ---------------------------------------------------------------------------
 
 /**
+ * Compute a sensible number of sweep steps for a given frequency range.
+ *
+ * Uses ~25 points per MHz of bandwidth, clamped to [11, 101].
+ * This ensures narrow bands (e.g. 60m, 50 kHz wide) still get enough
+ * resolution to find SWR dips, while wide sweeps (e.g. 6m, 4 MHz)
+ * don't generate unnecessarily large simulations.
+ */
+export function computeSteps(startMhz: number, stopMhz: number): number {
+  const bw = Math.abs(stopMhz - startMhz);
+  return Math.max(21, Math.min(101, Math.round(bw * 25) + 1));
+}
+
+/**
  * Create a FrequencyRange from a ham band.
- * Uses ~25 steps per MHz of bandwidth, clamped to 11–51 steps.
+ * Steps are computed automatically from the bandwidth.
  */
 export function bandToFrequencyRange(band: HamBand): FrequencyRange {
-  const bw = band.stop_mhz - band.start_mhz;
-  const steps = Math.max(11, Math.min(51, Math.round(bw * 25) + 1));
   return {
     start_mhz: band.start_mhz,
     stop_mhz: band.stop_mhz,
-    steps,
+    steps: computeSteps(band.start_mhz, band.stop_mhz),
   };
 }
 

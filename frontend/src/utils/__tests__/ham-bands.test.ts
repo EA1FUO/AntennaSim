@@ -12,6 +12,7 @@ import {
   getBandsForRegion,
   getBandEdges,
   bandToFrequencyRange,
+  computeSteps,
   analyzeBandPerformance,
 } from "../ham-bands";
 import type { FrequencyResult } from "../../api/nec";
@@ -99,6 +100,36 @@ describe("getBandEdges", () => {
 });
 
 // ---------------------------------------------------------------------------
+// computeSteps — adaptive sweep resolution
+// ---------------------------------------------------------------------------
+
+describe("computeSteps", () => {
+  it("narrow range (50 kHz) gets at least 21 steps", () => {
+    expect(computeSteps(10.1, 10.15)).toBe(21);
+  });
+
+  it("medium range (350 kHz) gets proportional steps", () => {
+    const steps = computeSteps(14.0, 14.35);
+    expect(steps).toBeGreaterThanOrEqual(9);
+    expect(steps).toBeLessThanOrEqual(21);
+  });
+
+  it("wide range (1.7 MHz) gets more steps", () => {
+    const steps = computeSteps(28.0, 29.7);
+    expect(steps).toBeGreaterThan(30);
+    expect(steps).toBeLessThanOrEqual(101);
+  });
+
+  it("very wide range (30+ MHz) is capped at 101", () => {
+    expect(computeSteps(420, 450)).toBe(101);
+  });
+
+  it("zero-width range returns 21 (minimum)", () => {
+    expect(computeSteps(14.0, 14.0)).toBe(21);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // bandToFrequencyRange
 // ---------------------------------------------------------------------------
 
@@ -108,24 +139,23 @@ describe("bandToFrequencyRange", () => {
     const range = bandToFrequencyRange(band);
     expect(range.start_mhz).toBe(14.0);
     expect(range.stop_mhz).toBe(14.35);
-    expect(range.steps).toBeGreaterThanOrEqual(9);
-    expect(range.steps).toBeLessThanOrEqual(51);
+    expect(range.steps).toBeGreaterThanOrEqual(21);
+    expect(range.steps).toBeLessThanOrEqual(101);
   });
 
-  it("narrow 30m band: still has at least 11 steps", () => {
+  it("narrow 30m band: still has at least 21 steps", () => {
     const band = HAM_BANDS.find((b) => b.label === "30m")!;
     const range = bandToFrequencyRange(band);
-    expect(range.steps).toBeGreaterThanOrEqual(11);
+    expect(range.steps).toBeGreaterThanOrEqual(21);
   });
 
-  it("wide 10m band: capped at 51 steps", () => {
+  it("wide 10m band: capped at 101 steps", () => {
     const band = HAM_BANDS.find((b) => b.label === "10m")!;
     const range = bandToFrequencyRange(band);
-    expect(range.steps).toBeLessThanOrEqual(51);
+    expect(range.steps).toBeLessThanOrEqual(101);
   });
 });
 
-// ---------------------------------------------------------------------------
 // analyzeBandPerformance
 // ---------------------------------------------------------------------------
 

@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - NumberInput click-to-edit component replacing all raw `<input type="number">` fields across 5 files
 - Frequency sweep controls (start/stop/steps) on the Simulator page for manual sweep range override
+- Adaptive sweep step count (`computeSteps`): ~25 pts/MHz, clamped [11, 101], auto-adjusts when range changes
 - Frequency sweep controls and validation warnings on the Simulator mobile bottom sheet
 - ProjectActions (save/load) on the Simulator mobile bottom sheet
 - Ham band frequency presets with ITU Region 1/2/3 support and band analysis utilities
@@ -26,7 +27,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Copy/paste/duplicate/mirror buttons in editor toolbar
 - `setFrequencyRange` action on antennaStore for overriding template-derived frequency range
 - Extracted shared ham band definitions from SWRChart into reusable `utils/ham-bands.ts`
-- 61 new tests for ham bands, project files, validation engine, and matching networks
+- 66 new tests for ham bands (including computeSteps), project files, validation engine, and matching networks
+
+### Fixed
+
+- Band preset frequency ranges no longer get overwritten when template parameters change (antennaStore `_frequencyOverride` flag)
+- Sweep step count now adapts to bandwidth instead of staying at a hardcoded value
 
 ## [0.8.0] - 2026-03-05
 

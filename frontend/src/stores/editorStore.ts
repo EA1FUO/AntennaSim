@@ -14,6 +14,7 @@ import { create } from "zustand";
 import type { WireGeometry, Excitation, GroundConfig, FrequencyRange } from "../templates/types";
 import type { LumpedLoad, TransmissionLine } from "../api/nec";
 import { autoSegment, centerSegment } from "../engine/segmentation";
+import { computeSteps } from "../utils/ham-bands";
 
 // ---- Types ----
 
@@ -38,7 +39,7 @@ interface EditorSnapshot {
 // ---- Default state ----
 
 const DEFAULT_GROUND: GroundConfig = { type: "average" };
-const DEFAULT_FREQ: FrequencyRange = { start_mhz: 13.5, stop_mhz: 15.0, steps: 31 };
+const DEFAULT_FREQ: FrequencyRange = { start_mhz: 13.5, stop_mhz: 15.0, steps: computeSteps(13.5, 15.0) };
 const DEFAULT_WIRE_RADIUS = 0.001; // 1mm
 const DEFAULT_FREQUENCY_MHZ = 14.1;
 
@@ -513,10 +514,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
     // Update frequency range to center on the new design frequency (~10% bandwidth)
     const bandwidth = mhz * 0.1;
+    const newStart = Math.round(Math.max(0.1, mhz - bandwidth / 2) * 1000) / 1000;
+    const newStop = Math.round(Math.min(2000, mhz + bandwidth / 2) * 1000) / 1000;
     const newFreqRange: FrequencyRange = {
-      start_mhz: Math.round(Math.max(0.1, mhz - bandwidth / 2) * 1000) / 1000,
-      stop_mhz: Math.round(Math.min(2000, mhz + bandwidth / 2) * 1000) / 1000,
-      steps: state.frequencyRange.steps,
+      start_mhz: newStart,
+      stop_mhz: newStop,
+      steps: computeSteps(newStart, newStop),
     };
     set({
       ...pushUndo(state),
