@@ -16,9 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Pre-simulation validation engine with 12 checks (lambda/10, zero-length wires, below-ground, segment limits, overlapping wires, etc.)
 - Validation warnings banner shown above the Run button in both Simulator and Editor pages
 - Multi-band analysis results tab showing per-band SWR, gain, bandwidth, and quality rating for all HF bands
+- Impedance matching network calculator with L, Pi, and T network topologies
+- Matching network results tab showing component values, Q factor, bandwidth, and schematic
 - `setFrequencyRange` action on antennaStore for overriding template-derived frequency range
 - Extracted shared ham band definitions from SWRChart into reusable `utils/ham-bands.ts`
-- 48 new tests for ham bands, project files, and validation engine
+- 61 new tests for ham bands, project files, validation engine, and matching networks
 
 ## [0.8.0] - 2026-03-05
 

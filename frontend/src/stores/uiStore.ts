@@ -9,7 +9,7 @@ import type { MatchingConfig } from "../utils/units";
 import { DEFAULT_MATCHING } from "../utils/units";
 
 export type Theme = "dark" | "light";
-export type ResultsTab = "swr" | "impedance" | "pattern" | "gain" | "smith" | "bands";
+export type ResultsTab = "swr" | "impedance" | "pattern" | "gain" | "smith" | "bands" | "match";
 export type MobileTab = "antenna" | "results";
 
 interface UIState {
