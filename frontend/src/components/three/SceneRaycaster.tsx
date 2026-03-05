@@ -7,9 +7,10 @@
  * (no React setState) to avoid stalling the R3F render loop.
  *
  * Performance strategy:
- * - Raycaster targets are cached and rebuilt only when the scene graph changes
- * - Raycasting is deferred via requestIdleCallback / setTimeout so it never
- *   blocks the animation frame
+ * - Raycaster targets are collected fresh each raycast via scene.traverse()
+ *   (~20-30 nodes, <0.1ms) to avoid stale references to unmounted meshes
+ * - Raycasting is deferred via requestIdleCallback so it never blocks the
+ *   animation frame
  * - Throttled to ~100ms intervals
  * - Module-level singletons for Raycaster / Vector2 avoid GC pressure
  */
@@ -95,24 +96,23 @@ function renderTooltipDOM(
 export function SceneRaycaster({ tooltipRef }: SceneRaycasterProps) {
   const { scene, camera, gl } = useThree();
 
-  // Cache raycaster targets so we don't traverse every pointer move.
-  // Rebuilt lazily when scene children change.
-  const targetsRef = useRef<Object3D[]>([]);
-  const sceneVersionRef = useRef(0);
-  const lastSceneChildCountRef = useRef(0);
   const lastTimeRef = useRef(0);
   const pendingIdleRef = useRef(0);
 
-  // Rebuild target cache (cheap — only when scene graph changes)
-  const rebuildTargets = useCallback(() => {
+  // Collect raycast targets fresh each time by traversing the scene.
+  // This is cheap (~20-30 nodes) and runs inside requestIdleCallback,
+  // so it never blocks the render loop.  Rebuilding every time avoids
+  // stale references to unmounted meshes (e.g. switching antenna templates
+  // replaces the pattern mesh deep in the scene graph without changing
+  // scene.children.length).
+  const collectTargets = useCallback(() => {
     const targets: Object3D[] = [];
     scene.traverse((obj) => {
       if (obj.userData?.hoverType) {
         targets.push(obj);
       }
     });
-    targetsRef.current = targets;
-    sceneVersionRef.current++;
+    return targets;
   }, [scene]);
 
   const handlePointerMove = useCallback(
@@ -137,14 +137,7 @@ export function SceneRaycaster({ tooltipRef }: SceneRaycasterProps) {
       // Defer the heavy work (traverse + raycast) off the current frame
       pendingIdleRef.current = requestIdleCallback(
         () => {
-          // Lazily rebuild targets if scene graph changed
-          const childCount = scene.children.length;
-          if (childCount !== lastSceneChildCountRef.current) {
-            lastSceneChildCountRef.current = childCount;
-            rebuildTargets();
-          }
-
-          const targets = targetsRef.current;
+          const targets = collectTargets();
           const tooltip = tooltipRef.current;
           if (!tooltip) return;
 
@@ -168,7 +161,7 @@ export function SceneRaycaster({ tooltipRef }: SceneRaycasterProps) {
         { timeout: 80 }, // guarantee it runs within 80ms even if busy
       );
     },
-    [scene, camera, gl, tooltipRef, rebuildTargets],
+    [camera, gl, tooltipRef, collectTargets],
   );
 
   const handlePointerLeave = useCallback(() => {
@@ -185,15 +178,12 @@ export function SceneRaycaster({ tooltipRef }: SceneRaycasterProps) {
     el.addEventListener("pointermove", handlePointerMove, { passive: true });
     el.addEventListener("pointerleave", handlePointerLeave);
 
-    // Initial target collection
-    rebuildTargets();
-
     return () => {
       el.removeEventListener("pointermove", handlePointerMove);
       el.removeEventListener("pointerleave", handlePointerLeave);
       if (pendingIdleRef.current) cancelIdleCallback(pendingIdleRef.current);
     };
-  }, [gl.domElement, handlePointerMove, handlePointerLeave, rebuildTargets]);
+  }, [gl.domElement, handlePointerMove, handlePointerLeave]);
 
   return null; // Renders nothing — purely side-effect component
 }
