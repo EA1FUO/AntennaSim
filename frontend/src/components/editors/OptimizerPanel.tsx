@@ -26,6 +26,7 @@ import {
 import { useEditorStore } from "../../stores/editorStore";
 import { useChartTheme } from "../../hooks/useChartTheme";
 import { Button } from "../ui/Button";
+import { NumberInput } from "../ui/NumberInput";
 import { getEngine } from "../../engine";
 import type {
   OptimizationProgress,
@@ -235,18 +236,14 @@ export function OptimizerPanel() {
       </div>
 
       {/* Max iterations */}
-      <div className="flex items-center gap-1.5">
-        <span className="text-[10px] text-text-secondary shrink-0">Iterations:</span>
-        <input
-          type="number"
-          min={10}
-          max={500}
-          step={10}
-          value={maxIterations}
-          onChange={(e) => setMaxIterations(parseInt(e.target.value) || 50)}
-          className="flex-1 bg-background text-text-primary text-[10px] font-mono px-1 py-0.5 rounded border border-border outline-none text-right"
-        />
-      </div>
+      <NumberInput
+        label="Iterations:"
+        value={maxIterations}
+        onChange={setMaxIterations}
+        min={10}
+        max={500}
+        decimals={0}
+      />
 
       {/* Variables */}
       <div className="space-y-1">
@@ -283,22 +280,16 @@ export function OptimizerPanel() {
                 <option key={f} value={f}>{f}</option>
               ))}
             </select>
-            <input
-              type="number"
-              step="0.1"
+            <NumberInput
               value={v.minValue}
-              onChange={(e) => updateVariable(i, { minValue: parseFloat(e.target.value) || 0 })}
-              className="bg-transparent text-text-primary text-[9px] font-mono outline-none w-10 text-right"
-              title="Min"
+              onChange={(val) => updateVariable(i, { minValue: val })}
+              decimals={1}
             />
             <span className="text-[9px] text-text-secondary">-</span>
-            <input
-              type="number"
-              step="0.1"
+            <NumberInput
               value={v.maxValue}
-              onChange={(e) => updateVariable(i, { maxValue: parseFloat(e.target.value) || 0 })}
-              className="bg-transparent text-text-primary text-[9px] font-mono outline-none w-10 text-right"
-              title="Max"
+              onChange={(val) => updateVariable(i, { maxValue: val })}
+              decimals={1}
             />
             <button
               onClick={() => removeVariable(i)}

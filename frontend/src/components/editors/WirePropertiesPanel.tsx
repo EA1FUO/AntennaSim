@@ -11,6 +11,7 @@ import { useEditorStore } from "../../stores/editorStore";
 import type { EditorWire } from "../../stores/editorStore";
 import { centerSegment } from "../../engine/segmentation";
 import { useUIStore } from "../../stores/uiStore";
+import { NumberInput } from "../ui/NumberInput";
 import type { Excitation } from "../../templates/types";
 
 function CoordField({
@@ -23,21 +24,13 @@ function CoordField({
   onChange: (v: number) => void;
 }) {
   return (
-    <div className="flex items-center gap-1">
-      <label className="text-[11px] text-text-secondary w-5 text-right shrink-0">
-        {label}
-      </label>
-      <input
-        type="number"
-        step="0.1"
-        value={value.toFixed(3)}
-        onChange={(e) => {
-          const v = parseFloat(e.target.value);
-          if (!isNaN(v) && isFinite(v)) onChange(v);
-        }}
-        className="flex-1 bg-background text-text-primary text-[11px] font-mono px-1.5 py-0.5 rounded border border-border focus:border-accent/50 outline-none text-right"
-      />
-    </div>
+    <NumberInput
+      label={label}
+      value={value}
+      onChange={onChange}
+      decimals={3}
+      unit="m"
+    />
   );
 }
 
@@ -171,21 +164,14 @@ export function WirePropertiesPanel() {
         <div className="text-[11px] text-text-secondary font-medium">
           Radius
         </div>
-        <div className="flex items-center gap-1">
-          <input
-            type="number"
-            step="0.0001"
-            min="0.0001"
-            max="0.1"
-            value={wire.radius.toFixed(4)}
-            onChange={(e) => {
-              const v = parseFloat(e.target.value);
-              if (!isNaN(v)) handleRadiusChange(wire.tag, v);
-            }}
-            className="flex-1 bg-background text-text-primary text-[11px] font-mono px-1.5 py-0.5 rounded border border-border focus:border-accent/50 outline-none text-right"
-          />
-          <span className="text-[11px] text-text-secondary">m</span>
-        </div>
+        <NumberInput
+          value={wire.radius}
+          onChange={(v) => handleRadiusChange(wire.tag, v)}
+          min={0.0001}
+          max={0.1}
+          decimals={4}
+          unit="m"
+        />
       </div>
 
       {/* Wire length (computed) */}
@@ -208,19 +194,13 @@ export function WirePropertiesPanel() {
           <>
             {/* Segment picker: number input + total */}
             <div className="flex items-center gap-1">
-              <span className="text-[11px] text-text-secondary">Seg</span>
-              <input
-                type="number"
+              <NumberInput
+                label="Seg"
+                value={excitation.segment}
+                onChange={(v) => setExcitation(wire.tag, v)}
                 min={1}
                 max={wire.segments}
-                value={excitation.segment}
-                onChange={(e) => {
-                  const v = parseInt(e.target.value, 10);
-                  if (!isNaN(v) && v >= 1 && v <= wire.segments) {
-                    setExcitation(wire.tag, v);
-                  }
-                }}
-                className="w-12 bg-background text-text-primary text-[11px] font-mono px-1 py-0.5 rounded border border-border focus:border-accent/50 outline-none text-center"
+                decimals={0}
               />
               <span className="text-[11px] text-text-secondary font-mono">
                 of {wire.segments}

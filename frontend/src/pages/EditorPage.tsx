@@ -35,6 +35,7 @@ import { ProjectActions } from "../components/ui/ProjectActions";
 import { ValidationWarnings } from "../components/ui/ValidationWarnings";
 import { Button } from "../components/ui/Button";
 import { Slider } from "../components/ui/Slider";
+import { NumberInput } from "../components/ui/NumberInput";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { createEditorProject } from "../utils/project-file";
 import { validateSimulationRequest } from "../engine/validation";
@@ -635,75 +636,43 @@ export function EditorPage() {
           {/* Bottom: Frequency, Sweep, Run button (always visible) */}
           <div className="p-2 space-y-2 shrink-0 border-t border-border">
             {/* Design frequency */}
-            <div className="flex items-center gap-2">
-              <label className="text-[10px] text-text-secondary shrink-0">
-                Design freq:
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                min="0.1"
-                max="500"
-                value={designFrequencyMhz}
-                onChange={(e) => {
-                  const v = parseFloat(e.target.value);
-                  if (!isNaN(v) && v > 0) setDesignFrequency(v);
-                }}
-                className="flex-1 bg-background text-text-primary text-[10px] font-mono px-1.5 py-0.5 rounded border border-border focus:border-accent/50 outline-none text-right"
-              />
-              <span className="text-[10px] text-text-secondary">MHz</span>
-            </div>
+            <NumberInput
+              label="Design freq:"
+              value={designFrequencyMhz}
+              onChange={setDesignFrequency}
+              min={0.1}
+              max={500}
+              decimals={1}
+              unit="MHz"
+            />
 
             {/* Frequency sweep range */}
             <div className="flex items-center gap-1">
-              <label className="text-[10px] text-text-secondary shrink-0">
-                Sweep:
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                min="0.1"
-                max="500"
+              <span className="text-[10px] text-text-secondary shrink-0">Sweep:</span>
+              <NumberInput
                 value={frequencyRange.start_mhz}
-                onChange={(e) => {
-                  const v = parseFloat(e.target.value);
-                  if (!isNaN(v) && v > 0 && v < frequencyRange.stop_mhz)
-                    setFrequencyRange({ ...frequencyRange, start_mhz: v });
-                }}
-                className="w-16 bg-background text-text-primary text-[10px] font-mono px-1 py-0.5 rounded border border-border focus:border-accent/50 outline-none text-right"
-                title="Sweep start (MHz)"
+                onChange={(v) => setFrequencyRange({ ...frequencyRange, start_mhz: v })}
+                min={0.1}
+                max={frequencyRange.stop_mhz - 0.1}
+                decimals={1}
               />
               <span className="text-[10px] text-text-secondary">-</span>
-              <input
-                type="number"
-                step="0.1"
-                min="0.1"
-                max="500"
+              <NumberInput
                 value={frequencyRange.stop_mhz}
-                onChange={(e) => {
-                  const v = parseFloat(e.target.value);
-                  if (!isNaN(v) && v > 0 && v > frequencyRange.start_mhz)
-                    setFrequencyRange({ ...frequencyRange, stop_mhz: v });
-                }}
-                className="w-16 bg-background text-text-primary text-[10px] font-mono px-1 py-0.5 rounded border border-border focus:border-accent/50 outline-none text-right"
-                title="Sweep stop (MHz)"
+                onChange={(v) => setFrequencyRange({ ...frequencyRange, stop_mhz: v })}
+                min={frequencyRange.start_mhz + 0.1}
+                max={500}
+                decimals={1}
+                unit="MHz"
               />
-              <span className="text-[10px] text-text-secondary">MHz</span>
-              <input
-                type="number"
-                step="1"
-                min="1"
-                max="201"
+              <NumberInput
                 value={frequencyRange.steps}
-                onChange={(e) => {
-                  const v = parseInt(e.target.value, 10);
-                  if (!isNaN(v) && v >= 1 && v <= 201)
-                    setFrequencyRange({ ...frequencyRange, steps: v });
-                }}
-                className="w-10 bg-background text-text-primary text-[10px] font-mono px-1 py-0.5 rounded border border-border focus:border-accent/50 outline-none text-right"
-                title="Number of sweep steps"
+                onChange={(v) => setFrequencyRange({ ...frequencyRange, steps: v })}
+                min={1}
+                max={201}
+                decimals={0}
+                unit="pts"
               />
-              <span className="text-[10px] text-text-secondary">pts</span>
             </div>
 
             {/* Band presets */}
@@ -814,55 +783,46 @@ export function EditorPage() {
                 />
               )}
               {/* Design frequency */}
-              <div className="flex items-center gap-2">
-                <label className="text-[11px] text-text-secondary shrink-0">Design freq:</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0.1"
-                  max="500"
-                  value={designFrequencyMhz}
-                  onChange={(e) => {
-                    const v = parseFloat(e.target.value);
-                    if (!isNaN(v) && v > 0) setDesignFrequency(v);
-                  }}
-                  className="flex-1 bg-background text-text-primary text-xs font-mono px-1.5 py-1 rounded border border-border focus:border-accent/50 outline-none text-right"
-                />
-                <span className="text-[11px] text-text-secondary">MHz</span>
-              </div>
+              <NumberInput
+                label="Design freq:"
+                value={designFrequencyMhz}
+                onChange={setDesignFrequency}
+                min={0.1}
+                max={500}
+                decimals={1}
+                unit="MHz"
+                size="sm"
+              />
               {/* Frequency sweep */}
               <div className="flex items-center gap-1 flex-wrap">
-                <label className="text-[11px] text-text-secondary shrink-0">Sweep:</label>
-                <input
-                  type="number" step="0.1" min="0.1" max="500"
+                <span className="text-[11px] text-text-secondary shrink-0">Sweep:</span>
+                <NumberInput
                   value={frequencyRange.start_mhz}
-                  onChange={(e) => {
-                    const v = parseFloat(e.target.value);
-                    if (!isNaN(v) && v > 0 && v < frequencyRange.stop_mhz) setFrequencyRange({ ...frequencyRange, start_mhz: v });
-                  }}
-                  className="w-16 bg-background text-text-primary text-xs font-mono px-1 py-1 rounded border border-border outline-none text-right"
+                  onChange={(v) => setFrequencyRange({ ...frequencyRange, start_mhz: v })}
+                  min={0.1}
+                  max={frequencyRange.stop_mhz - 0.1}
+                  decimals={1}
+                  size="sm"
                 />
                 <span className="text-[11px] text-text-secondary">-</span>
-                <input
-                  type="number" step="0.1" min="0.1" max="500"
+                <NumberInput
                   value={frequencyRange.stop_mhz}
-                  onChange={(e) => {
-                    const v = parseFloat(e.target.value);
-                    if (!isNaN(v) && v > 0 && v > frequencyRange.start_mhz) setFrequencyRange({ ...frequencyRange, stop_mhz: v });
-                  }}
-                  className="w-16 bg-background text-text-primary text-xs font-mono px-1 py-1 rounded border border-border outline-none text-right"
+                  onChange={(v) => setFrequencyRange({ ...frequencyRange, stop_mhz: v })}
+                  min={frequencyRange.start_mhz + 0.1}
+                  max={500}
+                  decimals={1}
+                  unit="MHz"
+                  size="sm"
                 />
-                <span className="text-[11px] text-text-secondary">MHz</span>
-                <input
-                  type="number" step="1" min="1" max="201"
+                <NumberInput
                   value={frequencyRange.steps}
-                  onChange={(e) => {
-                    const v = parseInt(e.target.value, 10);
-                    if (!isNaN(v) && v >= 1 && v <= 201) setFrequencyRange({ ...frequencyRange, steps: v });
-                  }}
-                  className="w-12 bg-background text-text-primary text-xs font-mono px-1 py-1 rounded border border-border outline-none text-right"
+                  onChange={(v) => setFrequencyRange({ ...frequencyRange, steps: v })}
+                  min={1}
+                  max={201}
+                  decimals={0}
+                  unit="pts"
+                  size="sm"
                 />
-                <span className="text-[11px] text-text-secondary">pts</span>
               </div>
               {/* Band presets */}
               <BandPresets

@@ -6,6 +6,7 @@
  */
 
 import { useCallback } from "react";
+import { NumberInput } from "../ui/NumberInput";
 import type { GroundConfig, GroundType } from "../../templates/types";
 
 interface GroundEditorProps {
@@ -44,27 +45,15 @@ export function GroundEditor({ ground, onChange }: GroundEditorProps) {
   );
 
   const handlePermittivityChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const val = parseFloat(e.target.value);
-      if (!isNaN(val)) {
-        onChange({
-          ...ground,
-          custom_permittivity: Math.max(1, Math.min(100, val)),
-        });
-      }
+    (val: number) => {
+      onChange({ ...ground, custom_permittivity: val });
     },
     [onChange, ground]
   );
 
   const handleConductivityChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const val = parseFloat(e.target.value);
-      if (!isNaN(val)) {
-        onChange({
-          ...ground,
-          custom_conductivity: Math.max(0, Math.min(10, val)),
-        });
-      }
+    (val: number) => {
+      onChange({ ...ground, custom_conductivity: val });
     },
     [onChange, ground]
   );
@@ -91,41 +80,25 @@ export function GroundEditor({ ground, onChange }: GroundEditorProps) {
       {/* Custom ground parameters */}
       {ground.type === "custom" && (
         <div className="space-y-2 pl-1">
-          <div className="flex items-center gap-2">
-            <label className="text-[11px] text-text-secondary whitespace-nowrap w-28">
-              Dielectric ({"\u03B5"}r)
-            </label>
-            <input
-              type="number"
-              min={1}
-              max={100}
-              step={0.1}
-              value={ground.custom_permittivity ?? 13}
-              onChange={handlePermittivityChange}
-              className="flex-1 bg-background border border-border rounded px-2 py-1
-                text-sm font-mono text-text-primary focus:outline-none focus:ring-1
-                focus:ring-accent w-20"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-[11px] text-text-secondary whitespace-nowrap w-28">
-              Conductivity ({"\u03C3"})
-            </label>
-            <div className="flex items-center gap-1 flex-1">
-              <input
-                type="number"
-                min={0}
-                max={10}
-                step={0.0001}
-                value={ground.custom_conductivity ?? 0.005}
-                onChange={handleConductivityChange}
-                className="flex-1 bg-background border border-border rounded px-2 py-1
-                  text-sm font-mono text-text-primary focus:outline-none focus:ring-1
-                  focus:ring-accent w-20"
-              />
-              <span className="text-[11px] text-text-secondary">S/m</span>
-            </div>
-          </div>
+          <NumberInput
+            label={`Dielectric (\u03B5r)`}
+            value={ground.custom_permittivity ?? 13}
+            onChange={handlePermittivityChange}
+            min={1}
+            max={100}
+            decimals={1}
+            size="sm"
+          />
+          <NumberInput
+            label={`Conductivity (\u03C3)`}
+            value={ground.custom_conductivity ?? 0.005}
+            onChange={handleConductivityChange}
+            min={0}
+            max={10}
+            decimals={4}
+            unit="S/m"
+            size="sm"
+          />
           <p className="text-[11px] text-text-secondary leading-relaxed px-0.5">
             Typical values: soil {"\u03B5"}r=3-20, {"\u03C3"}=0.0001-0.03.
             Water {"\u03B5"}r=80, concrete {"\u03B5"}r=4-8.

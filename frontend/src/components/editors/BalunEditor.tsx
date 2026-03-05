@@ -7,6 +7,7 @@
  */
 
 import { useCallback, useState } from "react";
+import { NumberInput } from "../ui/NumberInput";
 import type { MatchingConfig, MatchingType } from "../../utils/units";
 import { MATCHING_PRESETS } from "../../utils/units";
 
@@ -50,11 +51,8 @@ export function BalunEditor({ matching, onChange }: BalunEditorProps) {
   );
 
   const handleRatioChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const val = parseFloat(e.target.value);
-      if (!isNaN(val) && val > 0) {
-        onChange({ ...matching, ratio: val });
-      }
+    (val: number) => {
+      onChange({ ...matching, ratio: val });
     },
     [matching, onChange]
   );
@@ -123,18 +121,15 @@ export function BalunEditor({ matching, onChange }: BalunEditorProps) {
             <label className="text-[11px] text-text-secondary w-10 shrink-0">
               Ratio:
             </label>
-            <div className="flex items-center gap-1 flex-1">
-              <input
-                type="number"
-                value={matching.ratio}
-                onChange={handleRatioChange}
-                min={0.1}
-                max={100}
-                step={0.1}
-                className="w-16 bg-background text-text-primary text-xs font-mono px-1.5 py-1 rounded border border-border outline-none"
-              />
-              <span className="text-[11px] text-text-secondary">: 1</span>
-            </div>
+            <NumberInput
+              value={matching.ratio}
+              onChange={handleRatioChange}
+              min={0.1}
+              max={100}
+              decimals={1}
+              unit=": 1"
+              size="sm"
+            />
           </div>
           <div className="flex items-center gap-2">
             <label className="text-[11px] text-text-secondary w-10 shrink-0">

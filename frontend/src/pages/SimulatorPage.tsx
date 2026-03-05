@@ -23,6 +23,7 @@ import { ParameterPanel } from "../components/editors/ParameterPanel";
 import { GroundEditor } from "../components/editors/GroundEditor";
 import { BalunEditor } from "../components/editors/BalunEditor";
 import { Button } from "../components/ui/Button";
+import { NumberInput } from "../components/ui/NumberInput";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { ColorScale } from "../components/ui/ColorScale";
 import { SimulationLoadingOverlay } from "../components/ui/SimulationLoadingOverlay";
@@ -206,6 +207,41 @@ export function SimulatorPage() {
 
             <div className="border-t border-border" />
 
+            {/* Frequency sweep controls */}
+            <div className="space-y-1.5">
+              <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider px-1">
+                Frequency Sweep
+              </h3>
+              <div className="flex items-center gap-1 px-1">
+                <NumberInput
+                  value={frequencyRange.start_mhz}
+                  onChange={(v) => setFrequencyRange({ ...frequencyRange, start_mhz: v })}
+                  min={0.1}
+                  max={frequencyRange.stop_mhz - 0.1}
+                  decimals={1}
+                />
+                <span className="text-[10px] text-text-secondary">-</span>
+                <NumberInput
+                  value={frequencyRange.stop_mhz}
+                  onChange={(v) => setFrequencyRange({ ...frequencyRange, stop_mhz: v })}
+                  min={frequencyRange.start_mhz + 0.1}
+                  max={500}
+                  decimals={1}
+                  unit="MHz"
+                />
+                <NumberInput
+                  value={frequencyRange.steps}
+                  onChange={(v) => setFrequencyRange({ ...frequencyRange, steps: v })}
+                  min={1}
+                  max={201}
+                  decimals={0}
+                  unit="pts"
+                />
+              </div>
+            </div>
+
+            <div className="border-t border-border" />
+
             {/* Pattern resolution */}
             <div className="space-y-1">
               <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider px-1">
@@ -342,6 +378,10 @@ export function SimulatorPage() {
         <div className="px-3 py-2 flex-1 overflow-y-auto">
           {mobileTab === "antenna" && (
             <div className="space-y-3">
+              <ProjectActions
+                onSave={handleProjectSave}
+                onLoad={handleProjectLoad}
+              />
               <TemplatePicker
                 selectedId={template.id}
                 onSelect={handleTemplateSelect}
@@ -359,6 +399,42 @@ export function SimulatorPage() {
                 onSelectBand={handleBandSelect}
                 hfOnly
               />
+
+              {/* Frequency sweep controls */}
+              <div className="space-y-1">
+                <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider">
+                  Frequency Sweep
+                </h3>
+                <div className="flex items-center gap-1 flex-wrap">
+                  <NumberInput
+                    value={frequencyRange.start_mhz}
+                    onChange={(v) => setFrequencyRange({ ...frequencyRange, start_mhz: v })}
+                    min={0.1}
+                    max={frequencyRange.stop_mhz - 0.1}
+                    decimals={1}
+                    size="sm"
+                  />
+                  <span className="text-[11px] text-text-secondary">-</span>
+                  <NumberInput
+                    value={frequencyRange.stop_mhz}
+                    onChange={(v) => setFrequencyRange({ ...frequencyRange, stop_mhz: v })}
+                    min={frequencyRange.start_mhz + 0.1}
+                    max={500}
+                    decimals={1}
+                    unit="MHz"
+                    size="sm"
+                  />
+                  <NumberInput
+                    value={frequencyRange.steps}
+                    onChange={(v) => setFrequencyRange({ ...frequencyRange, steps: v })}
+                    min={1}
+                    max={201}
+                    decimals={0}
+                    unit="pts"
+                    size="sm"
+                  />
+                </div>
+              </div>
 
               {/* Pattern resolution */}
               <div className="space-y-1">
@@ -381,6 +457,8 @@ export function SimulatorPage() {
                   </p>
                 )}
               </div>
+
+              <ValidationWarnings validation={validation} />
             </div>
           )}
           {mobileTab === "results" && <ResultsPanel />}

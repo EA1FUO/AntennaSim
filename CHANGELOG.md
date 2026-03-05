@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- NumberInput click-to-edit component replacing all raw `<input type="number">` fields across 5 files
+- Frequency sweep controls (start/stop/steps) on the Simulator page for manual sweep range override
+- Frequency sweep controls and validation warnings on the Simulator mobile bottom sheet
+- ProjectActions (save/load) on the Simulator mobile bottom sheet
 - Ham band frequency presets with ITU Region 1/2/3 support and band analysis utilities
 - Band preset pill buttons integrated into Simulator and Editor pages for quick frequency selection
 - Project save/load (.antennasim JSON format) with schema validation and round-trip integrity
