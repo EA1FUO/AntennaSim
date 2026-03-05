@@ -42,8 +42,8 @@ class FrequencyConfig(BaseModel):
 class PatternConfig(BaseModel):
     """Radiation pattern calculation configuration."""
 
-    theta_start: float = Field(default=-90.0, ge=-90.0, le=90.0)
-    theta_stop: float = Field(default=90.0, ge=-90.0, le=90.0)
+    theta_start: float = Field(default=-90.0, ge=-180.0, le=180.0)
+    theta_stop: float = Field(default=90.0, ge=-180.0, le=180.0)
     theta_step: float = Field(default=5.0, ge=1.0, le=30.0)
     phi_start: float = Field(default=0.0, ge=0.0, le=360.0)
     phi_stop: float = Field(default=355.0, ge=0.0, le=360.0)
