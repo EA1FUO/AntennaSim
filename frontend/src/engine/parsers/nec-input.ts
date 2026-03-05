@@ -131,57 +131,63 @@ export function buildCardDeck(request: SimulateAdvancedRequest): string {
     );
   }
 
-  // FR card (frequency)
-  const freq = request.frequency;
-  const stepMhz =
-    freq.steps > 1
-      ? (freq.stop_mhz - freq.start_mhz) / (freq.steps - 1)
-      : 0;
-  lines.push(
-    `FR 0 ${freq.steps} 0 0 ` +
-      `${freq.start_mhz.toFixed(6)} ${stepMhz.toFixed(6)}`
-  );
+  // ---- Frequency sweep + execution cards ----
+  // NEC2 processes cards sequentially: each FR card sets the active frequencies,
+  // and the following NE/RP cards trigger computation at those frequencies.
+  // For multi-segment sweeps, we emit FR + NE + RP for each segment.
 
-  // NE card (near-field) — generates a grid of E-field sample points
+  // Build NE card string (if near-field requested)
+  let neCard: string | null = null;
   if (request.near_field) {
     const nf = request.near_field;
     if (nf.plane === "horizontal") {
       const nx = Math.floor(2 * nf.extent_m / nf.resolution_m) + 1;
       const ny = nx;
       const nz = 1;
-      lines.push(
+      neCard =
         `NE 0 ${nx} ${ny} ${nz} ` +
-          `${(-nf.extent_m).toFixed(4)} ${(-nf.extent_m).toFixed(4)} ${nf.height_m.toFixed(4)} ` +
-          `${nf.resolution_m.toFixed(4)} ${nf.resolution_m.toFixed(4)} ${(0.0).toFixed(4)}`
-      );
+        `${(-nf.extent_m).toFixed(4)} ${(-nf.extent_m).toFixed(4)} ${nf.height_m.toFixed(4)} ` +
+        `${nf.resolution_m.toFixed(4)} ${nf.resolution_m.toFixed(4)} ${(0.0).toFixed(4)}`;
     } else {
-      // Vertical plane along X axis
       const nx = Math.floor(2 * nf.extent_m / nf.resolution_m) + 1;
       const ny = 1;
       const nz = Math.floor(nf.extent_m / nf.resolution_m) + 1;
-      lines.push(
+      neCard =
         `NE 0 ${nx} ${ny} ${nz} ` +
-          `${(-nf.extent_m).toFixed(4)} ${(0.0).toFixed(4)} ${(0.0).toFixed(4)} ` +
-          `${nf.resolution_m.toFixed(4)} ${(0.0).toFixed(4)} ${nf.resolution_m.toFixed(4)}`
-      );
+        `${(-nf.extent_m).toFixed(4)} ${(0.0).toFixed(4)} ${(0.0).toFixed(4)} ` +
+        `${nf.resolution_m.toFixed(4)} ${(0.0).toFixed(4)} ${nf.resolution_m.toFixed(4)}`;
     }
   }
 
-  // RP card (radiation pattern)
-  // In free space there is no ground plane, so we need the full sphere
-  // (theta from 0° to 180° in NEC2 convention, i.e. -90° to +90° becomes 0° to 180°).
-  // With a ground plane, only the upper hemisphere is needed (-90° to +90°).
+  // Build RP card string
   const patternStep = request.pattern_step ?? 5;
   const isFreeSpace = groundType === "free_space";
   const thetaStart = isFreeSpace ? -180.0 : -90.0;
   const thetaRange = isFreeSpace ? 360.0 : 180.0;
   const nTheta = Math.floor(thetaRange / patternStep) + 1;
   const nPhi = Math.floor(360 / patternStep);
-  lines.push(
+  const rpCard =
     `RP 0 ${nTheta} ${nPhi} 1000 ` +
-      `${thetaStart.toFixed(1)} ${(0.0).toFixed(1)} ` +
-      `${patternStep.toFixed(1)} ${patternStep.toFixed(1)}`
-  );
+    `${thetaStart.toFixed(1)} ${(0.0).toFixed(1)} ` +
+    `${patternStep.toFixed(1)} ${patternStep.toFixed(1)}`;
+
+  /** Emit FR + NE + RP cards for one frequency range */
+  function emitFrequencyBlock(startMhz: number, stopMhz: number, steps: number): void {
+    const stepMhz = steps > 1 ? (stopMhz - startMhz) / (steps - 1) : 0;
+    lines.push(`FR 0 ${steps} 0 0 ${startMhz.toFixed(6)} ${stepMhz.toFixed(6)}`);
+    if (neCard) lines.push(neCard);
+    lines.push(rpCard);
+  }
+
+  const freqSegments = request.frequencySegments;
+  if (freqSegments && freqSegments.length > 0) {
+    for (const seg of freqSegments) {
+      emitFrequencyBlock(seg.start_mhz, seg.stop_mhz, seg.steps);
+    }
+  } else {
+    const freq = request.frequency;
+    emitFrequencyBlock(freq.start_mhz, freq.stop_mhz, freq.steps);
+  }
 
   // EN card
   lines.push("EN");

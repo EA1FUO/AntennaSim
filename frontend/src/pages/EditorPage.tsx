@@ -31,6 +31,7 @@ import { OptimizerPanel } from "../components/editors/OptimizerPanel";
 import { ColorScale } from "../components/ui/ColorScale";
 import { SimulationLoadingOverlay } from "../components/ui/SimulationLoadingOverlay";
 import { BandPresets } from "../components/ui/BandPresets";
+import { FrequencySegmentEditor } from "../components/ui/FrequencySegmentEditor";
 import { ProjectActions } from "../components/ui/ProjectActions";
 import { ValidationWarnings } from "../components/ui/ValidationWarnings";
 import { Button } from "../components/ui/Button";
@@ -43,7 +44,7 @@ import { templates } from "../templates";
 import { getDefaultParams } from "../templates/types";
 import type { ProjectFile } from "../utils/project-file";
 import type { AntennaTemplate, FrequencyRange } from "../templates/types";
-import { computeSteps } from "../utils/ham-bands";
+import { bandToSegment, hasBandSegment, removeBandSegment } from "../utils/ham-bands";
 import type { HamBand } from "../utils/ham-bands";
 import type { ViewToggles } from "../components/three/types";
 
@@ -65,7 +66,9 @@ export function EditorPage() {
   const ground = useEditorStore((s) => s.ground);
   const setGround = useEditorStore((s) => s.setGround);
   const frequencyRange = useEditorStore((s) => s.frequencyRange);
+  const frequencySegments = useEditorStore((s) => s.frequencySegments);
   const setFrequencyRange = useEditorStore((s) => s.setFrequencyRange);
+  const setFrequencySegments = useEditorStore((s) => s.setFrequencySegments);
   const designFrequencyMhz = useEditorStore((s) => s.designFrequencyMhz);
   const setDesignFrequency = useEditorStore((s) => s.setDesignFrequency);
   const mode = useEditorStore((s) => s.mode);
@@ -208,6 +211,7 @@ export function EditorPage() {
       excitations,
       ground,
       frequency: frequencyRange,
+      frequencySegments: frequencySegments.length > 0 ? frequencySegments : undefined,
       loads: loads.length > 0 ? loads : undefined,
       transmission_lines: transmissionLines.length > 0 ? transmissionLines : undefined,
       compute_currents: computeCurrents,
@@ -219,7 +223,7 @@ export function EditorPage() {
       },
       pattern_step: patternStep,
     });
-  }, [wires, excitations, ground, frequencyRange, loads, transmissionLines, computeCurrents, patternStep, simulateAdvanced, getWireGeometry]);
+  }, [wires, excitations, ground, frequencyRange, frequencySegments, loads, transmissionLines, computeCurrents, patternStep, simulateAdvanced, getWireGeometry]);
 
   // Template loader handlers
   const handleTemplateSelect = useCallback((t: AntennaTemplate) => {
@@ -257,11 +261,23 @@ export function EditorPage() {
 
   const handleBandSelect = useCallback(
     (range: FrequencyRange, _band: HamBand) => {
+      setFrequencySegments([]);
       setFrequencyRange(range);
       const center = (range.start_mhz + range.stop_mhz) / 2;
       setDesignFrequency(center);
     },
-    [setFrequencyRange, setDesignFrequency]
+    [setFrequencySegments, setFrequencyRange, setDesignFrequency]
+  );
+
+  const handleToggleBand = useCallback(
+    (band: HamBand) => {
+      if (hasBandSegment(frequencySegments, band)) {
+        setFrequencySegments(removeBandSegment(frequencySegments, band));
+      } else {
+        setFrequencySegments([...frequencySegments, bandToSegment(band)]);
+      }
+    },
+    [frequencySegments, setFrequencySegments]
   );
 
   const handleProjectSave = useCallback((): ProjectFile => {
@@ -647,40 +663,21 @@ export function EditorPage() {
               unit="MHz"
             />
 
-            {/* Frequency sweep range */}
-            <div className="flex items-center gap-1">
-              <span className="text-[10px] text-text-secondary shrink-0">Sweep:</span>
-              <NumberInput
-                value={frequencyRange.start_mhz}
-                onChange={(v) => setFrequencyRange({ start_mhz: v, stop_mhz: frequencyRange.stop_mhz, steps: computeSteps(v, frequencyRange.stop_mhz) })}
-                min={0.1}
-                max={frequencyRange.stop_mhz - 0.1}
-                decimals={1}
-              />
-              <span className="text-[10px] text-text-secondary">-</span>
-              <NumberInput
-                value={frequencyRange.stop_mhz}
-                onChange={(v) => setFrequencyRange({ start_mhz: frequencyRange.start_mhz, stop_mhz: v, steps: computeSteps(frequencyRange.start_mhz, v) })}
-                min={frequencyRange.start_mhz + 0.1}
-                max={500}
-                decimals={1}
-                unit="MHz"
-              />
-              <NumberInput
-                value={frequencyRange.steps}
-                onChange={(v) => setFrequencyRange({ ...frequencyRange, steps: v })}
-                min={1}
-                max={201}
-                decimals={0}
-                unit="pts"
-              />
-            </div>
-
             {/* Band presets */}
             <BandPresets
               currentRange={frequencyRange}
               onSelectBand={handleBandSelect}
+              segments={frequencySegments}
+              onToggleBand={handleToggleBand}
               hfOnly
+            />
+
+            {/* Frequency sweep / segments */}
+            <FrequencySegmentEditor
+              frequencyRange={frequencyRange}
+              onFrequencyRangeChange={setFrequencyRange}
+              segments={frequencySegments}
+              onSegmentsChange={setFrequencySegments}
             />
 
             {/* Antenna height */}
@@ -794,42 +791,21 @@ export function EditorPage() {
                 unit="MHz"
                 size="sm"
               />
-              {/* Frequency sweep */}
-              <div className="flex items-center gap-1 flex-wrap">
-                <span className="text-[11px] text-text-secondary shrink-0">Sweep:</span>
-                <NumberInput
-                  value={frequencyRange.start_mhz}
-                  onChange={(v) => setFrequencyRange({ start_mhz: v, stop_mhz: frequencyRange.stop_mhz, steps: computeSteps(v, frequencyRange.stop_mhz) })}
-                  min={0.1}
-                  max={frequencyRange.stop_mhz - 0.1}
-                  decimals={1}
-                  size="sm"
-                />
-                <span className="text-[11px] text-text-secondary">-</span>
-                <NumberInput
-                  value={frequencyRange.stop_mhz}
-                  onChange={(v) => setFrequencyRange({ start_mhz: frequencyRange.start_mhz, stop_mhz: v, steps: computeSteps(frequencyRange.start_mhz, v) })}
-                  min={frequencyRange.start_mhz + 0.1}
-                  max={500}
-                  decimals={1}
-                  unit="MHz"
-                  size="sm"
-                />
-                <NumberInput
-                  value={frequencyRange.steps}
-                  onChange={(v) => setFrequencyRange({ ...frequencyRange, steps: v })}
-                  min={1}
-                  max={201}
-                  decimals={0}
-                  unit="pts"
-                  size="sm"
-                />
-              </div>
-              {/* Band presets */}
+              {/* Band presets (multi-select) */}
               <BandPresets
                 currentRange={frequencyRange}
                 onSelectBand={handleBandSelect}
+                segments={frequencySegments}
+                onToggleBand={handleToggleBand}
                 hfOnly
+              />
+              {/* Frequency sweep / segments */}
+              <FrequencySegmentEditor
+                frequencyRange={frequencyRange}
+                onFrequencyRangeChange={setFrequencyRange}
+                segments={frequencySegments}
+                onSegmentsChange={setFrequencySegments}
+                size="sm"
               />
               {/* Snap size */}
               <div>

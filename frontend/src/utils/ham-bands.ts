@@ -5,7 +5,7 @@
  * with Region 2/3 variants for bands where allocations differ.
  */
 
-import type { FrequencyRange } from "../templates/types";
+import type { FrequencyRange, FrequencySegment } from "../templates/types";
 import type { FrequencyResult } from "../api/nec";
 
 // ---------------------------------------------------------------------------
@@ -99,6 +99,38 @@ export function bandToFrequencyRange(band: HamBand): FrequencyRange {
     stop_mhz: band.stop_mhz,
     steps: computeSteps(band.start_mhz, band.stop_mhz),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Multi-segment helpers
+// ---------------------------------------------------------------------------
+
+/** Convert a HamBand to a FrequencySegment */
+export function bandToSegment(band: HamBand): FrequencySegment {
+  return {
+    start_mhz: band.start_mhz,
+    stop_mhz: band.stop_mhz,
+    steps: computeSteps(band.start_mhz, band.stop_mhz),
+    label: band.label,
+  };
+}
+
+/** Check if a segment matches a band's frequency range */
+function segmentMatchesBand(seg: FrequencySegment, band: HamBand): boolean {
+  return (
+    Math.abs(seg.start_mhz - band.start_mhz) < 0.01 &&
+    Math.abs(seg.stop_mhz - band.stop_mhz) < 0.01
+  );
+}
+
+/** Check if a band already exists in the segments list */
+export function hasBandSegment(segments: FrequencySegment[], band: HamBand): boolean {
+  return segments.some((seg) => segmentMatchesBand(seg, band));
+}
+
+/** Remove a band's segment from the list */
+export function removeBandSegment(segments: FrequencySegment[], band: HamBand): FrequencySegment[] {
+  return segments.filter((seg) => !segmentMatchesBand(seg, band));
 }
 
 // ---------------------------------------------------------------------------

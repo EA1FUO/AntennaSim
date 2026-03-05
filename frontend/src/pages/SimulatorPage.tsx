@@ -23,11 +23,11 @@ import { ParameterPanel } from "../components/editors/ParameterPanel";
 import { GroundEditor } from "../components/editors/GroundEditor";
 import { BalunEditor } from "../components/editors/BalunEditor";
 import { Button } from "../components/ui/Button";
-import { NumberInput } from "../components/ui/NumberInput";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { ColorScale } from "../components/ui/ColorScale";
 import { SimulationLoadingOverlay } from "../components/ui/SimulationLoadingOverlay";
 import { BandPresets } from "../components/ui/BandPresets";
+import { FrequencySegmentEditor } from "../components/ui/FrequencySegmentEditor";
 import { ProjectActions } from "../components/ui/ProjectActions";
 import { ValidationWarnings } from "../components/ui/ValidationWarnings";
 import { ResultsPanel } from "../components/results/ResultsTabs";
@@ -37,7 +37,7 @@ import { validateSimulationRequest } from "../engine/validation";
 import { getTemplate, templateMap } from "../templates";
 import type { ProjectFile } from "../utils/project-file";
 import type { AntennaTemplate, FrequencyRange } from "../templates/types";
-import { computeSteps } from "../utils/ham-bands";
+import { bandToSegment, hasBandSegment, removeBandSegment } from "../utils/ham-bands";
 import type { HamBand } from "../utils/ham-bands";
 import type { ViewToggles } from "../components/three/types";
 
@@ -57,10 +57,12 @@ export function SimulatorPage() {
   const wireGeometry = useAntennaStore((s) => s.wireGeometry);
   const excitation = useAntennaStore((s) => s.excitation);
   const frequencyRange = useAntennaStore((s) => s.frequencyRange);
+  const frequencySegments = useAntennaStore((s) => s.frequencySegments);
   const setTemplate = useAntennaStore((s) => s.setTemplate);
   const setParam = useAntennaStore((s) => s.setParam);
   const setGround = useAntennaStore((s) => s.setGround);
   const setFrequencyRange = useAntennaStore((s) => s.setFrequencyRange);
+  const setFrequencySegments = useAntennaStore((s) => s.setFrequencySegments);
 
   // Simulation store
   const simStatus = useSimulationStore((s) => s.status);
@@ -101,11 +103,13 @@ export function SimulatorPage() {
   const [patternStep, setPatternStep] = useState(5);
 
   const handleRunSimulation = useCallback(() => {
-    simulate(wireGeometry, excitation, ground, frequencyRange, patternStep);
-  }, [simulate, wireGeometry, excitation, ground, frequencyRange, patternStep]);
+    simulate(wireGeometry, excitation, ground, frequencyRange, patternStep, frequencySegments);
+  }, [simulate, wireGeometry, excitation, ground, frequencyRange, patternStep, frequencySegments]);
 
   const handleBandSelect = useCallback(
     (range: FrequencyRange, _band: HamBand) => {
+      // Single-select fallback — clear segments and set single range
+      setFrequencySegments([]);
       setFrequencyRange(range);
       // Also update the template's frequency param if it has one, using band center
       const center = (range.start_mhz + range.stop_mhz) / 2;
@@ -116,7 +120,19 @@ export function SimulatorPage() {
         setParam(freqParam.key, Math.round(center * 1000) / 1000);
       }
     },
-    [setFrequencyRange, setParam, template.parameters]
+    [setFrequencySegments, setFrequencyRange, setParam, template.parameters]
+  );
+
+  const handleToggleBand = useCallback(
+    (band: HamBand) => {
+      if (hasBandSegment(frequencySegments, band)) {
+        const updated = removeBandSegment(frequencySegments, band);
+        setFrequencySegments(updated);
+      } else {
+        setFrequencySegments([...frequencySegments, bandToSegment(band)]);
+      }
+    },
+    [frequencySegments, setFrequencySegments]
   );
 
   const handleProjectSave = useCallback((): ProjectFile => {
@@ -203,43 +219,19 @@ export function SimulatorPage() {
             <BandPresets
               currentRange={frequencyRange}
               onSelectBand={handleBandSelect}
+              segments={frequencySegments}
+              onToggleBand={handleToggleBand}
               hfOnly
             />
 
             <div className="border-t border-border" />
 
-            {/* Frequency sweep controls */}
-            <div className="space-y-1.5">
-              <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider px-1">
-                Frequency Sweep
-              </h3>
-              <div className="flex items-center gap-1 px-1">
-                <NumberInput
-                  value={frequencyRange.start_mhz}
-                  onChange={(v) => setFrequencyRange({ start_mhz: v, stop_mhz: frequencyRange.stop_mhz, steps: computeSteps(v, frequencyRange.stop_mhz) })}
-                  min={0.1}
-                  max={frequencyRange.stop_mhz - 0.1}
-                  decimals={1}
-                />
-                <span className="text-[10px] text-text-secondary">-</span>
-                <NumberInput
-                  value={frequencyRange.stop_mhz}
-                  onChange={(v) => setFrequencyRange({ start_mhz: frequencyRange.start_mhz, stop_mhz: v, steps: computeSteps(frequencyRange.start_mhz, v) })}
-                  min={frequencyRange.start_mhz + 0.1}
-                  max={500}
-                  decimals={1}
-                  unit="MHz"
-                />
-                <NumberInput
-                  value={frequencyRange.steps}
-                  onChange={(v) => setFrequencyRange({ ...frequencyRange, steps: v })}
-                  min={1}
-                  max={201}
-                  decimals={0}
-                  unit="pts"
-                />
-              </div>
-            </div>
+            <FrequencySegmentEditor
+              frequencyRange={frequencyRange}
+              onFrequencyRangeChange={setFrequencyRange}
+              segments={frequencySegments}
+              onSegmentsChange={setFrequencySegments}
+            />
 
             <div className="border-t border-border" />
 
@@ -398,44 +390,18 @@ export function SimulatorPage() {
               <BandPresets
                 currentRange={frequencyRange}
                 onSelectBand={handleBandSelect}
+                segments={frequencySegments}
+                onToggleBand={handleToggleBand}
                 hfOnly
               />
 
-              {/* Frequency sweep controls */}
-              <div className="space-y-1">
-                <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider">
-                  Frequency Sweep
-                </h3>
-                <div className="flex items-center gap-1 flex-wrap">
-                  <NumberInput
-                    value={frequencyRange.start_mhz}
-                    onChange={(v) => setFrequencyRange({ start_mhz: v, stop_mhz: frequencyRange.stop_mhz, steps: computeSteps(v, frequencyRange.stop_mhz) })}
-                    min={0.1}
-                    max={frequencyRange.stop_mhz - 0.1}
-                    decimals={1}
-                    size="sm"
-                  />
-                  <span className="text-[11px] text-text-secondary">-</span>
-                  <NumberInput
-                    value={frequencyRange.stop_mhz}
-                    onChange={(v) => setFrequencyRange({ start_mhz: frequencyRange.start_mhz, stop_mhz: v, steps: computeSteps(frequencyRange.start_mhz, v) })}
-                    min={frequencyRange.start_mhz + 0.1}
-                    max={500}
-                    decimals={1}
-                    unit="MHz"
-                    size="sm"
-                  />
-                  <NumberInput
-                    value={frequencyRange.steps}
-                    onChange={(v) => setFrequencyRange({ ...frequencyRange, steps: v })}
-                    min={1}
-                    max={201}
-                    decimals={0}
-                    unit="pts"
-                    size="sm"
-                  />
-                </div>
-              </div>
+              <FrequencySegmentEditor
+                frequencyRange={frequencyRange}
+                onFrequencyRangeChange={setFrequencyRange}
+                segments={frequencySegments}
+                onSegmentsChange={setFrequencySegments}
+                size="sm"
+              />
 
               {/* Pattern resolution */}
               <div className="space-y-1">

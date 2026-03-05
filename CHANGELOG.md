@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Multi-segment frequency sweeps: simulate multiple band ranges in a single NEC2 run (e.g., 20m + 15m + 10m simultaneously)
+- `FrequencySegment` type and `frequencySegments` field on both stores, engine request types, and backend Pydantic model
+- BandPresets dual interaction: click to toggle band as frequency segment, Ctrl+click (long-press on mobile) to change antenna design frequency and set single-band sweep
+- FrequencySegmentEditor component: compact segment list with per-segment start/stop/steps controls, total point counter, and 301-point cap
+- Card deck builders (WASM + backend) emit interleaved FR + NE + RP card blocks for multi-segment sweeps
+- `bandToSegment`, `hasBandSegment`, `removeBandSegment` utilities in `ham-bands.ts`
+- 12 new tests for multi-segment card deck generation and segment helper functions (total: 308)
+
 ## [0.9.0] - 2026-03-05
 
 ### Added

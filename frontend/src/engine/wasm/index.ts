@@ -137,6 +137,7 @@ export class WasmEngine implements SimulationEngine {
       ],
       ground: request.ground,
       frequency: request.frequency,
+      frequencySegments: request.frequencySegments,
       compute_currents: true,
       near_field: {
         plane: "horizontal",

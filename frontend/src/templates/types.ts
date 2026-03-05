@@ -78,6 +78,15 @@ export interface FrequencyRange {
   steps: number;
 }
 
+/** A single frequency segment for multi-band sweeps */
+export interface FrequencySegment {
+  start_mhz: number;
+  stop_mhz: number;
+  steps: number;
+  /** Optional label, e.g. "20m", "Custom" */
+  label?: string;
+}
+
 /** Template category */
 export type TemplateCategory =
   | "wire"

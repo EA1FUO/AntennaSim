@@ -13,6 +13,7 @@ import type {
   Excitation,
   GroundConfig,
   FrequencyRange,
+  FrequencySegment,
 } from "../templates/types";
 
 // Re-export simulation result types from api/nec.ts so consumers can import from engine/types
@@ -40,6 +41,8 @@ export interface SimulateRequest {
   excitation: Excitation;
   ground: GroundConfig;
   frequency: FrequencyRange;
+  /** Optional multi-segment sweep — when present, overrides `frequency` */
+  frequencySegments?: FrequencySegment[];
   patternStep?: number;
 }
 
@@ -61,6 +64,8 @@ export interface SimulateAdvancedRequest {
   excitations: Excitation[];
   ground: GroundConfig;
   frequency: FrequencyRange;
+  /** Optional multi-segment sweep — when present, overrides `frequency` */
+  frequencySegments?: FrequencySegment[];
   loads?: LumpedLoad[];
   transmission_lines?: TransmissionLine[];
   arcs?: WireArc[];

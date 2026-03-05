@@ -39,6 +39,27 @@ class FrequencyConfig(BaseModel):
         return (self.stop_mhz - self.start_mhz) / (self.steps - 1)
 
 
+class FrequencySegmentConfig(BaseModel):
+    """A single frequency segment for multi-band sweeps."""
+
+    start_mhz: float = Field(ge=0.1, le=2000.0, description="Segment start frequency (MHz)")
+    stop_mhz: float = Field(ge=0.1, le=2000.0, description="Segment stop frequency (MHz)")
+    steps: int = Field(ge=1, le=201, description="Number of steps in this segment")
+    label: str | None = Field(default=None, max_length=50, description="Optional label (e.g. '20m')")
+
+    @model_validator(mode="after")
+    def validate_range(self) -> "FrequencySegmentConfig":
+        if self.stop_mhz < self.start_mhz:
+            raise ValueError("stop_mhz must be >= start_mhz")
+        return self
+
+    @property
+    def step_mhz(self) -> float:
+        if self.steps <= 1:
+            return 0.0
+        return (self.stop_mhz - self.start_mhz) / (self.steps - 1)
+
+
 class PatternConfig(BaseModel):
     """Radiation pattern calculation configuration."""
 
@@ -92,7 +113,24 @@ class SimulationRequest(BaseModel):
 
     # V2: Near-field calculation
     near_field: "NearFieldConfig | None" = Field(default=None,
-                                                   description="Near-field calculation parameters")
+                                                    description="Near-field calculation parameters")
+
+    # Multi-segment frequency sweep (overrides `frequency` when present)
+    frequency_segments: list[FrequencySegmentConfig] | None = Field(
+        default=None, max_length=20,
+        description="Multi-band frequency segments (overrides frequency when present)")
+
+    @model_validator(mode="after")
+    def validate_frequency_segments_total(self) -> "SimulationRequest":
+        """Ensure total frequency points across all segments don't exceed 301."""
+        if self.frequency_segments:
+            total_points = sum(seg.steps for seg in self.frequency_segments)
+            if total_points > 301:
+                raise ValueError(
+                    f"Total frequency points across all segments ({total_points}) "
+                    f"exceeds maximum of 301"
+                )
+        return self
 
     @model_validator(mode="after")
     def validate_total_segments(self) -> "SimulationRequest":

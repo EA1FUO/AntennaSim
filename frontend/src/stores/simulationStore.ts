@@ -13,7 +13,7 @@
 
 import { create } from "zustand";
 import type { SimulationResult, FrequencyResult } from "../api/nec";
-import type { WireGeometry, Excitation, GroundConfig, FrequencyRange } from "../templates/types";
+import type { WireGeometry, Excitation, GroundConfig, FrequencyRange, FrequencySegment } from "../templates/types";
 import type { SimulateAdvancedRequest } from "../engine/types";
 import { getEngine } from "../engine";
 
@@ -45,7 +45,8 @@ interface SimulationState {
     excitation: Excitation,
     ground: GroundConfig,
     frequency: FrequencyRange,
-    patternStep?: number
+    patternStep?: number,
+    frequencySegments?: FrequencySegment[]
   ) => Promise<void>;
   /** V2: Run an advanced simulation with all V2 features */
   simulateAdvanced: (options: AdvancedSimulationOptions) => Promise<void>;
@@ -84,7 +85,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
 
   isLoading: () => get().status === "loading",
 
-  simulate: async (wires, excitation, ground, frequency, patternStep) => {
+  simulate: async (wires, excitation, ground, frequency, patternStep, frequencySegments) => {
     set({ status: "loading", error: null });
 
     try {
@@ -94,6 +95,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
         excitation,
         ground,
         frequency,
+        frequencySegments: frequencySegments?.length ? frequencySegments : undefined,
         patternStep,
       });
       set({ status: "success", result, selectedFreqIndex: findBestSwrIndex(result) });

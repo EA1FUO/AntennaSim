@@ -102,47 +102,51 @@ def build_card_deck(request: SimulationRequest) -> str:
             f"{ex.voltage_real:.4f} {ex.voltage_imag:.4f}"
         )
 
-    # Frequency card
-    freq = request.frequency
-    lines.append(
-        f"FR 0 {freq.steps} 0 0 "
-        f"{freq.start_mhz:.6f} {freq.step_mhz:.6f}"
-    )
+    # ---- Frequency sweep + execution cards ----
+    # NEC2 processes cards sequentially: each FR card sets the active frequencies,
+    # and the following NE/RP cards trigger computation at those frequencies.
+    # For multi-segment sweeps, we emit FR + NE + RP for each segment.
 
-    # Near-field cards (NE/NH) — must come before RP
+    # Build NE card string (if near-field requested)
+    ne_card: str | None = None
     if request.near_field and request.near_field.enabled:
         nf = request.near_field
         if nf.plane == "horizontal":
             nx = int(2 * nf.extent_m / nf.resolution_m) + 1
             ny = nx
             nz = 1
-            x0 = -nf.extent_m
-            y0 = -nf.extent_m
-            z0 = nf.height_m
-            dx = nf.resolution_m
-            dy = nf.resolution_m
-            dz = 0.0
+            x0, y0, z0 = -nf.extent_m, -nf.extent_m, nf.height_m
+            dx, dy, dz = nf.resolution_m, nf.resolution_m, 0.0
         else:  # vertical plane along X axis
             nx = int(2 * nf.extent_m / nf.resolution_m) + 1
             ny = 1
             nz = int(nf.extent_m / nf.resolution_m) + 1
-            x0 = -nf.extent_m
-            y0 = 0.0
-            z0 = 0.0
-            dx = nf.resolution_m
-            dy = 0.0
-            dz = nf.resolution_m
-        lines.append(
-            f"NE 0 {nx} {ny} {nz} {x0:.4f} {y0:.4f} {z0:.4f} {dx:.4f} {dy:.4f} {dz:.4f}"
-        )
+            x0, y0, z0 = -nf.extent_m, 0.0, 0.0
+            dx, dy, dz = nf.resolution_m, 0.0, nf.resolution_m
+        ne_card = f"NE 0 {nx} {ny} {nz} {x0:.4f} {y0:.4f} {z0:.4f} {dx:.4f} {dy:.4f} {dz:.4f}"
 
-    # Radiation pattern card
+    # Build RP card string
     pat = request.pattern
-    lines.append(
+    rp_card = (
         f"RP 0 {pat.n_theta} {pat.n_phi} 1000 "
         f"{pat.theta_start:.1f} {pat.phi_start:.1f} "
         f"{pat.theta_step:.1f} {pat.phi_step:.1f}"
     )
+
+    def emit_frequency_block(start_mhz: float, stop_mhz: float, steps: int) -> None:
+        """Emit FR + NE + RP cards for one frequency range."""
+        step_mhz = (stop_mhz - start_mhz) / (steps - 1) if steps > 1 else 0.0
+        lines.append(f"FR 0 {steps} 0 0 {start_mhz:.6f} {step_mhz:.6f}")
+        if ne_card:
+            lines.append(ne_card)
+        lines.append(rp_card)
+
+    if request.frequency_segments:
+        for seg in request.frequency_segments:
+            emit_frequency_block(seg.start_mhz, seg.stop_mhz, seg.steps)
+    else:
+        freq = request.frequency
+        emit_frequency_block(freq.start_mhz, freq.stop_mhz, freq.steps)
 
     # End card
     lines.append("EN")

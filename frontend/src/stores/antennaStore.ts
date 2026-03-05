@@ -13,6 +13,7 @@ import type {
   WireGeometry,
   Excitation,
   FrequencyRange,
+  FrequencySegment,
 } from "../templates/types";
 import { getDefaultParams } from "../templates/types";
 import { getDefaultTemplate } from "../templates";
@@ -39,6 +40,8 @@ interface AntennaState {
   feedpoints: FeedpointData[];
   /** Default frequency range */
   frequencyRange: FrequencyRange;
+  /** Multi-segment frequency sweep (empty = use single frequencyRange) */
+  frequencySegments: FrequencySegment[];
   /**
    * When true, setParam/setParams will NOT overwrite frequencyRange with the
    * template-derived default. Set by setFrequencyRange, cleared by setTemplate.
@@ -56,6 +59,16 @@ interface AntennaState {
   setGround: (ground: GroundConfig) => void;
   /** Override the frequency range (e.g. from band presets or sweep controls) */
   setFrequencyRange: (range: FrequencyRange) => void;
+  /** Set all frequency segments at once */
+  setFrequencySegments: (segments: FrequencySegment[]) => void;
+  /** Add a frequency segment */
+  addFrequencySegment: (segment: FrequencySegment) => void;
+  /** Remove a frequency segment by index */
+  removeFrequencySegment: (index: number) => void;
+  /** Update a frequency segment at a specific index */
+  updateFrequencySegment: (index: number, segment: FrequencySegment) => void;
+  /** Clear all frequency segments (revert to single sweep) */
+  clearFrequencySegments: () => void;
   /** Recompute derived geometry from current template + params */
   recompute: () => void;
 }
@@ -85,6 +98,7 @@ export const useAntennaStore = create<AntennaState>((set, get) => {
     template: defaultTemplate,
     params: defaultParams,
     ground: { ...defaultTemplate.defaultGround },
+    frequencySegments: [],
     _frequencyOverride: false,
     ...derived,
 
@@ -95,6 +109,7 @@ export const useAntennaStore = create<AntennaState>((set, get) => {
         template,
         params,
         ground: { ...template.defaultGround },
+        frequencySegments: [],
         _frequencyOverride: false,
         ...derived,
       });
@@ -134,6 +149,36 @@ export const useAntennaStore = create<AntennaState>((set, get) => {
 
     setFrequencyRange: (range) => {
       set({ frequencyRange: range, _frequencyOverride: true });
+    },
+
+    setFrequencySegments: (segments) => {
+      set({ frequencySegments: segments, _frequencyOverride: true });
+    },
+
+    addFrequencySegment: (segment) => {
+      const state = get();
+      set({
+        frequencySegments: [...state.frequencySegments, segment],
+        _frequencyOverride: true,
+      });
+    },
+
+    removeFrequencySegment: (index) => {
+      const state = get();
+      set({
+        frequencySegments: state.frequencySegments.filter((_, i) => i !== index),
+      });
+    },
+
+    updateFrequencySegment: (index, segment) => {
+      const state = get();
+      const updated = [...state.frequencySegments];
+      updated[index] = segment;
+      set({ frequencySegments: updated });
+    },
+
+    clearFrequencySegments: () => {
+      set({ frequencySegments: [] });
     },
 
     recompute: () => {

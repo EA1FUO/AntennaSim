@@ -62,6 +62,16 @@ export class BackendEngine implements SimulationEngine {
         resolution_m: 0.5,
       },
       comment: "AntennaSim simulation",
+      ...(request.frequencySegments?.length
+        ? {
+            frequency_segments: request.frequencySegments.map((s) => ({
+              start_mhz: s.start_mhz,
+              stop_mhz: s.stop_mhz,
+              steps: s.steps,
+              ...(s.label ? { label: s.label } : {}),
+            })),
+          }
+        : {}),
     };
 
     return api.post<SimulationResult>("/api/v1/simulate", body, {
@@ -116,6 +126,16 @@ export class BackendEngine implements SimulationEngine {
         resolution_m: 0.5,
       },
       comment: request.comment ?? "AntennaSim V2 simulation",
+      ...(request.frequencySegments?.length
+        ? {
+            frequency_segments: request.frequencySegments.map((s) => ({
+              start_mhz: s.start_mhz,
+              stop_mhz: s.stop_mhz,
+              steps: s.steps,
+              ...(s.label ? { label: s.label } : {}),
+            })),
+          }
+        : {}),
     };
 
     return api.post<SimulationResult>("/api/v1/simulate", body, {

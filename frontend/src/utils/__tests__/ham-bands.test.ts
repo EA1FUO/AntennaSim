@@ -12,9 +12,13 @@ import {
   getBandsForRegion,
   getBandEdges,
   bandToFrequencyRange,
+  bandToSegment,
+  hasBandSegment,
+  removeBandSegment,
   computeSteps,
   analyzeBandPerformance,
 } from "../ham-bands";
+import type { FrequencySegment } from "../../templates/types";
 import type { FrequencyResult } from "../../api/nec";
 
 // ---------------------------------------------------------------------------
@@ -156,6 +160,67 @@ describe("bandToFrequencyRange", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Multi-segment helpers
+// ---------------------------------------------------------------------------
+
+describe("bandToSegment", () => {
+  it("converts a band to a FrequencySegment with label", () => {
+    const band = HAM_BANDS.find((b) => b.label === "20m" && b.region === "all")!;
+    const seg = bandToSegment(band);
+    expect(seg.start_mhz).toBe(14.0);
+    expect(seg.stop_mhz).toBe(14.35);
+    expect(seg.label).toBe("20m");
+    expect(seg.steps).toBeGreaterThanOrEqual(21);
+  });
+});
+
+describe("hasBandSegment", () => {
+  it("returns true when segment matches band", () => {
+    const segments: FrequencySegment[] = [
+      { start_mhz: 14.0, stop_mhz: 14.35, steps: 15, label: "20m" },
+    ];
+    const band = HAM_BANDS.find((b) => b.label === "20m" && b.region === "all")!;
+    expect(hasBandSegment(segments, band)).toBe(true);
+  });
+
+  it("returns false when no segment matches", () => {
+    const segments: FrequencySegment[] = [
+      { start_mhz: 7.0, stop_mhz: 7.2, steps: 11, label: "40m" },
+    ];
+    const band = HAM_BANDS.find((b) => b.label === "20m" && b.region === "all")!;
+    expect(hasBandSegment(segments, band)).toBe(false);
+  });
+
+  it("returns false for empty segments", () => {
+    const band = HAM_BANDS.find((b) => b.label === "20m" && b.region === "all")!;
+    expect(hasBandSegment([], band)).toBe(false);
+  });
+});
+
+describe("removeBandSegment", () => {
+  it("removes the matching segment", () => {
+    const segments: FrequencySegment[] = [
+      { start_mhz: 14.0, stop_mhz: 14.35, steps: 15, label: "20m" },
+      { start_mhz: 21.0, stop_mhz: 21.45, steps: 20, label: "15m" },
+    ];
+    const band = HAM_BANDS.find((b) => b.label === "20m" && b.region === "all")!;
+    const result = removeBandSegment(segments, band);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.label).toBe("15m");
+  });
+
+  it("returns same array when no match found", () => {
+    const segments: FrequencySegment[] = [
+      { start_mhz: 14.0, stop_mhz: 14.35, steps: 15, label: "20m" },
+    ];
+    const band = HAM_BANDS.find((b) => b.label === "40m" && b.region === "r1")!;
+    const result = removeBandSegment(segments, band);
+    expect(result).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // analyzeBandPerformance
 // ---------------------------------------------------------------------------
 

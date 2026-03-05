@@ -11,7 +11,7 @@
  */
 
 import { create } from "zustand";
-import type { WireGeometry, Excitation, GroundConfig, FrequencyRange } from "../templates/types";
+import type { WireGeometry, Excitation, GroundConfig, FrequencyRange, FrequencySegment } from "../templates/types";
 import type { LumpedLoad, TransmissionLine } from "../api/nec";
 import { autoSegment, centerSegment } from "../engine/segmentation";
 import { computeSteps } from "../utils/ham-bands";
@@ -66,6 +66,8 @@ interface EditorState {
   ground: GroundConfig;
   /** Frequency range for simulation */
   frequencyRange: FrequencyRange;
+  /** Multi-segment frequency sweep (empty = use single frequencyRange) */
+  frequencySegments: FrequencySegment[];
   /** Snap grid size in meters (0 = disabled) */
   snapSize: number;
   /** Whether grid is shown */
@@ -122,6 +124,16 @@ interface EditorState {
   // ---- Settings ----
   setGround: (ground: GroundConfig) => void;
   setFrequencyRange: (freq: FrequencyRange) => void;
+  /** Set all frequency segments at once */
+  setFrequencySegments: (segments: FrequencySegment[]) => void;
+  /** Add a frequency segment */
+  addFrequencySegment: (segment: FrequencySegment) => void;
+  /** Remove a frequency segment by index */
+  removeFrequencySegment: (index: number) => void;
+  /** Update a frequency segment at a specific index */
+  updateFrequencySegment: (index: number, segment: FrequencySegment) => void;
+  /** Clear all frequency segments (revert to single sweep) */
+  clearFrequencySegments: () => void;
   setSnapSize: (size: number) => void;
   setShowGrid: (show: boolean) => void;
   setDesignFrequency: (mhz: number) => void;
@@ -235,6 +247,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   verticalDrag: false,
   ground: { ...DEFAULT_GROUND },
   frequencyRange: { ...DEFAULT_FREQ },
+  frequencySegments: [],
   snapSize: 0.1,
   showGrid: true,
   nextTag: 1,
@@ -492,6 +505,22 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   setGround: (ground) => set({ ground }),
   setFrequencyRange: (freq) => set({ frequencyRange: freq }),
+  setFrequencySegments: (segments) => set({ frequencySegments: segments }),
+  addFrequencySegment: (segment) => {
+    const state = get();
+    set({ frequencySegments: [...state.frequencySegments, segment] });
+  },
+  removeFrequencySegment: (index) => {
+    const state = get();
+    set({ frequencySegments: state.frequencySegments.filter((_, i) => i !== index) });
+  },
+  updateFrequencySegment: (index, segment) => {
+    const state = get();
+    const updated = [...state.frequencySegments];
+    updated[index] = segment;
+    set({ frequencySegments: updated });
+  },
+  clearFrequencySegments: () => set({ frequencySegments: [] }),
   setSnapSize: (size) => set({ snapSize: size }),
   setShowGrid: (show) => set({ showGrid: show }),
   setDesignFrequency: (mhz) => {

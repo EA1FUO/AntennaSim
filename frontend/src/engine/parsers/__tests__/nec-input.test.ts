@@ -157,6 +157,93 @@ describe("Frequency (FR card)", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Multi-segment frequency sweep
+// ---------------------------------------------------------------------------
+
+describe("Multi-segment frequency (frequencySegments)", () => {
+  it("emits one FR+RP pair per segment", () => {
+    const deck = buildCardDeck(makeDipole({
+      frequencySegments: [
+        { start_mhz: 14.0, stop_mhz: 14.35, steps: 15, label: "20m" },
+        { start_mhz: 21.0, stop_mhz: 21.45, steps: 20, label: "15m" },
+      ],
+    }));
+    const frCards = findCards(deck, "FR");
+    const rpCards = findCards(deck, "RP");
+    expect(frCards).toHaveLength(2);
+    expect(rpCards).toHaveLength(2);
+  });
+
+  it("computes correct step size for each segment", () => {
+    const deck = buildCardDeck(makeDipole({
+      frequencySegments: [
+        { start_mhz: 14.0, stop_mhz: 14.35, steps: 15 },
+        { start_mhz: 28.0, stop_mhz: 29.7, steps: 51 },
+      ],
+    }));
+    const frCards = findCards(deck, "FR");
+    // Segment 1: step = (14.35 - 14.0) / 14 = 0.025
+    expect(frCards[0]).toContain("14.000000");
+    expect(frCards[0]).toContain("0.025000");
+    // Segment 2: step = (29.7 - 28.0) / 50 = 0.034
+    expect(frCards[1]).toContain("28.000000");
+    expect(frCards[1]).toContain("0.034000");
+  });
+
+  it("each FR is followed by RP (correct interleaving)", () => {
+    const deck = buildCardDeck(makeDipole({
+      frequencySegments: [
+        { start_mhz: 7.0, stop_mhz: 7.2, steps: 11 },
+        { start_mhz: 14.0, stop_mhz: 14.35, steps: 15 },
+        { start_mhz: 21.0, stop_mhz: 21.45, steps: 20 },
+      ],
+    }));
+    const allLines = lines(deck);
+    const cardTypes = allLines.map((l) => l.split(" ")[0]);
+
+    // Find all FR positions and verify each is followed by RP
+    const frIndices = cardTypes.reduce<number[]>((acc, c, i) => c === "FR" ? [...acc, i] : acc, []);
+    expect(frIndices).toHaveLength(3);
+    for (const frIdx of frIndices) {
+      expect(cardTypes[frIdx + 1]).toBe("RP");
+    }
+  });
+
+  it("falls back to single frequency when segments is empty", () => {
+    const deck = buildCardDeck(makeDipole({ frequencySegments: [] }));
+    expect(findCards(deck, "FR")).toHaveLength(1);
+    expect(findCards(deck, "RP")).toHaveLength(1);
+  });
+
+  it("falls back to single frequency when segments is undefined", () => {
+    const deck = buildCardDeck(makeDipole());
+    expect(findCards(deck, "FR")).toHaveLength(1);
+    expect(findCards(deck, "RP")).toHaveLength(1);
+  });
+
+  it("includes NE card after each FR when near_field is set", () => {
+    const deck = buildCardDeck(makeDipole({
+      frequencySegments: [
+        { start_mhz: 14.0, stop_mhz: 14.35, steps: 15 },
+        { start_mhz: 21.0, stop_mhz: 21.45, steps: 20 },
+      ],
+      near_field: { plane: "horizontal", height_m: 1.8, extent_m: 20.0, resolution_m: 0.5 },
+    }));
+    const neCards = findCards(deck, "NE");
+    expect(neCards).toHaveLength(2);
+
+    // Verify order: FR NE RP FR NE RP
+    const allLines2 = lines(deck);
+    const cardTypes = allLines2.map((l) => l.split(" ")[0]);
+    const frIndices = cardTypes.reduce<number[]>((acc, c, i) => c === "FR" ? [...acc, i] : acc, []);
+    for (const frIdx of frIndices) {
+      expect(cardTypes[frIdx + 1]).toBe("NE");
+      expect(cardTypes[frIdx + 2]).toBe("RP");
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Optional cards: LD, TL, NE, GA, GM, GR
 // ---------------------------------------------------------------------------
 
