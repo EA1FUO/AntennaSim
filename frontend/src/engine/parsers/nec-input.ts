@@ -168,12 +168,18 @@ export function buildCardDeck(request: SimulateAdvancedRequest): string {
   }
 
   // RP card (radiation pattern)
+  // In free space there is no ground plane, so we need the full sphere
+  // (theta from 0° to 180° in NEC2 convention, i.e. -90° to +90° becomes 0° to 180°).
+  // With a ground plane, only the upper hemisphere is needed (-90° to +90°).
   const patternStep = request.pattern_step ?? 5;
-  const nTheta = Math.floor(180 / patternStep) + 1;
+  const isFreeSpace = groundType === "free_space";
+  const thetaStart = isFreeSpace ? -180.0 : -90.0;
+  const thetaRange = isFreeSpace ? 360.0 : 180.0;
+  const nTheta = Math.floor(thetaRange / patternStep) + 1;
   const nPhi = Math.floor(360 / patternStep);
   lines.push(
     `RP 0 ${nTheta} ${nPhi} 1000 ` +
-      `${(-90.0).toFixed(1)} ${(0.0).toFixed(1)} ` +
+      `${thetaStart.toFixed(1)} ${(0.0).toFixed(1)} ` +
       `${patternStep.toFixed(1)} ${patternStep.toFixed(1)}`
   );
 

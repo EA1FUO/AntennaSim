@@ -187,11 +187,14 @@ function createSimulateFn(): SimulateFn {
         return null;
       }
 
-      // Pattern config matching the hardcoded RP card from nec-input.ts
+      // Pattern config matching the RP card from nec-input.ts
+      // (full sphere for free space, upper hemisphere for ground)
       const patternStep = 5;
-      const nTheta = Math.floor(180 / patternStep) + 1; // 37
-      const nPhi = Math.floor(360 / patternStep); // 72
-      const thetaStart = -90;
+      const isFreeSpace = request.ground.type === "free_space";
+      const thetaStart = isFreeSpace ? -180 : -90;
+      const thetaRange = isFreeSpace ? 360 : 180;
+      const nTheta = Math.floor(thetaRange / patternStep) + 1;
+      const nPhi = Math.floor(360 / patternStep);
 
       const results = parseNecOutput(
         output,

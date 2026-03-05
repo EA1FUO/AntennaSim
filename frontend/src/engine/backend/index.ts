@@ -22,6 +22,7 @@ import type {
 export class BackendEngine implements SimulationEngine {
   async simulate(request: SimulateRequest): Promise<SimulationResult> {
     const step = request.patternStep ?? 5;
+    const isFreeSpace = request.ground.type === "free_space";
     const body: Record<string, unknown> = {
       wires: request.wires.map((w) => ({
         tag: w.tag,
@@ -45,8 +46,8 @@ export class BackendEngine implements SimulationEngine {
         steps: request.frequency.steps,
       },
       pattern: {
-        theta_start: -90,
-        theta_stop: 90,
+        theta_start: isFreeSpace ? -180 : -90,
+        theta_stop: isFreeSpace ? 180 : 90,
         theta_step: step,
         phi_start: 0,
         phi_stop: 360 - step,
@@ -72,6 +73,7 @@ export class BackendEngine implements SimulationEngine {
     request: SimulateAdvancedRequest,
   ): Promise<SimulationResult> {
     const step = request.pattern_step ?? 5;
+    const isFreeSpace = request.ground.type === "free_space";
     const body: Record<string, unknown> = {
       wires: request.wires.map((w) => ({
         tag: w.tag,
@@ -93,8 +95,8 @@ export class BackendEngine implements SimulationEngine {
         steps: request.frequency.steps,
       },
       pattern: {
-        theta_start: -90,
-        theta_stop: 90,
+        theta_start: isFreeSpace ? -180 : -90,
+        theta_stop: isFreeSpace ? 180 : 90,
         theta_step: step,
         phi_start: 0,
         phi_stop: 360 - step,
