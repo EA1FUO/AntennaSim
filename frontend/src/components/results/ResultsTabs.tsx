@@ -10,6 +10,7 @@ import { ImpedanceChart } from "./ImpedanceChart";
 import { GainTable } from "./GainTable";
 import { PatternPolar } from "./PatternPolar";
 import { SmithChart } from "./SmithChart";
+import { BandAnalysis } from "./BandAnalysis";
 import { ChartExpandable } from "../ui/ChartPopup";
 import { useSimulationStore } from "../../stores/simulationStore";
 import { useUIStore, type ResultsTab } from "../../stores/uiStore";
@@ -22,6 +23,7 @@ const TABS = [
   { key: "smith", label: "Smith" },
   { key: "pattern", label: "Pattern" },
   { key: "gain", label: "Gain" },
+  { key: "bands", label: "Bands" },
 ];
 
 export function ResultsPanel() {
@@ -332,6 +334,15 @@ export function ResultsPanel() {
                     Performance Summary
                   </h4>
                   <GainTable data={selectedFreqResult} />
+                </div>
+              )}
+
+              {resultsTab === "bands" && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-medium text-text-secondary">
+                    Multi-Band Analysis
+                  </h4>
+                  <BandAnalysis data={result.frequency_data} />
                 </div>
               )}
             </div>

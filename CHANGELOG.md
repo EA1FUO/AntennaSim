@@ -13,9 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Band preset pill buttons integrated into Simulator and Editor pages for quick frequency selection
 - Project save/load (.antennasim JSON format) with schema validation and round-trip integrity
 - Save/Open project buttons with Ctrl+S / Ctrl+O keyboard shortcuts on both pages
+- Pre-simulation validation engine with 12 checks (lambda/10, zero-length wires, below-ground, segment limits, overlapping wires, etc.)
+- Validation warnings banner shown above the Run button in both Simulator and Editor pages
+- Multi-band analysis results tab showing per-band SWR, gain, bandwidth, and quality rating for all HF bands
 - `setFrequencyRange` action on antennaStore for overriding template-derived frequency range
 - Extracted shared ham band definitions from SWRChart into reusable `utils/ham-bands.ts`
-- 33 new tests for ham bands and project file utilities
+- 48 new tests for ham bands, project files, and validation engine
 
 ## [0.8.0] - 2026-03-05
 

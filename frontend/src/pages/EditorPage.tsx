@@ -32,10 +32,12 @@ import { ColorScale } from "../components/ui/ColorScale";
 import { SimulationLoadingOverlay } from "../components/ui/SimulationLoadingOverlay";
 import { BandPresets } from "../components/ui/BandPresets";
 import { ProjectActions } from "../components/ui/ProjectActions";
+import { ValidationWarnings } from "../components/ui/ValidationWarnings";
 import { Button } from "../components/ui/Button";
 import { Slider } from "../components/ui/Slider";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { createEditorProject } from "../utils/project-file";
+import { validateSimulationRequest } from "../engine/validation";
 import { templates } from "../templates";
 import { getDefaultParams } from "../templates/types";
 import type { ProjectFile } from "../utils/project-file";
@@ -282,6 +284,18 @@ export function EditorPage() {
 
   const isLoading = simStatus === "loading";
   const canRun = wires.length > 0 && excitations.length > 0;
+
+  // Pre-simulation validation
+  // wires is intentionally used as the dep trigger — getWireGeometry() reads from the store
+  const wireGeometry = useMemo(() => {
+    void wires; // trigger re-computation when wires change
+    return getWireGeometry();
+  }, [wires, getWireGeometry]);
+  const validation = useMemo(
+    () => validateSimulationRequest(wireGeometry, excitations, ground, frequencyRange),
+    [wireGeometry, excitations, ground, frequencyRange]
+  );
+
   const patternData = selectedFreqResult?.pattern ?? null;
   const currentData = selectedFreqResult?.currents ?? null;
   const nearFieldData = simResult?.near_field ?? null;
@@ -304,12 +318,6 @@ export function EditorPage() {
       maxZ = Math.max(maxZ, w.z1, w.z2);
     }
     return Math.round(maxZ * 100) / 100;
-  }, [wires]);
-
-  // Warning: all wires at ground level
-  const allWiresAtGround = useMemo(() => {
-    if (wires.length === 0) return false;
-    return wires.every((w) => Math.abs(w.z1) < 0.001 && Math.abs(w.z2) < 0.001);
   }, [wires]);
 
   // Height adjustment handler — shifts all wires so that the lowest point is at the target height
@@ -707,25 +715,14 @@ export function EditorPage() {
               />
             )}
 
-            {/* Warning: wires at ground level */}
-            {allWiresAtGround && (
-              <div className="flex items-start gap-1.5 p-1.5 rounded-md bg-swr-warning/10 border border-swr-warning/30">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-swr-warning shrink-0 mt-0.5">
-                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                  <line x1="12" y1="9" x2="12" y2="13" />
-                  <line x1="12" y1="17" x2="12.01" y2="17" />
-                </svg>
-                <p className="text-[10px] text-swr-warning leading-tight">
-                  All wires are at ground level (Z=0). Use the height slider above to raise the antenna, or results will show no radiation.
-                </p>
-              </div>
-            )}
+            {/* Validation warnings */}
+            <ValidationWarnings validation={validation} />
 
             {/* Run */}
             <Button
               onClick={handleRunSimulation}
               loading={isLoading}
-              disabled={isLoading || !canRun}
+              disabled={isLoading || !canRun || !validation.valid}
               className="w-full"
               size="sm"
             >

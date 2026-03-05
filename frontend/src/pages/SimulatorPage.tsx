@@ -8,7 +8,7 @@
  *   [3D Viewport (45%)] [Bottom Sheet: Antenna | Results tabs]
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAntennaStore } from "../stores/antennaStore";
 import { useSimulationStore } from "../stores/simulationStore";
 import { useUIStore } from "../stores/uiStore";
@@ -28,9 +28,11 @@ import { ColorScale } from "../components/ui/ColorScale";
 import { SimulationLoadingOverlay } from "../components/ui/SimulationLoadingOverlay";
 import { BandPresets } from "../components/ui/BandPresets";
 import { ProjectActions } from "../components/ui/ProjectActions";
+import { ValidationWarnings } from "../components/ui/ValidationWarnings";
 import { ResultsPanel } from "../components/results/ResultsTabs";
 import { PatternFrequencySlider } from "../components/results/PatternFrequencySlider";
 import { createSimulatorProject } from "../utils/project-file";
+import { validateSimulationRequest } from "../engine/validation";
 import { getTemplate, templateMap } from "../templates";
 import type { ProjectFile } from "../utils/project-file";
 import type { AntennaTemplate, FrequencyRange } from "../templates/types";
@@ -148,6 +150,12 @@ export function SimulatorPage() {
 
   const isLoading = simStatus === "loading";
 
+  // Pre-simulation validation
+  const validation = useMemo(
+    () => validateSimulationRequest(wireGeometry, [excitation], ground, frequencyRange),
+    [wireGeometry, excitation, ground, frequencyRange]
+  );
+
   // Pattern data for 3D viewport
   const patternData = selectedFreqResult?.pattern ?? null;
   const currents = selectedFreqResult?.currents ?? null;
@@ -246,11 +254,12 @@ export function SimulatorPage() {
           </div>
 
           {/* Run button — bottom of left panel */}
-          <div className="p-3 border-t border-border">
+          <div className="p-3 border-t border-border space-y-2">
+            <ValidationWarnings validation={validation} />
             <Button
               onClick={handleRunSimulation}
               loading={isLoading}
-              disabled={isLoading}
+              disabled={isLoading || !validation.valid}
               className="w-full"
               size="md"
             >
