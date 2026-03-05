@@ -419,7 +419,7 @@ export function PatternPolar({ pattern, mode, size = 200, responsive = false }: 
     </div>
     {/* Info line: mode + max gain + beamwidth — outside SVG to avoid overlap */}
     <div
-      className="text-center flex-shrink-0 pt-1"
+      className="text-center shrink-0 pt-1"
       style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px", color: ct.tick }}
     >
       {mode === "azimuth" ? "Azimuth (H)" : "Elevation (E)"}
@@ -428,7 +428,7 @@ export function PatternPolar({ pattern, mode, size = 200, responsive = false }: 
       {beamwidthArcs ? ` | BW: ${beamwidthArcs.mainLobeBeamwidth.toFixed(0)}\u00B0` : ""}
     </div>
     {/* Legend */}
-    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pt-1.5 flex-shrink-0" style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px" }}>
+    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pt-1.5 shrink-0" style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px" }}>
       <span className="flex items-center gap-1">
         <span className="inline-block w-3 h-2 rounded-sm" style={{ backgroundColor: patternColor, opacity: 0.4 }} />
         <span style={{ color: ct.tick }}>Gain pattern</span>

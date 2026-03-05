@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.7.6-blue?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.7.7-blue?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/license-GPL--3.0-green?style=flat-square" alt="License">
   <img src="https://img.shields.io/badge/NEC2-engine-orange?style=flat-square" alt="NEC2">
   <img src="https://img.shields.io/badge/docker-ready-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker">
@@ -559,13 +559,13 @@ Press `?` anywhere in the app to see the full shortcuts panel.
 | Technology | Version | Purpose |
 |---|---|---|
 | [React](https://react.dev) | 19 | UI framework |
-| [TypeScript](https://www.typescriptlang.org) | 5.7 | Type safety (strict mode) |
-| [Vite](https://vite.dev) | 6 | Build tool with HMR |
-| [Tailwind CSS](https://tailwindcss.com) | 3.4 | Utility-first styling |
+| [TypeScript](https://www.typescriptlang.org) | 5.9 | Type safety (strict mode) |
+| [Vite](https://vite.dev) | 7 | Build tool with HMR |
+| [Tailwind CSS](https://tailwindcss.com) | 4 | Utility-first styling |
 | [React Three Fiber](https://r3f.docs.pmnd.rs) | 9.5 | Declarative Three.js |
-| [Three.js](https://threejs.org) | 0.170 | 3D rendering engine |
+| [Three.js](https://threejs.org) | 0.183 | 3D rendering engine |
 | [Zustand](https://zustand.docs.pmnd.rs) | 5.0 | State management |
-| [Recharts](https://recharts.org) | 2.14 | Chart library |
+| [Recharts](https://recharts.org) | 3.7 | Chart library |
 
 ### Backend
 

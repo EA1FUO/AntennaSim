@@ -1,12 +1,13 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import fs from "fs";
 
 const version = fs.readFileSync(path.resolve(__dirname, "../VERSION"), "utf-8").trim();
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   define: {
     __APP_VERSION__: JSON.stringify(version),
   },
@@ -21,7 +22,7 @@ export default defineConfig({
     strictPort: true,
   },
   build: {
-    chunkSizeWarningLimit: 700,
+    chunkSizeWarningLimit: 750,
     rollupOptions: {
       output: {
         manualChunks: {

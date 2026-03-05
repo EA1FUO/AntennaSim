@@ -1,0 +1,60 @@
+# Dependencies & build artifacts (rebuilt inside Docker)
+frontend/node_modules
+frontend/dist
+frontend/.tsbuildinfo
+
+# WASM build (not used by Docker images)
+wasm/build
+frontend/public/wasm/nec2c.js
+frontend/public/wasm/nec2c.wasm
+
+# Python caches
+**/__pycache__
+**/*.pyc
+backend/.mypy_cache
+backend/.pytest_cache
+backend/.ruff_cache
+
+# Git
+.git
+.gitignore
+.gitmodules
+
+# CI/CD & docs (not needed in images)
+.github
+screenshots
+*.md
+LICENSE
+
+# Editor & OS
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Environment files (secrets)
+.env
+.env.*
+!.env.example
+
+# Logs & temp files
+*.log
+logs
+dump.rdb
+nec_workdir
+*.nec
+*.out
+coverage
+htmlcov
+.coverage
+*.bak
+*.tmp
+
+# Scripts (dev utility only)
+scripts
+
+# Docker override (local only)
+docker-compose.override.yml

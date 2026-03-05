@@ -164,13 +164,13 @@ export function ImpedanceChart({ data, matching = DEFAULT_MATCHING, heightClass 
               fontFamily: "JetBrains Mono, monospace",
             }}
             labelStyle={{ color: ct.tooltipLabel }}
-            labelFormatter={(v: number) => `${v.toFixed(3)} MHz`}
-            formatter={(value: number, name: string) => {
+            labelFormatter={(v) => `${Number(v).toFixed(3)} MHz`}
+            formatter={(value, name) => {
               const label = name === "r" ? "R" : "jX";
               const color = name === "r" ? "#3B82F6" : "#F59E0B";
               return [
-                <span key={name} style={{ color }}>
-                  {value.toFixed(1)} {"\u03A9"}
+                <span key={String(name)} style={{ color }}>
+                  {Number(value).toFixed(1)} {"\u03A9"}
                 </span>,
                 label,
               ];
@@ -215,7 +215,7 @@ export function ImpedanceChart({ data, matching = DEFAULT_MATCHING, heightClass 
       </ResponsiveContainer>
       </div>
       {/* Supplementary legend for reference lines */}
-      <div className="flex items-center justify-center gap-3 pt-1 flex-shrink-0" style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px" }}>
+      <div className="flex items-center justify-center gap-3 pt-1 shrink-0" style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px" }}>
         <span className="flex items-center gap-1">
           <span className="inline-block w-4 h-0 border-t border-dashed" style={{ borderColor: "#6B7280" }} />
           <span style={{ color: ct.tick }}>{matching.feedlineZ0}{"\u03A9"} ref</span>

@@ -166,7 +166,7 @@ export function CompareOverlay({ className = "" }: CompareOverlayProps) {
                   borderRadius: "4px",
                   fontSize: "10px",
                 }}
-                labelFormatter={(v: number) => `${v.toFixed(3)} MHz`}
+                labelFormatter={(v) => `${Number(v).toFixed(3)} MHz`}
               />
               <ReferenceLine y={2} stroke="#22C55E" strokeDasharray="3 3" strokeWidth={0.5} />
 

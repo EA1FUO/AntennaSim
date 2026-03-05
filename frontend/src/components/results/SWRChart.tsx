@@ -143,8 +143,9 @@ export function SWRChart({
   }, [freqRange]);
 
   const handleClick = useCallback(
-    (point: { activePayload?: Array<{ payload: { index?: number } }> }) => {
-      const idx = point.activePayload?.[0]?.payload?.index;
+    (point: Record<string, unknown>) => {
+      const ap = point?.activePayload;
+      const idx = Array.isArray(ap) ? (ap[0] as { payload?: { index?: number } })?.payload?.index : undefined;
       if (idx != null && onFrequencyClick) {
         onFrequencyClick(idx);
       }
@@ -253,20 +254,21 @@ export function SWRChart({
               fontFamily: "JetBrains Mono, monospace",
             }}
             labelStyle={{ color: ct.tooltipLabel }}
-            labelFormatter={(v: number) => `${v.toFixed(3)} MHz`}
-            formatter={(value: number, name: string) => {
+            labelFormatter={(v) => `${Number(v).toFixed(3)} MHz`}
+            formatter={(value, name) => {
+              const v = Number(value);
               const color =
-                value < 1.5
+                v < 1.5
                   ? "#10B981"
-                  : value < 2
+                  : v < 2
                     ? "#22C55E"
-                    : value < 3
+                    : v < 3
                       ? "#F59E0B"
                       : "#EF4444";
               const label = name === "s1pSwr" ? ".s1p" : "SWR";
               return [
-                <span key={name} style={{ color }}>
-                  {value.toFixed(2)}
+                <span key={String(name)} style={{ color }}>
+                  {v.toFixed(2)}
                 </span>,
                 label,
               ];
@@ -316,7 +318,7 @@ export function SWRChart({
       </ResponsiveContainer>
       </div>
       {/* Zone legend */}
-      <div className="flex items-center justify-center gap-3 pt-1 flex-shrink-0" style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px" }}>
+      <div className="flex items-center justify-center gap-3 pt-1 shrink-0" style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px" }}>
         <span className="flex items-center gap-1">
           <span className="inline-block w-3 h-2 rounded-sm" style={{ backgroundColor: "#10B981", opacity: 0.35 }} />
           <span style={{ color: ct.tick }}>&lt;1.5 Good</span>

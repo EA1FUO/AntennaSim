@@ -433,7 +433,7 @@ export function SmithChart({
       )}
       </div>
       {/* Legend */}
-      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pt-2 flex-shrink-0" style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px" }}>
+      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pt-2 shrink-0" style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px" }}>
         <span className="flex items-center gap-1">
           <span className="inline-block w-3 h-0.5 rounded" style={{ backgroundColor: trajectoryColor }} />
           <span style={{ color: textColor }}>Z locus</span>

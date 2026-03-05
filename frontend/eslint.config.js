@@ -19,6 +19,13 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      // These new react-hooks v7 rules are too strict for Three.js/R3F
+      // imperative patterns and common React patterns (menu close on route
+      // change, imperative camera mutation, ref-based SVG measurement, etc.)
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/refs': 'warn',
+      'react-hooks/immutability': 'warn',
+      'react-hooks/purity': 'warn',
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },
