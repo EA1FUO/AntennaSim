@@ -29,23 +29,10 @@ import type { S1PDataPoint } from "../../utils/s1p-parser";
 import type { MatchingConfig } from "../../utils/units";
 import { applyMatching, DEFAULT_MATCHING } from "../../utils/units";
 import { useChartTheme } from "../../hooks/useChartTheme";
+import { getBandEdges } from "../../utils/ham-bands";
 
-/** Amateur radio band edges (MHz) */
-const HAM_BANDS = [
-  { name: "160m", start: 1.8, end: 2.0 },
-  { name: "80m", start: 3.5, end: 4.0 },
-  { name: "60m", start: 5.3305, end: 5.4065 },
-  { name: "40m", start: 7.0, end: 7.3 },
-  { name: "30m", start: 10.1, end: 10.15 },
-  { name: "20m", start: 14.0, end: 14.35 },
-  { name: "17m", start: 18.068, end: 18.168 },
-  { name: "15m", start: 21.0, end: 21.45 },
-  { name: "12m", start: 24.89, end: 24.99 },
-  { name: "10m", start: 28.0, end: 29.7 },
-  { name: "6m", start: 50.0, end: 54.0 },
-  { name: "2m", start: 144.0, end: 148.0 },
-  { name: "70cm", start: 420.0, end: 450.0 },
-];
+/** Amateur radio band edges (MHz) — sourced from shared ham-bands utility */
+const HAM_BANDS = getBandEdges("r1");
 
 interface SWRChartProps {
   data: FrequencyResult[];

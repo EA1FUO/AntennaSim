@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Ham band frequency presets with ITU Region 1/2/3 support and band analysis utilities
+- Project save/load (.antennasim JSON format) with schema validation and round-trip integrity
+- Extracted shared ham band definitions from SWRChart into reusable `utils/ham-bands.ts`
+- 33 new tests for ham bands and project file utilities
+
 ## [0.8.0] - 2026-03-05
 
 ### Added
