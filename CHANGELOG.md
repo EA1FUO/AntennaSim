@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.0.0] - 2026-03-05
 
 ### Added
 
@@ -15,12 +15,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - FrequencySegmentEditor component: compact segment list with per-segment start/stop/steps controls, total point counter, and 301-point cap
 - Card deck builders (WASM + backend) emit interleaved FR + NE + RP card blocks for multi-segment sweeps
 - `bandToSegment`, `hasBandSegment`, `removeBandSegment` utilities in `ham-bands.ts`
-- 12 new tests for multi-segment card deck generation and segment helper functions (total: 308)
-
-## [0.9.0] - 2026-03-05
-
-### Added
-
 - NumberInput click-to-edit component replacing all raw `<input type="number">` fields across 5 files
 - Frequency sweep controls (start/stop/steps) on the Simulator page for manual sweep range override
 - Adaptive sweep step count (`computeSteps`): ~25 pts/MHz, clamped [11, 101], auto-adjusts when range changes
@@ -39,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Copy/paste/duplicate/mirror buttons in editor toolbar
 - `setFrequencyRange` action on antennaStore for overriding template-derived frequency range
 - Extracted shared ham band definitions from SWRChart into reusable `utils/ham-bands.ts`
-- 66 new tests for ham bands (including computeSteps), project files, validation engine, and matching networks
+- 78 new tests for multi-segment sweeps, ham bands (including computeSteps), project files, validation engine, and matching networks (total: 308)
 
 ### Fixed
 
@@ -262,7 +256,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 This was the initial public release -- a complete rewrite of the original prototype into a production-quality application with React 19, TypeScript, FastAPI, and Docker.
 
-[0.9.0]: https://github.com/EA1FUO/AntennaSim/compare/v0.8.0...v0.9.0
+[1.0.0]: https://github.com/EA1FUO/AntennaSim/compare/v0.8.0...v1.0.0
 [0.8.0]: https://github.com/EA1FUO/AntennaSim/compare/v0.7.7...v0.8.0
 [0.7.7]: https://github.com/EA1FUO/AntennaSim/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/EA1FUO/AntennaSim/compare/v0.7.5...v0.7.6
