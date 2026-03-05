@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+/// <reference types="vitest/globals" />
 
 /** App version injected by Vite from the root VERSION file at build time. */
 declare const __APP_VERSION__: string;

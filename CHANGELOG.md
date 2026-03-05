@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.0] - 2026-03-05
+
+### Added
+
+- Testing infrastructure with Vitest and @vitest/coverage-v8
+- Snapshot tests for all 17 antenna templates (geometry, excitation, frequency range, feedpoints)
+- Parameter boundary tests verifying templates don't crash at min/max values
+- NEC2 card deck generation tests (GW, EX, GN, FR, RP, PT, LD, TL, NE, GA, GM, GR cards)
+- NEC2 output parser tests (SWR computation, impedance extraction, pattern parsing, current distribution)
+- WASM engine parity tests (card deck determinism, structural consistency across all templates)
+- Test step in CI workflow (runs `npm test` between lint and build)
+- `npm test`, `npm run test:watch`, and `npm run test:coverage` scripts
+
 ## [0.7.7] - 2026-03-05
 
 ### Added
@@ -208,6 +221,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 This was the initial public release -- a complete rewrite of the original prototype into a production-quality application with React 19, TypeScript, FastAPI, and Docker.
 
+[0.8.0]: https://github.com/EA1FUO/AntennaSim/compare/v0.7.7...v0.8.0
 [0.7.7]: https://github.com/EA1FUO/AntennaSim/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/EA1FUO/AntennaSim/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/EA1FUO/AntennaSim/compare/v0.7.4...v0.7.5
