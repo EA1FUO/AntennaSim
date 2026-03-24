@@ -13,7 +13,7 @@ import type { EditorWire } from "../../stores/editorStore";
 /** Column definitions (used by desktop table) */
 const COLUMNS = [
   { key: "tag", label: "Tag", width: "w-12", editable: false },
-  { key: "segments", label: "Segs", width: "w-12", editable: false },
+  { key: "segments", label: "Segs", width: "w-12", editable: true },
   { key: "x1", label: "X1", width: "w-16", editable: true },
   { key: "y1", label: "Y1", width: "w-16", editable: true },
   { key: "z1", label: "Z1", width: "w-16", editable: true },
@@ -23,7 +23,7 @@ const COLUMNS = [
   { key: "radius", label: "R(m)", width: "w-16", editable: true },
 ] as const;
 
-type EditableKey = "x1" | "y1" | "z1" | "x2" | "y2" | "z2" | "radius";
+type EditableKey = "segments" | "x1" | "y1" | "z1" | "x2" | "y2" | "z2" | "radius";
 
 interface EditCell {
   tag: number;
@@ -76,7 +76,9 @@ export function WireTable() {
 
   const commitEdit = useCallback(() => {
     if (!editCell) return;
-    const numVal = parseFloat(editValue);
+    const numVal = editCell.field === "segments"
+      ? Math.max(1, Math.min(200, Math.round(parseFloat(editValue))))
+      : parseFloat(editValue);
     if (!isNaN(numVal) && isFinite(numVal)) {
       updateWire(editCell.tag, { [editCell.field]: numVal });
     }
@@ -262,9 +264,11 @@ export function WireTable() {
                             : undefined
                         }
                       >
-                        {col.key === "tag" || col.key === "segments"
+                        {col.key === "tag"
                           ? String(value)
-                          : formatNum(value as number, col.key === "radius" ? 4 : 3)}
+                          : col.key === "segments"
+                            ? <>{String(value)}{wire.segmentsManual && <span className="text-accent ml-0.5" title="Manual override">*</span>}</>
+                            : formatNum(value as number, col.key === "radius" ? 4 : 3)}
                       </td>
                     );
                   })}
@@ -307,7 +311,7 @@ export function WireTable() {
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs font-bold text-accent">Wire {wire.tag}</span>
                 <span className="text-[11px] text-text-secondary font-mono">
-                  {wire.segments} segs | R={formatNum(wire.radius, 4)}m
+                  {wire.segments}{wire.segmentsManual ? <span className="text-accent">*</span> : ""} segs | R={formatNum(wire.radius, 4)}m
                 </span>
               </div>
               {/* Coordinates grid */}

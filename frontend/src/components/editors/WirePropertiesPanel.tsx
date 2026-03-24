@@ -42,6 +42,7 @@ export function WirePropertiesPanel() {
   const setExcitation = useEditorStore((s) => s.setExcitation);
   const removeExcitation = useEditorStore((s) => s.removeExcitation);
   const splitWire = useEditorStore((s) => s.splitWire);
+  const resetSegments = useEditorStore((s) => s.resetSegments);
   const deleteWires = useEditorStore((s) => s.deleteWires);
   const pickingExcitationForTag = useEditorStore((s) => s.pickingExcitationForTag);
   const setPickingExcitationForTag = useEditorStore((s) => s.setPickingExcitationForTag);
@@ -110,9 +111,28 @@ export function WirePropertiesPanel() {
         <h4 className="text-xs font-medium text-text-primary">
           Wire <span className="text-accent">{wire.tag}</span>
         </h4>
-        <span className="text-[11px] font-mono text-text-secondary">
-          {wire.segments} segs
-        </span>
+        <div className="flex items-center gap-1">
+          <NumberInput
+            value={wire.segments}
+            onChange={(v) => updateWire(wire.tag, { segments: v })}
+            decimals={0}
+            min={1}
+            max={200}
+            size="xs"
+          />
+          <span className="text-[10px] text-text-secondary">segs</span>
+          {wire.segmentsManual ? (
+            <button
+              onClick={() => resetSegments(wire.tag)}
+              className="text-[10px] text-accent hover:text-accent/80 transition-colors"
+              title="Reset to auto-computed segments (lambda/10 rule)"
+            >
+              Auto
+            </button>
+          ) : (
+            <span className="text-[10px] text-text-secondary/60">(auto)</span>
+          )}
+        </div>
       </div>
 
       {/* Endpoint 1 */}
