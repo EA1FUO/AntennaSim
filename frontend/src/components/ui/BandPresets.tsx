@@ -124,7 +124,7 @@ export function BandPresets({
     <div className="space-y-1">
       <div className="flex items-center gap-1.5 px-1">
         <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider">
-          Band Presets
+          Band Sweep Presets
         </h3>
         {hasSegments && (
           <span className="text-[10px] text-accent">
