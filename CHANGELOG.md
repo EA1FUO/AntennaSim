@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.1] - 2026-03-24
+
+### Added
+
+- Manual wire segment override in the Wire Editor with sticky behavior (persists through geometry changes)
+- Editable segments in both WirePropertiesPanel and WireTable with "Auto" reset button
+- Visual indicator (*) for manually overridden segments in the wire table
+
+### Changed
+
+- Renamed "Band Presets" label to "Band Sweep Presets" for clarity
+
 ## [1.0.0] - 2026-03-05
 
 ### Added
