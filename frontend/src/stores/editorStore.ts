@@ -26,6 +26,8 @@ export type { LumpedLoad, TransmissionLine } from "../api/nec";
 export interface EditorWire extends WireGeometry {
   /** Whether this wire is currently selected */
   selected?: boolean;
+  /** Whether segments were manually set by the user (sticky override) */
+  segmentsManual?: boolean;
 }
 
 /** A snapshot of the editor state for undo/redo */
@@ -100,6 +102,8 @@ interface EditorState {
   moveAllWiresZ: (dz: number) => void;
   /** Split a wire at its midpoint into two wires */
   splitWire: (tag: number) => void;
+  /** Reset a wire's segments to auto-computed (lambda/10 rule) */
+  resetSegments: (tag: number) => void;
   /** Clear all wires */
   clearAll: () => void;
   /** Set all wires at once (e.g. from import) */
@@ -300,9 +304,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const wire = state.wires[idx]!;
     const updated = { ...wire, ...updates };
 
-    // Recompute segments if geometry changed
-    if (updates.x1 !== undefined || updates.y1 !== undefined || updates.z1 !== undefined ||
-        updates.x2 !== undefined || updates.y2 !== undefined || updates.z2 !== undefined) {
+    // If segments explicitly set by user, mark as manual override
+    if (updates.segments !== undefined) {
+      updated.segments = Math.max(1, Math.min(200, Math.round(updates.segments)));
+      updated.segmentsManual = true;
+    }
+
+    // Recompute segments if geometry changed and not manually overridden
+    if (!updated.segmentsManual &&
+        (updates.x1 !== undefined || updates.y1 !== undefined || updates.z1 !== undefined ||
+         updates.x2 !== undefined || updates.y2 !== undefined || updates.z2 !== undefined)) {
       updated.segments = computeSegments(updated, state.designFrequencyMhz);
     }
 
@@ -387,6 +398,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       y2: midY,
       z2: midZ,
       segments: computeSegments({ x1: wire.x1, y1: wire.y1, z1: wire.z1, x2: midX, y2: midY, z2: midZ }, state.designFrequencyMhz),
+      segmentsManual: false,
     };
     const wire2: EditorWire = {
       ...wire,
@@ -395,6 +407,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       y1: midY,
       z1: midZ,
       segments: computeSegments({ x1: midX, y1: midY, z1: midZ, x2: wire.x2, y2: wire.y2, z2: wire.z2 }, state.designFrequencyMhz),
+      segmentsManual: false,
     };
 
     // Update excitations if they reference the split wire.
@@ -432,6 +445,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       selectedTags: newSelected,
       nextTag: tag2 + 1,
     });
+  },
+
+  resetSegments: (tag) => {
+    const state = get();
+    const idx = state.wires.findIndex((w) => w.tag === tag);
+    if (idx === -1) return;
+
+    const wire = state.wires[idx]!;
+    const segments = computeSegments(wire, state.designFrequencyMhz);
+    const updated = { ...wire, segments, segmentsManual: false };
+    const newWires = [...state.wires];
+    newWires[idx] = updated;
+    const newExcitations = fixExcitations(state.excitations, newWires);
+    set({ ...pushUndo(state), wires: newWires, excitations: newExcitations });
   },
 
   clearAll: () => {
@@ -525,11 +552,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setShowGrid: (show) => set({ showGrid: show }),
   setDesignFrequency: (mhz) => {
     const state = get();
-    // Recompute all wire segments with new design frequency
-    const newWires = state.wires.map((w) => ({
-      ...w,
-      segments: computeSegments(w, mhz),
-    }));
+    // Recompute wire segments with new design frequency (skip manually overridden)
+    const newWires = state.wires.map((w) =>
+      w.segmentsManual ? { ...w } : { ...w, segments: computeSegments(w, mhz) }
+    );
     // Scale excitation segments proportionally to preserve relative position
     const newExcitations = state.excitations.map((e) => {
       const oldWire = state.wires.find((w) => w.tag === e.wire_tag);
