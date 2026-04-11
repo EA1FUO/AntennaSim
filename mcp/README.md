@@ -1,12 +1,12 @@
 # AntennaSim MCP Server
 
-This MCP server exposes **AntennaSim's NEC2-based antenna simulation capabilities** as tools that LLM clients can call over **stdio**.
+This MCP server exposes **AntennaSim's NEC2-based antenna simulation capabilities** as tools that LLM clients can call over **stdio** or **HTTP (SSE)**.
 
 It is designed to let agents and chat assistants:
 
 - list and inspect antenna templates
 - pick ham bands and sweep ranges
-- generate NEC2 geometry from **19 predefined antenna templates**
+- generate NEC2 geometry from **21 predefined antenna templates**
 - design custom wire antennas from a compact endpoint-based string format
 - inspect/export the raw NEC2 card deck for a template configuration
 - run `nec2c`
@@ -15,6 +15,16 @@ It is designed to let agents and chat assistants:
 - simulate arbitrary custom wire geometries
 
 The server is **standalone** and **does not require Redis**.
+
+**Two deployment modes:**
+
+| | Local (stdio) | Docker (SSE over HTTP) |
+|---|---|---|
+| **Transport** | Standard I/O | HTTP + Server-Sent Events |
+| **Best for** | Claude Desktop, Cursor, CLI | Remote access, multi-user, docker-compose |
+| **Port** | N/A (subprocess) | 8080 (configurable) |
+| **nec2c** | Must be installed locally | Bundled in Docker image |
+| **Config** | `python server.py` | `MCP_TRANSPORT=sse` |
 
 ---
 
@@ -54,9 +64,9 @@ Internally, the MCP server:
 
 ## Built-in templates
 
-The server currently includes **19** built-in templates:
+The server currently includes **21** built-in templates:
 
-- **Wire:** `dipole`, `inverted-v`, `efhw`, `random-wire`
+- **Wire:** `dipole`, `inverted-v`, `efhw`, `efhw-inverted-l`, `efhw-inverted-v`, `random-wire`
 - **Vertical:** `vertical`, `inverted-l`, `j-pole`, `slim-jim`
 - **Multiband:** `off-center-fed`, `fan-dipole`, `g5rv`
 - **Loop:** `delta-loop`, `horizontal-delta-loop`, `magnetic-loop`
@@ -137,9 +147,86 @@ antsim-mcp
 
 ---
 
+## Docker deployment
+
+The MCP server is integrated into the project's `docker-compose.yml` and runs as a separate service with SSE transport, accessible via HTTP.
+
+### With docker-compose (recommended)
+
+The MCP service is included in both the production and development stacks:
+
+```bash
+# Production (all services including MCP)
+docker compose up --build
+
+# Development (with hot-reload volume mounts)
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+```
+
+| Service | URL | Description |
+|---|---|---|
+| MCP (production) | `http://mcp:8080/sse` (internal) | Via nginx at `/mcp/` |
+| MCP (dev) | `http://localhost:8080/sse` | Direct access |
+| MCP via nginx | `http://localhost/mcp/sse` | Proxied through nginx |
+
+### Standalone Docker run
+
+Build and run the MCP service independently:
+
+```bash
+# Build
+docker build -f mcp/Dockerfile -t antennasim-mcp .
+
+# Run
+docker run -p 8080:8080 antennasim-mcp
+```
+
+The server starts on `http://0.0.0.0:8080` with SSE transport.
+
+### Connecting an MCP client to the Docker SSE endpoint
+
+For Claude Desktop or any SSE-capable MCP client, configure the SSE URL:
+
+```
+http://localhost:8080/sse
+```
+
+Or if running behind nginx:
+
+```
+http://your-host/mcp/sse
+```
+
+### Validating with the MCP Inspector
+
+```bash
+# Start the MCP container
+docker run -d -p 9090:8080 --name mcp antennasim-mcp
+
+# Run the Inspector pointing at the SSE endpoint
+npx @modelcontextprotocol/inspector
+
+# In the Inspector UI:
+#   1. Change transport from STDIO to SSE
+#   2. Enter URL: http://localhost:9090/sse
+#   3. Click Connect
+#   4. Navigate to Tools → List Tools
+```
+
+---
+
 ## Environment variables
 
 The server can use these useful environment variables:
+
+- `MCP_TRANSPORT`  
+  Transport mode: `"stdio"` (default) for local CLI clients, `"sse"` for HTTP/Docker.
+
+- `MCP_HOST`  
+  Listen address for SSE mode. Default `"0.0.0.0"` (all interfaces).
+
+- `MCP_PORT`  
+  Listen port for SSE mode. Default `8080`.
 
 - `ANTENNASIM_BACKEND_DIR`  
   Full path to `AntennaSim/backend` if it is not in the default sibling location.
@@ -150,12 +237,21 @@ The server can use these useful environment variables:
 - `NEC_WORKDIR`  
   Passed through the backend settings loader. Controls where temporary NEC files are written.
 
-Example:
+Example (local stdio):
 
 ```bash
 export ANTENNASIM_BACKEND_DIR=/full/path/to/AntennaSim/backend
-export SIM_TIMEOUT_SECONDS=180
-export NEC_WORKDIR=/tmp/nec_workdir
+python server.py
+```
+
+Example (SSE for Docker):
+
+```bash
+export MCP_TRANSPORT=sse
+export MCP_HOST=0.0.0.0
+export MCP_PORT=8080
+export ANTENNASIM_BACKEND_DIR=/app/backend
+python server.py
 ```
 
 ---
@@ -228,7 +324,7 @@ Any stdio-based MCP client can launch:
 
 ## 1) `list_antenna_templates`
 
-Lists all **19** built-in templates with:
+Lists all **21** built-in templates with:
 
 - template ID
 - name
@@ -616,6 +712,8 @@ Check:
 
 ## Quick start summary
 
+### Local (stdio)
+
 ```bash
 cd AntennaSim/mcp
 python -m venv .venv
@@ -626,3 +724,22 @@ python server.py
 ```
 
 Then connect your MCP client to that stdio process and start calling the tools.
+
+### Docker (SSE over HTTP)
+
+```bash
+cd AntennaSim
+docker build -f mcp/Dockerfile -t antennasim-mcp .
+docker run -p 8080:8080 antennasim-mcp
+```
+
+Then point your MCP client at `http://localhost:8080/sse`.
+
+### Full stack with docker-compose
+
+```bash
+cd AntennaSim
+docker compose up --build
+```
+
+MCP is available at `http://localhost/mcp/sse` (via nginx) or directly at `http://mcp:8080/sse` (internal).

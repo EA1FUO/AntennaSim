@@ -1818,6 +1818,200 @@ inverted_l_template = AntennaTemplate(
 
 
 # ---------------------------------------------------------------------------
+# EFHW Inverted-L
+# ---------------------------------------------------------------------------
+
+def _efhw_inverted_l_geometry(params: Mapping[str, float]) -> list[WireGeometry]:
+    freq = _param(params, "frequency", 7.1)
+    vertical_height = _param(params, "vertical_height", 8.0)
+    feed_height = _param(params, "feed_height", 1.5)
+    wire_diam_mm = _param(params, "wire_diameter", 2.0)
+
+    wavelength = 300.0 / freq
+    total_length = (wavelength / 2.0) * 0.97
+    radius = (wire_diam_mm / 1000.0) / 2.0
+
+    # Cap the vertical section to the total half-wave length
+    actual_vertical = min(vertical_height, total_length)
+    horizontal_length = max(0.0, total_length - actual_vertical)
+
+    max_freq = freq * 1.15
+    vertical_segs = auto_segment(actual_vertical, max_freq, 21)
+
+    top_z = feed_height + actual_vertical
+    wires: list[WireGeometry] = [
+        WireGeometry(1, vertical_segs, 0.0, 0.0, feed_height, 0.0, 0.0, top_z, radius),
+    ]
+
+    if horizontal_length > 1e-6:
+        horizontal_segs = auto_segment(horizontal_length, max_freq, 21)
+        wires.append(
+            WireGeometry(2, horizontal_segs, 0.0, 0.0, top_z, horizontal_length, 0.0, top_z, radius),
+        )
+
+    counterpoise_length = wavelength * 0.05
+    counterpoise_segs = auto_segment(counterpoise_length, max_freq, 5)
+    cp_tag = len(wires) + 1
+    wires.append(
+        WireGeometry(cp_tag, counterpoise_segs, 0.0, 0.0, feed_height, -counterpoise_length, 0.0, feed_height, radius),
+    )
+
+    return wires
+
+
+def _efhw_inverted_l_excitation(_params: Mapping[str, float], _wires: list[WireGeometry]) -> Excitation:
+    return Excitation(wire_tag=1, segment=1, voltage_real=1.0, voltage_imag=0.0)
+
+
+def _efhw_inverted_l_frequency_range(params: Mapping[str, float]) -> FrequencyRange:
+    freq = _param(params, "frequency", 7.1)
+    return _centered_frequency_range(freq, 0.1, 31)
+
+
+efhw_inverted_l_template = AntennaTemplate(
+    id="efhw-inverted-l",
+    name="EFHW Inverted-L",
+    short_name="EFHW-L",
+    description="End-fed half-wave bent into an L shape — vertical section plus horizontal top wire.",
+    long_description=(
+        "An EFHW Inverted-L is an End-Fed Half-Wave antenna where the wire runs vertically from "
+        "a low feed point up to the top of a mast, then continues horizontally. The total wire "
+        "length remains approximately λ/2. This layout is very practical when only a single mast "
+        "is available: the vertical section provides some low-angle radiation component, while the "
+        "horizontal top section completes the half-wave resonance. Like all EFHW antennas, a 49:1 "
+        "transformer and a short counterpoise are used at the feed point. Multiband operation on "
+        "even harmonics is possible (e.g., a 40m EFHW-L also works on 20m and 10m)."
+    ),
+    icon="┐~",
+    category="wire",
+    difficulty="beginner",
+    bands=("80m", "40m", "20m", "15m", "10m"),
+    parameters=(
+        _parameter("frequency", "Design Frequency", "Fundamental frequency for half-wave resonance", "MHz", 0.5, 2000.0, 0.1, 7.1, 3),
+        _parameter("vertical_height", "Vertical Section", "Height of the vertical wire section above the feed point", "m", 1.0, 30.0, 0.5, 8.0, 1),
+        _parameter("feed_height", "Feed Height", "Height of the feed point above ground", "m", 0.5, 10.0, 0.5, 1.5, 1),
+        _parameter("wire_diameter", "Wire Diameter", "Conductor diameter", "mm", 0.5, 10.0, 0.1, 2.0, 1),
+    ),
+    default_ground=AVERAGE_GROUND,
+    generate_geometry=_efhw_inverted_l_geometry,
+    generate_excitation=_efhw_inverted_l_excitation,
+    default_frequency_range=_efhw_inverted_l_frequency_range,
+    tips=(
+        "A 49:1 transformer at the feed point is essential — the end-fed impedance is several thousand ohms.",
+        "The vertical section adds a useful vertical radiation component, helpful for medium-distance contacts.",
+        "If the mast is taller than λ/2, the wire is entirely vertical and there is no horizontal section.",
+        "Works on even harmonics: a 40m EFHW-L also covers 20m and 10m.",
+        "Keep the counterpoise wire away from the vertical section to avoid coupling.",
+        "This configuration needs only one support point (the mast top) plus a low anchor for the far end of the horizontal wire.",
+    ),
+    related_templates=("efhw", "efhw-inverted-v", "inverted-l"),
+)
+
+
+# ---------------------------------------------------------------------------
+# EFHW Inverted-V
+# ---------------------------------------------------------------------------
+
+def _efhw_inverted_v_geometry(params: Mapping[str, float]) -> list[WireGeometry]:
+    freq = _param(params, "frequency", 7.1)
+    apex_height = _param(params, "apex_height", 12.0)
+    feed_height = _param(params, "feed_height", 2.0)
+    far_end_height = _param(params, "far_end_height", 2.0)
+    wire_diam_mm = _param(params, "wire_diameter", 2.0)
+
+    wavelength = 300.0 / freq
+    total_length = (wavelength / 2.0) * 0.97
+    radius = (wire_diam_mm / 1000.0) / 2.0
+
+    leg_length = total_length / 2.0
+
+    feed_dz = apex_height - feed_height
+    if feed_dz > leg_length:
+        feed_dx = 0.0
+        feed_dz = leg_length
+    else:
+        feed_dx = math.sqrt(max(0.0, leg_length * leg_length - feed_dz * feed_dz))
+
+    far_dz = apex_height - far_end_height
+    if far_dz > leg_length:
+        far_dx = 0.0
+        far_dz = leg_length
+    else:
+        far_dx = math.sqrt(max(0.0, leg_length * leg_length - far_dz * far_dz))
+
+    max_freq = freq * 1.15
+    segs_feed_leg = auto_segment(leg_length, max_freq, 21)
+    segs_far_leg = auto_segment(leg_length, max_freq, 21)
+
+    feed_z = apex_height - feed_dz
+    far_z = apex_height - far_dz
+
+    wires: list[WireGeometry] = [
+        WireGeometry(1, segs_feed_leg, -feed_dx, 0.0, feed_z, 0.0, 0.0, apex_height, radius),
+        WireGeometry(2, segs_far_leg, 0.0, 0.0, apex_height, far_dx, 0.0, far_z, radius),
+    ]
+
+    counterpoise_length = wavelength * 0.05
+    counterpoise_segs = auto_segment(counterpoise_length, max_freq, 5)
+    wires.append(
+        WireGeometry(3, counterpoise_segs, -feed_dx, 0.0, feed_z, -feed_dx - counterpoise_length, 0.0, feed_z, radius),
+    )
+
+    return wires
+
+
+def _efhw_inverted_v_excitation(_params: Mapping[str, float], _wires: list[WireGeometry]) -> Excitation:
+    return Excitation(wire_tag=1, segment=1, voltage_real=1.0, voltage_imag=0.0)
+
+
+def _efhw_inverted_v_frequency_range(params: Mapping[str, float]) -> FrequencyRange:
+    freq = _param(params, "frequency", 7.1)
+    return _centered_frequency_range(freq, 0.1, 31)
+
+
+efhw_inverted_v_template = AntennaTemplate(
+    id="efhw-inverted-v",
+    name="EFHW Inverted-V",
+    short_name="EFHW-V",
+    description="End-fed half-wave draped over an apex — both ends slope down from a single high point.",
+    long_description=(
+        "An EFHW Inverted-V is an End-Fed Half-Wave antenna where the wire is draped over "
+        "a single high support (mast, tree branch) with both ends sloping downward. The total "
+        "wire length is approximately λ/2 and the feed point with 49:1 transformer is at one "
+        "of the low ends. This is one of the simplest antennas to deploy in the field: throw a "
+        "line over a branch, hoist the wire up, stake both ends, and connect the transformer. "
+        "The inverted-V shape gives a slightly broader azimuthal pattern than a flat wire and "
+        "the sloping ends lower the overall height requirement. Like the standard EFHW, multiband "
+        "operation on even harmonics is possible."
+    ),
+    icon="/\\~",
+    category="wire",
+    difficulty="beginner",
+    bands=("80m", "40m", "20m", "15m", "10m"),
+    parameters=(
+        _parameter("frequency", "Design Frequency", "Fundamental frequency for half-wave resonance", "MHz", 0.5, 2000.0, 0.1, 7.1, 3),
+        _parameter("apex_height", "Apex Height", "Height of the apex (support point) above ground", "m", 3.0, 50.0, 0.5, 12.0, 1),
+        _parameter("feed_height", "Feed End Height", "Height of the fed end above ground", "m", 0.5, 30.0, 0.5, 2.0, 1),
+        _parameter("far_end_height", "Far End Height", "Height of the non-fed end above ground", "m", 0.5, 30.0, 0.5, 2.0, 1),
+        _parameter("wire_diameter", "Wire Diameter", "Conductor diameter", "mm", 0.5, 10.0, 0.1, 2.0, 1),
+    ),
+    default_ground=AVERAGE_GROUND,
+    generate_geometry=_efhw_inverted_v_geometry,
+    generate_excitation=_efhw_inverted_v_excitation,
+    default_frequency_range=_efhw_inverted_v_frequency_range,
+    tips=(
+        "The 49:1 transformer is at the low (fed) end — keep the coax run along the ground, away from the wire.",
+        "Needs only one high support point (tree branch, mast, rope over a limb).",
+        "A slightly broader horizontal pattern than a flat EFHW due to the sloping geometry.",
+        "Works on even harmonics: a 40m EFHW-V also covers 20m and 10m.",
+        "Lower both ends symmetrically for a balanced pattern, or lower one end more for directional preference.",
+        "A short counterpoise wire (0.05λ) at the feed end stabilizes the impedance.",
+    ),
+    related_templates=("efhw", "efhw-inverted-l", "inverted-v"),
+)
+
+
+# ---------------------------------------------------------------------------
 # Random Wire
 # ---------------------------------------------------------------------------
 
@@ -1912,6 +2106,8 @@ TEMPLATES: list[AntennaTemplate] = [
     j_pole_template,
     slim_jim_template,
     efhw_template,
+    efhw_inverted_l_template,
+    efhw_inverted_v_template,
     random_wire_template,
     g5rv_template,
     fan_dipole_template,

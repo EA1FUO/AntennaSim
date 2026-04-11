@@ -1285,8 +1285,29 @@ def get_nec2_card_deck(
 
 
 def main() -> None:
-    """Run the MCP server using stdio transport."""
-    mcp.run()
+    """Run the MCP server.
+
+    Transport is selected via the MCP_TRANSPORT environment variable:
+    - "stdio" (default): standard I/O, for local CLI / Claude Desktop / Cursor
+    - "sse": HTTP + Server-Sent Events, for Docker / remote access
+
+    When using SSE transport, the server listens on:
+    - MCP_HOST (default "0.0.0.0")
+    - MCP_PORT (default 8080)
+    """
+    import os
+
+    transport = os.environ.get("MCP_TRANSPORT", "stdio").strip().lower()
+    if transport == "sse":
+        host = os.environ.get("MCP_HOST", "0.0.0.0")
+        port = int(os.environ.get("MCP_PORT", "8080"))
+        mcp.settings.host = host
+        mcp.settings.port = port
+        if mcp.settings.transport_security is not None:
+            mcp.settings.transport_security.enable_dns_rebinding_protection = False
+        mcp.run(transport="sse")
+    else:
+        mcp.run()
 
 
 if __name__ == "__main__":

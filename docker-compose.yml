@@ -33,6 +33,30 @@ services:
     depends_on:
       - redis
 
+  mcp:
+    image: ea1fuo/antennasim-mcp:latest
+    build:
+      context: .
+      dockerfile: mcp/Dockerfile
+    environment:
+      - MCP_TRANSPORT=sse
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8080
+      - ANTENNASIM_BACKEND_DIR=/app/backend
+      - SIM_TIMEOUT_SECONDS=180
+      - NEC_WORKDIR=/tmp/nec_workdir
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 512M
+    read_only: true
+    tmpfs:
+      - /tmp/nec_workdir:size=100M,uid=999,gid=999
+    security_opt:
+      - no-new-privileges:true
+
   redis:
     image: redis:7-alpine
     volumes:
@@ -49,6 +73,7 @@ services:
     depends_on:
       - frontend
       - backend
+      - mcp
     restart: unless-stopped
 
 volumes:

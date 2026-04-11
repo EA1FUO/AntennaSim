@@ -1,0 +1,35 @@
+FROM python:3.12-slim
+
+# Install nec2c
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends nec2c && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN which nec2c
+
+WORKDIR /app
+
+# Install Python dependencies
+RUN pip install --no-cache-dir \
+    "mcp>=1.0.0" \
+    "pydantic>=2.10.0" \
+    "pydantic-settings>=2.6.0"
+
+# Source is volume-mounted in dev mode at /app/mcp and /app/backend/src
+COPY VERSION ./VERSION
+COPY VERSION ./backend/VERSION
+
+RUN mkdir -p /tmp/nec_workdir /opt/antsim_mcp
+
+ENV ANTENNASIM_BACKEND_DIR=/app/backend
+ENV NEC_WORKDIR=/tmp/nec_workdir
+ENV MCP_TRANSPORT=sse
+ENV MCP_HOST=0.0.0.0
+ENV MCP_PORT=8080
+ENV PYTHONUNBUFFERED=1
+
+EXPOSE 8080
+
+# In dev mode, copy volume-mounted MCP source to a safe path on each start
+# to avoid shadowing the installed 'mcp' package, then run from there
+CMD ["sh", "-c", "cp /app/mcp/server.py /app/mcp/simulator.py /app/mcp/templates.py /app/mcp/ham_bands.py /opt/antsim_mcp/ && exec python /opt/antsim_mcp/server.py"]
