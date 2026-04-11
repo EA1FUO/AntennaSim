@@ -11,7 +11,12 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 try:
-    from .ham_bands import analyze_band_performance, band_to_frequency_range, get_band_by_label, get_bands_for_region
+    from .ham_bands import (
+        analyze_band_performance,
+        band_to_frequency_range,
+        get_band_by_label,
+        get_bands_for_region,
+    )
     from .simulator import (
         BackendImportError,
         GROUND_TYPE_VALUES,
@@ -33,7 +38,12 @@ try:
         resolve_params,
     )
 except ImportError:
-    from ham_bands import analyze_band_performance, band_to_frequency_range, get_band_by_label, get_bands_for_region
+    from ham_bands import (
+        analyze_band_performance,
+        band_to_frequency_range,
+        get_band_by_label,
+        get_bands_for_region,
+    )
     from simulator import (
         BackendImportError,
         GROUND_TYPE_VALUES,
@@ -96,7 +106,9 @@ def _format_exception(exc: Exception) -> str:
 
 
 def _is_non_string_sequence(value: Any) -> bool:
-    return isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray, Mapping))
+    return isinstance(value, Sequence) and not isinstance(
+        value, (str, bytes, bytearray, Mapping)
+    )
 
 
 def _value(item: Any, key: str) -> Any:
@@ -123,7 +135,9 @@ def _parse_wires_json(text: str) -> list[dict[str, Any]]:
     if isinstance(data, dict) and "wires" in data:
         data = data["wires"]
     if not isinstance(data, list):
-        raise ValueError("wires_json must be a JSON array, or an object containing a 'wires' array.")
+        raise ValueError(
+            "wires_json must be a JSON array, or an object containing a 'wires' array."
+        )
     return [dict(item) if isinstance(item, Mapping) else item for item in data]
 
 
@@ -137,11 +151,15 @@ def _parse_excitations_json(text: str) -> dict[str, Any] | list[dict[str, Any]]:
             nested = data["excitations"]
             if not isinstance(nested, list):
                 raise ValueError("'excitations' must be a JSON array.")
-            return [dict(item) if isinstance(item, Mapping) else item for item in nested]
+            return [
+                dict(item) if isinstance(item, Mapping) else item for item in nested
+            ]
         if "excitation" in data:
             nested = data["excitation"]
             if isinstance(nested, list):
-                return [dict(item) if isinstance(item, Mapping) else item for item in nested]
+                return [
+                    dict(item) if isinstance(item, Mapping) else item for item in nested
+                ]
             if isinstance(nested, Mapping):
                 return dict(nested)
             raise ValueError("'excitation' must be a JSON object or array.")
@@ -180,7 +198,9 @@ def _format_table(headers: Sequence[str], rows: Sequence[Sequence[str]]) -> str:
             widths[index] = max(widths[index], len(str(cell)))
 
     def render(row: Sequence[str]) -> str:
-        return " | ".join(str(cell).ljust(widths[index]) for index, cell in enumerate(row))
+        return " | ".join(
+            str(cell).ljust(widths[index]) for index, cell in enumerate(row)
+        )
 
     separator = "-+-".join("-" * width for width in widths)
     lines = [render(headers), separator]
@@ -188,7 +208,9 @@ def _format_table(headers: Sequence[str], rows: Sequence[Sequence[str]]) -> str:
     return "\n".join(lines)
 
 
-def _truncate_rows(rows: list[list[str]], max_rows: int) -> tuple[list[list[str]], bool]:
+def _truncate_rows(
+    rows: list[list[str]], max_rows: int
+) -> tuple[list[list[str]], bool]:
     if len(rows) <= max_rows:
         return rows, False
     head_count = max_rows // 2
@@ -204,8 +226,12 @@ def _resolve_ground_spec(ground_type: str, default_ground_type: str) -> str:
     return normalized
 
 
-def _format_ground_display(ground_spec: str, default_ground_type: str = "average") -> str:
-    ground_name, epsilon_r, conductivity = parse_ground_spec(ground_spec, default_ground_type)
+def _format_ground_display(
+    ground_spec: str, default_ground_type: str = "average"
+) -> str:
+    ground_name, epsilon_r, conductivity = parse_ground_spec(
+        ground_spec, default_ground_type
+    )
     if ground_name == "custom" and epsilon_r is not None and conductivity is not None:
         return f"custom (εr={epsilon_r:g}, σ={conductivity:g} S/m)"
     if ground_name == "custom":
@@ -221,7 +247,11 @@ def _parse_wire_design_string(text: str) -> list[WireGeometry]:
             "'tag,segments,x1,y1,z1,x2,y2,z2,radius'."
         )
 
-    entries = [entry.strip() for entry in stripped.replace("\n", ";").split(";") if entry.strip()]
+    entries = [
+        entry.strip()
+        for entry in stripped.replace("\n", ";").split(";")
+        if entry.strip()
+    ]
     if not entries:
         raise ValueError("No wire definitions were provided.")
 
@@ -239,14 +269,22 @@ def _parse_wire_design_string(text: str) -> list[WireGeometry]:
             segments_value = float(parts[1])
             x1, y1, z1, x2, y2, z2, radius = (float(part) for part in parts[2:])
         except ValueError as exc:
-            raise ValueError(f"Wire {index} contains non-numeric values: {entry!r}.") from exc
+            raise ValueError(
+                f"Wire {index} contains non-numeric values: {entry!r}."
+            ) from exc
 
         if not tag_value.is_integer() or tag_value <= 0:
-            raise ValueError(f"Wire {index} tag must be a positive integer; got {parts[0]!r}.")
+            raise ValueError(
+                f"Wire {index} tag must be a positive integer; got {parts[0]!r}."
+            )
         if not segments_value.is_integer() or segments_value <= 0:
-            raise ValueError(f"Wire {index} segments must be a positive integer; got {parts[1]!r}.")
+            raise ValueError(
+                f"Wire {index} segments must be a positive integer; got {parts[1]!r}."
+            )
         if int(segments_value) > 200:
-            raise ValueError(f"Wire {index} segments must be between 1 and 200; got {int(segments_value)}.")
+            raise ValueError(
+                f"Wire {index} segments must be between 1 and 200; got {int(segments_value)}."
+            )
         if radius <= 0.0:
             raise ValueError(f"Wire {index} radius must be greater than zero.")
 
@@ -285,7 +323,9 @@ def _resolve_explicit_frequency_range(
     if frequency_range.start_mhz < 0.1 or frequency_range.stop_mhz > 2000.0:
         raise ValueError("Frequency limits must be between 0.1 and 2000 MHz.")
     if frequency_range.stop_mhz < frequency_range.start_mhz:
-        raise ValueError("freq_stop_mhz must be greater than or equal to freq_start_mhz.")
+        raise ValueError(
+            "freq_stop_mhz must be greater than or equal to freq_start_mhz."
+        )
     if frequency_range.steps < 1 or frequency_range.steps > 201:
         raise ValueError("freq_steps must be between 1 and 201.")
 
@@ -360,7 +400,9 @@ def _extract_ground_constants(raw_value: Any) -> tuple[float | None, float | Non
 
 
 def _ground_card(ground_spec: str, default_ground_type: str = "average") -> str:
-    ground_name, epsilon_r, conductivity = parse_ground_spec(ground_spec, default_ground_type)
+    ground_name, epsilon_r, conductivity = parse_ground_spec(
+        ground_spec, default_ground_type
+    )
 
     if ground_name == "free_space":
         return "GN -1"
@@ -368,7 +410,11 @@ def _ground_card(ground_spec: str, default_ground_type: str = "average") -> str:
         return "GN 1"
 
     if epsilon_r is None or conductivity is None:
-        raw_ground_value = GROUND_TYPE_VALUES.get(ground_name) if isinstance(GROUND_TYPE_VALUES, Mapping) else None
+        raw_ground_value = (
+            GROUND_TYPE_VALUES.get(ground_name)
+            if isinstance(GROUND_TYPE_VALUES, Mapping)
+            else None
+        )
         epsilon_r, conductivity = _extract_ground_constants(raw_ground_value)
 
     if epsilon_r is None or conductivity is None:
@@ -390,8 +436,8 @@ def _build_nec2_card_deck(
 ) -> str:
     frequency_step = 0.0
     if frequency_range.steps > 1:
-        frequency_step = (
-            (frequency_range.stop_mhz - frequency_range.start_mhz) / (frequency_range.steps - 1)
+        frequency_step = (frequency_range.stop_mhz - frequency_range.start_mhz) / (
+            frequency_range.steps - 1
         )
 
     lines: list[str] = []
@@ -448,12 +494,18 @@ def _resolve_frequency_range(
     default_range = template.default_frequency_range(params)
     start = default_range.start_mhz if freq_start_mhz is None else float(freq_start_mhz)
     stop = default_range.stop_mhz if freq_stop_mhz is None else float(freq_stop_mhz)
-    steps = default_range.steps if freq_steps is None or freq_steps <= 0 else int(freq_steps)
+    steps = (
+        default_range.steps
+        if freq_steps is None or freq_steps <= 0
+        else int(freq_steps)
+    )
 
     if start < 0.1 or stop < 0.1 or start > 2000.0 or stop > 2000.0:
         raise ValueError("Frequency limits must be between 0.1 and 2000 MHz.")
     if stop < start:
-        raise ValueError("freq_stop_mhz must be greater than or equal to freq_start_mhz.")
+        raise ValueError(
+            "freq_stop_mhz must be greater than or equal to freq_start_mhz."
+        )
     if steps < 1 or steps > 201:
         raise ValueError("freq_steps must be between 1 and 201.")
 
@@ -472,14 +524,28 @@ def _resolve_comparison_frequency_range(
     default1 = template1.default_frequency_range(params1)
     default2 = template2.default_frequency_range(params2)
 
-    start = min(default1.start_mhz, default2.start_mhz) if freq_start_mhz is None else float(freq_start_mhz)
-    stop = max(default1.stop_mhz, default2.stop_mhz) if freq_stop_mhz is None else float(freq_stop_mhz)
-    steps = max(default1.steps, default2.steps) if freq_steps is None or freq_steps <= 0 else int(freq_steps)
+    start = (
+        min(default1.start_mhz, default2.start_mhz)
+        if freq_start_mhz is None
+        else float(freq_start_mhz)
+    )
+    stop = (
+        max(default1.stop_mhz, default2.stop_mhz)
+        if freq_stop_mhz is None
+        else float(freq_stop_mhz)
+    )
+    steps = (
+        max(default1.steps, default2.steps)
+        if freq_steps is None or freq_steps <= 0
+        else int(freq_steps)
+    )
 
     if start < 0.1 or stop < 0.1 or start > 2000.0 or stop > 2000.0:
         raise ValueError("Frequency limits must be between 0.1 and 2000 MHz.")
     if stop < start:
-        raise ValueError("freq_stop_mhz must be greater than or equal to freq_start_mhz.")
+        raise ValueError(
+            "freq_stop_mhz must be greater than or equal to freq_start_mhz."
+        )
     if steps < 1 or steps > 201:
         raise ValueError("freq_steps must be between 1 and 201.")
 
@@ -548,14 +614,20 @@ def _best_front_to_back_result(frequency_data: Sequence[Any]) -> Any | None:
 
 
 def _average_efficiency(frequency_data: Sequence[Any]) -> float | None:
-    values = [float(item.efficiency_percent) for item in frequency_data if item.efficiency_percent is not None]
+    values = [
+        float(item.efficiency_percent)
+        for item in frequency_data
+        if item.efficiency_percent is not None
+    ]
     if not values:
         return None
     return sum(values) / len(values)
 
 
 def _nearest_frequency_result(frequency_data: Sequence[Any], target_mhz: float) -> Any:
-    return min(frequency_data, key=lambda item: abs(float(item.frequency_mhz) - target_mhz))
+    return min(
+        frequency_data, key=lambda item: abs(float(item.frequency_mhz) - target_mhz)
+    )
 
 
 def _beamwidth_summary(result: Any) -> str:
@@ -567,7 +639,9 @@ def _beamwidth_summary(result: Any) -> str:
     return ", ".join(parts) if parts else "—"
 
 
-def _count_usable_points(frequency_data: Sequence[Any], swr_threshold: float = 2.0) -> int:
+def _count_usable_points(
+    frequency_data: Sequence[Any], swr_threshold: float = 2.0
+) -> int:
     return sum(1 for item in frequency_data if float(item.swr_50) <= swr_threshold)
 
 
@@ -581,14 +655,28 @@ def _format_sweep_table(frequency_data: Sequence[Any], max_rows: int = 61) -> st
             f"{float(item.gain_max_dbi):.2f}",
             f"{float(item.gain_max_theta):.1f}",
             f"{float(item.gain_max_phi):.1f}",
-            "—" if item.front_to_back_db is None else f"{float(item.front_to_back_db):.2f}",
-            "—" if item.efficiency_percent is None else f"{float(item.efficiency_percent):.1f}",
+            "—"
+            if item.front_to_back_db is None
+            else f"{float(item.front_to_back_db):.2f}",
+            "—"
+            if item.efficiency_percent is None
+            else f"{float(item.efficiency_percent):.1f}",
         ]
         for item in frequency_data
     ]
     rows, truncated = _truncate_rows(rows, max_rows)
     table = _format_table(
-        ["Freq MHz", "SWR", "R Ω", "X Ω", "Gain dBi", "Theta°", "Phi°", "F/B dB", "Eff %"],
+        [
+            "Freq MHz",
+            "SWR",
+            "R Ω",
+            "X Ω",
+            "Gain dBi",
+            "Theta°",
+            "Phi°",
+            "F/B dB",
+            "Eff %",
+        ],
         rows,
     )
     if truncated:
@@ -596,8 +684,14 @@ def _format_sweep_table(frequency_data: Sequence[Any], max_rows: int = 61) -> st
     return table
 
 
-def _format_band_analysis_table(frequency_data: Sequence[Any], region: str = "r1") -> str:
-    analysis = [item for item in analyze_band_performance(frequency_data, region=region) if item.simulated]
+def _format_band_analysis_table(
+    frequency_data: Sequence[Any], region: str = "r1"
+) -> str:
+    analysis = [
+        item
+        for item in analyze_band_performance(frequency_data, region=region)
+        if item.simulated
+    ]
     if not analysis:
         return ""
 
@@ -607,7 +701,9 @@ def _format_band_analysis_table(frequency_data: Sequence[Any], region: str = "r1
             str(item.point_count),
             "—" if item.min_swr is None else f"{item.min_swr:.2f}",
             "—" if item.min_swr_freq_mhz is None else f"{item.min_swr_freq_mhz:.3f}",
-            "—" if item.usable_bandwidth_khz is None else str(item.usable_bandwidth_khz),
+            "—"
+            if item.usable_bandwidth_khz is None
+            else str(item.usable_bandwidth_khz),
             "—" if item.avg_gain_dbi is None else f"{item.avg_gain_dbi:.2f}",
             "—" if item.peak_gain_dbi is None else f"{item.peak_gain_dbi:.2f}",
             item.quality,
@@ -631,7 +727,9 @@ def _run_template_simulation(
     template = get_template(template_id)
     params_data = _parse_json_object(params_json, "params")
     params = resolve_params(template, params_data)
-    frequency_range = _resolve_frequency_range(template, params, freq_start_mhz, freq_stop_mhz, freq_steps)
+    frequency_range = _resolve_frequency_range(
+        template, params, freq_start_mhz, freq_stop_mhz, freq_steps
+    )
     ground_spec = _resolve_ground_spec(ground_type, template.default_ground.type)
 
     wires = template.generate_geometry(params)
@@ -668,7 +766,9 @@ def _format_simulation_report(
     best_swr = _best_swr_result(frequency_data)
     peak_gain = _peak_gain_result(frequency_data)
     best_ftb = _best_front_to_back_result(frequency_data)
-    center_target = (float(frequency_data[0].frequency_mhz) + float(frequency_data[-1].frequency_mhz)) / 2.0
+    center_target = (
+        float(frequency_data[0].frequency_mhz) + float(frequency_data[-1].frequency_mhz)
+    ) / 2.0
     center_point = _nearest_frequency_result(frequency_data, center_target)
     usable_points = _count_usable_points(frequency_data)
     avg_eff = _average_efficiency(frequency_data)
@@ -751,23 +851,78 @@ def _format_comparison_report(run1: TemplateRun, run2: TemplateRun) -> str:
     ftb2 = _best_front_to_back_result(data2)
     eff1 = _average_efficiency(data1)
     eff2 = _average_efficiency(data2)
-    center_target = (run1.frequency_range.start_mhz + run1.frequency_range.stop_mhz) / 2.0
+    center_target = (
+        run1.frequency_range.start_mhz + run1.frequency_range.stop_mhz
+    ) / 2.0
     center1 = _nearest_frequency_result(data1, center_target)
     center2 = _nearest_frequency_result(data2, center_target)
     usable1 = _count_usable_points(data1)
     usable2 = _count_usable_points(data2)
 
     summary_rows = [
-        ["Geometry", f"{len(run1.wires)} wires / {run1.artifacts.result.total_segments} segs", f"{len(run2.wires)} wires / {run2.artifacts.result.total_segments} segs", "—"],
-        ["Best SWR", f"{float(best1.swr_50):.2f} @ {float(best1.frequency_mhz):.3f} MHz", f"{float(best2.swr_50):.2f} @ {float(best2.frequency_mhz):.3f} MHz", _winner_lower(float(best1.swr_50), float(best2.swr_50))],
-        ["Impedance @ best SWR", _format_impedance(best1), _format_impedance(best2), "—"],
-        ["Sweep points SWR <= 2.0", f"{usable1} of {len(data1)}", f"{usable2} of {len(data2)}", _winner_higher(float(usable1), float(usable2))],
-        ["Peak gain", f"{float(peak1.gain_max_dbi):.2f} dBi @ {float(peak1.frequency_mhz):.3f} MHz", f"{float(peak2.gain_max_dbi):.2f} dBi @ {float(peak2.frequency_mhz):.3f} MHz", _winner_higher(float(peak1.gain_max_dbi), float(peak2.gain_max_dbi))],
-        ["Peak F/B", "—" if ftb1 is None else f"{float(ftb1.front_to_back_db):.2f} dB", "—" if ftb2 is None else f"{float(ftb2.front_to_back_db):.2f} dB", _winner_higher(None if ftb1 is None else float(ftb1.front_to_back_db), None if ftb2 is None else float(ftb2.front_to_back_db))],
-        ["Beamwidth @ peak gain", _beamwidth_summary(peak1), _beamwidth_summary(peak2), "—"],
-        ["Average efficiency", "—" if eff1 is None else f"{eff1:.1f}%", "—" if eff2 is None else f"{eff2:.1f}%", _winner_higher(eff1, eff2)],
-        ["Center-of-sweep SWR", f"{float(center1.swr_50):.2f}", f"{float(center2.swr_50):.2f}", _winner_lower(float(center1.swr_50), float(center2.swr_50))],
-        ["Center-of-sweep impedance", _format_impedance(center1), _format_impedance(center2), "—"],
+        [
+            "Geometry",
+            f"{len(run1.wires)} wires / {run1.artifacts.result.total_segments} segs",
+            f"{len(run2.wires)} wires / {run2.artifacts.result.total_segments} segs",
+            "—",
+        ],
+        [
+            "Best SWR",
+            f"{float(best1.swr_50):.2f} @ {float(best1.frequency_mhz):.3f} MHz",
+            f"{float(best2.swr_50):.2f} @ {float(best2.frequency_mhz):.3f} MHz",
+            _winner_lower(float(best1.swr_50), float(best2.swr_50)),
+        ],
+        [
+            "Impedance @ best SWR",
+            _format_impedance(best1),
+            _format_impedance(best2),
+            "—",
+        ],
+        [
+            "Sweep points SWR <= 2.0",
+            f"{usable1} of {len(data1)}",
+            f"{usable2} of {len(data2)}",
+            _winner_higher(float(usable1), float(usable2)),
+        ],
+        [
+            "Peak gain",
+            f"{float(peak1.gain_max_dbi):.2f} dBi @ {float(peak1.frequency_mhz):.3f} MHz",
+            f"{float(peak2.gain_max_dbi):.2f} dBi @ {float(peak2.frequency_mhz):.3f} MHz",
+            _winner_higher(float(peak1.gain_max_dbi), float(peak2.gain_max_dbi)),
+        ],
+        [
+            "Peak F/B",
+            "—" if ftb1 is None else f"{float(ftb1.front_to_back_db):.2f} dB",
+            "—" if ftb2 is None else f"{float(ftb2.front_to_back_db):.2f} dB",
+            _winner_higher(
+                None if ftb1 is None else float(ftb1.front_to_back_db),
+                None if ftb2 is None else float(ftb2.front_to_back_db),
+            ),
+        ],
+        [
+            "Beamwidth @ peak gain",
+            _beamwidth_summary(peak1),
+            _beamwidth_summary(peak2),
+            "—",
+        ],
+        [
+            "Average efficiency",
+            "—" if eff1 is None else f"{eff1:.1f}%",
+            "—" if eff2 is None else f"{eff2:.1f}%",
+            _winner_higher(eff1, eff2),
+        ],
+        [
+            "Center-of-sweep SWR",
+            f"{float(center1.swr_50):.2f}",
+            f"{float(center2.swr_50):.2f}",
+            _winner_lower(float(center1.swr_50), float(center2.swr_50)),
+        ],
+        [
+            "Center-of-sweep impedance",
+            _format_impedance(center1),
+            _format_impedance(center2),
+            "—",
+        ],
     ]
 
     lines = [
@@ -786,7 +941,9 @@ def _format_comparison_report(run1: TemplateRun, run2: TemplateRun) -> str:
     ]
 
     same_grid = len(data1) == len(data2) and all(
-        math.isclose(float(item1.frequency_mhz), float(item2.frequency_mhz), abs_tol=1e-9)
+        math.isclose(
+            float(item1.frequency_mhz), float(item2.frequency_mhz), abs_tol=1e-9
+        )
         for item1, item2 in zip(data1, data2)
     )
     if same_grid:
@@ -808,7 +965,15 @@ def _format_comparison_report(run1: TemplateRun, run2: TemplateRun) -> str:
                 "",
                 "Per-frequency comparison",
                 _format_table(
-                    ["Freq MHz", "SWR 1", "SWR 2", "Gain 1", "Gain 2", "Lower SWR", "Higher Gain"],
+                    [
+                        "Freq MHz",
+                        "SWR 1",
+                        "SWR 2",
+                        "Gain 1",
+                        "Gain 2",
+                        "Lower SWR",
+                        "Higher Gain",
+                    ],
                     comparison_rows,
                 ),
             ]
@@ -835,7 +1000,9 @@ def list_antenna_templates() -> str:
         category_order = ("wire", "vertical", "multiband", "loop", "directional")
 
         for category in category_order:
-            group = [template for template in TEMPLATES if template.category == category]
+            group = [
+                template for template in TEMPLATES if template.category == category
+            ]
             if not group:
                 continue
             sections.append("")
@@ -847,7 +1014,9 @@ def list_antenna_templates() -> str:
                 sections.append(f"  {template.description}")
 
         sections.append("")
-        sections.append("Use get_template_info(template_id) for full parameter details.")
+        sections.append(
+            "Use get_template_info(template_id) for full parameter details."
+        )
         return "\n".join(sections)
     except Exception as exc:
         return _format_exception(exc)
@@ -896,7 +1065,9 @@ def get_template_info(template_id: str) -> str:
         lines.extend(["", "Tips"])
         lines.extend(f"- {tip}" for tip in template.tips)
 
-        lines.extend(["", f"Related templates: {', '.join(template.related_templates)}"])
+        lines.extend(
+            ["", f"Related templates: {', '.join(template.related_templates)}"]
+        )
         return "\n".join(lines)
     except Exception as exc:
         return _format_exception(exc)
@@ -988,8 +1159,12 @@ def compare_antennas(
     try:
         template1 = get_template(antenna1_template)
         template2 = get_template(antenna2_template)
-        params1 = resolve_params(template1, _parse_json_object(antenna1_params, "antenna1_params"))
-        params2 = resolve_params(template2, _parse_json_object(antenna2_params, "antenna2_params"))
+        params1 = resolve_params(
+            template1, _parse_json_object(antenna1_params, "antenna1_params")
+        )
+        params2 = resolve_params(
+            template2, _parse_json_object(antenna2_params, "antenna2_params")
+        )
 
         frequency_range = _resolve_comparison_frequency_range(
             template1,
@@ -1024,8 +1199,24 @@ def compare_antennas(
             comment=f"{template2.name} comparison run via AntennaSim MCP",
         )
 
-        run1 = TemplateRun(template1, params1, wires1, excitation1, frequency_range, ground_spec1, artifacts1)
-        run2 = TemplateRun(template2, params2, wires2, excitation2, frequency_range, ground_spec2, artifacts2)
+        run1 = TemplateRun(
+            template1,
+            params1,
+            wires1,
+            excitation1,
+            frequency_range,
+            ground_spec1,
+            artifacts1,
+        )
+        run2 = TemplateRun(
+            template2,
+            params2,
+            wires2,
+            excitation2,
+            frequency_range,
+            ground_spec2,
+            artifacts2,
+        )
         return _format_comparison_report(run1, run2)
     except Exception as exc:
         return _format_exception(exc)
@@ -1135,9 +1326,13 @@ def simulate_custom_antenna(
             steps=int(freq_steps),
         )
         if frequency_range.start_mhz < 0.1 or frequency_range.stop_mhz > 2000.0:
-            raise ValueError("Custom simulation frequency limits must be between 0.1 and 2000 MHz.")
+            raise ValueError(
+                "Custom simulation frequency limits must be between 0.1 and 2000 MHz."
+            )
         if frequency_range.stop_mhz < frequency_range.start_mhz:
-            raise ValueError("freq_stop_mhz must be greater than or equal to freq_start_mhz.")
+            raise ValueError(
+                "freq_stop_mhz must be greater than or equal to freq_start_mhz."
+            )
         if frequency_range.steps < 1 or frequency_range.steps > 201:
             raise ValueError("freq_steps must be between 1 and 201.")
 
@@ -1194,7 +1389,9 @@ def design_wire_antenna(
         parsed_wires = _parse_wire_design_string(wires)
         feed_matches = [wire for wire in parsed_wires if wire.tag == feed_wire_tag]
         if not feed_matches:
-            raise ValueError(f"feed_wire_tag {feed_wire_tag} does not match any wire tag in the design.")
+            raise ValueError(
+                f"feed_wire_tag {feed_wire_tag} does not match any wire tag in the design."
+            )
         if len(feed_matches) > 1:
             raise ValueError(
                 f"feed_wire_tag {feed_wire_tag} matches multiple wires. "
@@ -1208,7 +1405,9 @@ def design_wire_antenna(
                 f"that wire has {feed_wire.segments} segments."
             )
 
-        frequency_range = _resolve_explicit_frequency_range(freq_start_mhz, freq_stop_mhz, freq_steps)
+        frequency_range = _resolve_explicit_frequency_range(
+            freq_start_mhz, freq_stop_mhz, freq_steps
+        )
         ground_spec = _resolve_ground_spec(ground_type, "average")
         title = (antenna_name or "").strip() or "Custom design"
         excitation = Excitation(
@@ -1289,7 +1488,8 @@ def main() -> None:
 
     Transport is selected via the MCP_TRANSPORT environment variable:
     - "stdio" (default): standard I/O, for local CLI / Claude Desktop / Cursor
-    - "sse": HTTP + Server-Sent Events, for Docker / remote access
+    - "sse": HTTP + Server-Sent Events, for legacy remote access
+    - "streamable-http": MCP over a single HTTP endpoint, for modern remote clients
 
     When using SSE transport, the server listens on:
     - MCP_HOST (default "0.0.0.0")
@@ -1298,14 +1498,14 @@ def main() -> None:
     import os
 
     transport = os.environ.get("MCP_TRANSPORT", "stdio").strip().lower()
-    if transport == "sse":
+    if transport in {"sse", "streamable-http"}:
         host = os.environ.get("MCP_HOST", "0.0.0.0")
         port = int(os.environ.get("MCP_PORT", "8080"))
         mcp.settings.host = host
         mcp.settings.port = port
         if mcp.settings.transport_security is not None:
             mcp.settings.transport_security.enable_dns_rebinding_protection = False
-        mcp.run(transport="sse")
+        mcp.run(transport=transport)
     else:
         mcp.run()
 

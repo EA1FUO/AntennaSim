@@ -165,9 +165,9 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 | Service | URL | Description |
 |---|---|---|
-| MCP (production) | `http://mcp:8080/sse` (internal) | Via nginx at `/mcp/` |
-| MCP (dev) | `http://localhost:8080/sse` | Direct access |
-| MCP via nginx | `http://localhost/mcp/sse` | Proxied through nginx |
+| MCP (production) | `http://mcp:8080/mcp` (internal) | Via nginx at `/mcp` |
+| MCP (dev) | `http://localhost:8080/mcp` | Direct access |
+| MCP via nginx | `http://localhost/mcp` | Proxied through nginx |
 
 ### Standalone Docker run
 
@@ -185,16 +185,16 @@ The server starts on `http://0.0.0.0:8080` with SSE transport.
 
 ### Connecting an MCP client to the Docker SSE endpoint
 
-For Claude Desktop or any SSE-capable MCP client, configure the SSE URL:
+For OpenCode or any streamable HTTP-capable MCP client, configure the MCP URL:
 
 ```
-http://localhost:8080/sse
+http://localhost:8080/mcp
 ```
 
 Or if running behind nginx:
 
 ```
-http://your-host/mcp/sse
+http://your-host/mcp
 ```
 
 ### Validating with the MCP Inspector
@@ -203,12 +203,12 @@ http://your-host/mcp/sse
 # Start the MCP container
 docker run -d -p 9090:8080 --name mcp antennasim-mcp
 
-# Run the Inspector pointing at the SSE endpoint
+# Run the Inspector pointing at the MCP endpoint
 npx @modelcontextprotocol/inspector
 
 # In the Inspector UI:
 #   1. Change transport from STDIO to SSE
-#   2. Enter URL: http://localhost:9090/sse
+#   2. Enter URL: http://localhost:9090/mcp
 #   3. Click Connect
 #   4. Navigate to Tools → List Tools
 ```
@@ -733,7 +733,7 @@ docker build -f mcp/Dockerfile -t antennasim-mcp .
 docker run -p 8080:8080 antennasim-mcp
 ```
 
-Then point your MCP client at `http://localhost:8080/sse`.
+Then point your MCP client at `http://localhost:8080/mcp`.
 
 ### Full stack with docker-compose
 
@@ -742,4 +742,4 @@ cd AntennaSim
 docker compose up --build
 ```
 
-MCP is available at `http://localhost/mcp/sse` (via nginx) or directly at `http://mcp:8080/sse` (internal).
+MCP is available at `http://localhost/mcp` (via nginx) or directly at `http://mcp:8080/mcp` (internal).

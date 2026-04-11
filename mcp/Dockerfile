@@ -10,7 +10,7 @@ RUN which nec2c
 WORKDIR /app
 
 # Install Python dependencies for the MCP server
-# (mcp pulls in uvicorn, starlette, etc. for SSE transport)
+# (mcp pulls in uvicorn, starlette, etc. for HTTP transports)
 RUN pip install --no-cache-dir \
     "mcp>=1.0.0" \
     "pydantic>=2.10.0" \
@@ -36,7 +36,7 @@ USER appuser
 
 ENV ANTENNASIM_BACKEND_DIR=/app/backend
 ENV NEC_WORKDIR=/tmp/nec_workdir
-ENV MCP_TRANSPORT=sse
+ENV MCP_TRANSPORT=streamable-http
 ENV MCP_HOST=0.0.0.0
 ENV MCP_PORT=8080
 ENV PYTHONUNBUFFERED=1

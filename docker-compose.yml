@@ -39,7 +39,7 @@ services:
       context: .
       dockerfile: mcp/Dockerfile
     environment:
-      - MCP_TRANSPORT=sse
+      - MCP_TRANSPORT=streamable-http
       - MCP_HOST=0.0.0.0
       - MCP_PORT=8080
       - ANTENNASIM_BACKEND_DIR=/app/backend
