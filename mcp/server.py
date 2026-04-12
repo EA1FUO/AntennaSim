@@ -645,6 +645,400 @@ def _count_usable_points(
     return sum(1 for item in frequency_data if float(item.swr_50) <= swr_threshold)
 
 
+# ---------------------------------------------------------------------------
+# Radiation pattern helpers
+# ---------------------------------------------------------------------------
+
+def _compute_reflection_coefficient(r: float, x: float, z0: float = 50.0) -> tuple[float, float]:
+    """Compute reflection coefficient magnitude and phase for R + jX relative to Z0."""
+    z = complex(float(r), float(x))
+    denom = z + complex(float(z0), 0.0)
+    if abs(denom) < 1e-30:
+        return 1.0, 180.0
+    gamma = (z - complex(float(z0), 0.0)) / denom
+    return round(min(abs(gamma), 1.0), 6), round(math.degrees(math.atan2(gamma.imag, gamma.real)), 2)
+
+
+def _nearest_pattern_index(start: float, step: float, count: int, target: float) -> int:
+    if count <= 1 or abs(step) < 1e-12:
+        return 0
+    return max(0, min(count - 1, int(round((target - start) / step))))
+
+
+def _extract_azimuth_cut(pattern: Any, theta_index: int) -> list[tuple[float, float]]:
+    """Extract gain vs phi at a fixed theta index."""
+    theta_index = max(0, min(int(pattern.theta_count) - 1, theta_index))
+    cut: list[tuple[float, float]] = []
+    for pi in range(int(pattern.phi_count)):
+        g = float(pattern.gain_dbi[theta_index][pi])
+        if g <= -900.0:
+            continue
+        phi = float(pattern.phi_start) + pi * float(pattern.phi_step)
+        cut.append((phi % 360.0, g))
+    cut.sort(key=lambda p: p[0])
+    return cut
+
+
+def _extract_elevation_cut(pattern: Any, phi_index: int) -> list[tuple[float, float]]:
+    """Extract gain vs theta at a fixed phi index."""
+    phi_index = max(0, min(int(pattern.phi_count) - 1, phi_index))
+    cut: list[tuple[float, float]] = []
+    for ti in range(int(pattern.theta_count)):
+        g = float(pattern.gain_dbi[ti][phi_index])
+        if g <= -900.0:
+            continue
+        theta = float(pattern.theta_start) + ti * float(pattern.theta_step)
+        cut.append((theta, g))
+    cut.sort(key=lambda p: p[0])
+    return cut
+
+
+def _circular_diff(a: float, b: float) -> float:
+    d = abs((a - b) % 360.0)
+    return min(d, 360.0 - d)
+
+
+def _nearest_cut_gain(cut: Sequence[tuple[float, float]], target: float, *, circular: bool) -> float | None:
+    if not cut:
+        return None
+    if circular:
+        return float(min(cut, key=lambda p: _circular_diff(p[0], target % 360.0))[1])
+    return float(min(cut, key=lambda p: abs(p[0] - target))[1])
+
+
+def _compute_cut_beamwidth(
+    cut: Sequence[tuple[float, float]], peak_angle: float, peak_gain: float, *, circular: bool
+) -> float | None:
+    """Compute -3 dB beamwidth from a sorted 1-D gain cut."""
+    if len(cut) < 3:
+        return None
+    threshold = peak_gain - 3.0
+    ordered = sorted(cut, key=lambda p: p[0])
+    if circular:
+        extended = [(a - 360.0, g) for a, g in ordered] + list(ordered) + [(a + 360.0, g) for a, g in ordered]
+        n = len(ordered)
+        peak_idx = min(range(n, 2 * n), key=lambda i: _circular_diff(extended[i][0], peak_angle))
+    else:
+        extended = list(ordered)
+        peak_idx = min(range(len(extended)), key=lambda i: abs(extended[i][0] - peak_angle))
+
+    left = None
+    for i in range(peak_idx, 0, -1):
+        a0, g0 = extended[i - 1]
+        a1, g1 = extended[i]
+        if (g0 - threshold) * (g1 - threshold) < 0.0:
+            frac = (threshold - g0) / (g1 - g0) if abs(g1 - g0) > 1e-9 else 0.5
+            left = a0 + frac * (a1 - a0)
+            break
+
+    right = None
+    for i in range(peak_idx, len(extended) - 1):
+        a0, g0 = extended[i]
+        a1, g1 = extended[i + 1]
+        if (g0 - threshold) * (g1 - threshold) < 0.0:
+            frac = (threshold - g0) / (g1 - g0) if abs(g1 - g0) > 1e-9 else 0.5
+            right = a0 + frac * (a1 - a0)
+            break
+
+    if left is None or right is None:
+        return None
+    bw = abs(right - left)
+    return round(min(bw, 360.0) if circular else bw, 1)
+
+
+def _classify_pattern_shape(azimuth_gains: Sequence[tuple[float, float]]) -> dict[str, Any]:
+    """Classify azimuth pattern shape."""
+    if not azimuth_gains:
+        return {"shape": "unknown", "azimuth_variation_db": 0.0, "azimuth_stddev_db": 0.0,
+                "max_gain": None, "min_gain": None, "num_lobes": 0}
+    gains = [g for _, g in azimuth_gains]
+    mx, mn = max(gains), min(gains)
+    variation = mx - mn
+    mean = sum(gains) / len(gains)
+    stddev = math.sqrt(sum((g - mean) ** 2 for g in gains) / len(gains))
+
+    thresh = mx - 3.0
+    n = len(azimuth_gains)
+    lobes: list[tuple[float, float]] = []
+    for i in range(n):
+        _, gp = azimuth_gains[(i - 1) % n]
+        a, g = azimuth_gains[i]
+        _, gn = azimuth_gains[(i + 1) % n]
+        if g >= thresh and g + 1e-9 >= gp and g + 1e-9 >= gn:
+            if not lobes or _circular_diff(a, lobes[-1][0]) > 20.0:
+                lobes.append((a, g))
+    num_lobes = max(1, len(lobes))
+
+    bidirectional = False
+    if len(lobes) >= 2:
+        s = sorted(lobes, key=lambda p: p[1], reverse=True)[:2]
+        if abs(_circular_diff(s[0][0], s[1][0]) - 180.0) <= 40.0 and abs(s[0][1] - s[1][1]) <= 3.0:
+            bidirectional = True
+
+    if variation < 3.0:
+        shape = "omnidirectional"
+    elif variation < 6.0:
+        shape = "nearly omnidirectional"
+    elif bidirectional:
+        shape = "bidirectional"
+    elif variation > 15.0:
+        shape = "highly directional"
+    else:
+        shape = "directional"
+
+    return {"shape": shape, "azimuth_variation_db": round(variation, 2),
+            "azimuth_stddev_db": round(stddev, 2), "max_gain": round(mx, 2),
+            "min_gain": round(mn, 2), "num_lobes": num_lobes}
+
+
+def _extract_pattern_analysis(freq_result: Any) -> dict[str, Any]:
+    """Extract structured pattern metrics and principal-plane cuts."""
+    pattern = getattr(freq_result, "pattern", None)
+    if pattern is None:
+        return {"available": False, "reason": "Pattern data not available for this frequency point."}
+
+    ti = _nearest_pattern_index(float(pattern.theta_start), float(pattern.theta_step),
+                                 int(pattern.theta_count), float(freq_result.gain_max_theta))
+    pi = _nearest_pattern_index(float(pattern.phi_start), float(pattern.phi_step),
+                                 int(pattern.phi_count), float(freq_result.gain_max_phi))
+    theta_deg = float(pattern.theta_start) + ti * float(pattern.theta_step)
+    phi_deg = (float(pattern.phi_start) + pi * float(pattern.phi_step)) % 360.0
+
+    az_cut = _extract_azimuth_cut(pattern, ti)
+    el_cut = _extract_elevation_cut(pattern, pi)
+    if not az_cut or not el_cut:
+        return {"available": False, "reason": "Pattern grid did not contain usable data."}
+
+    front = float(pattern.gain_dbi[ti][pi])
+    if front <= -900.0:
+        front = float(freq_result.gain_max_dbi)
+    back = _nearest_cut_gain(az_cut, phi_deg + 180.0, circular=True)
+    side_p = _nearest_cut_gain(az_cut, phi_deg + 90.0, circular=True)
+    side_n = _nearest_cut_gain(az_cut, phi_deg - 90.0, circular=True)
+    side = max(v for v in (side_p, side_n) if v is not None) if any(v is not None for v in (side_p, side_n)) else None
+    ftb = None if back is None else round(front - back, 2)
+    fts = None if side is None else round(front - side, 2)
+
+    bw_h = getattr(freq_result, "beamwidth_h_deg", None)
+    if bw_h is None:
+        bw_h = _compute_cut_beamwidth(az_cut, phi_deg, front, circular=True)
+    else:
+        bw_h = float(bw_h)
+    bw_e = getattr(freq_result, "beamwidth_e_deg", None)
+    if bw_e is None:
+        bw_e = _compute_cut_beamwidth(el_cut, theta_deg, front, circular=False)
+    else:
+        bw_e = float(bw_e)
+
+    classification = _classify_pattern_shape(az_cut)
+    directivity_char = classification["shape"]
+    if classification["shape"] in {"directional", "highly directional"} and ftb is not None and ftb >= 6.0:
+        directivity_char = "unidirectional"
+
+    return {
+        "available": True, "theta_deg": round(theta_deg, 2), "phi_deg": round(phi_deg, 2),
+        "max_gain_dbi": round(front, 2), "beamwidth_h_deg": bw_h, "beamwidth_e_deg": bw_e,
+        "front_to_back_db": ftb, "front_to_side_db": fts,
+        "back_gain_dbi": None if back is None else round(back, 2),
+        "side_gain_dbi": None if side is None else round(side, 2),
+        "classification": classification, "shape": classification["shape"],
+        "directivity_character": directivity_char,
+        "azimuth_cut": az_cut, "elevation_cut": el_cut,
+    }
+
+
+def _analysis_beamwidth_summary(analysis: dict[str, Any]) -> str:
+    """Format beamwidth from analysis dict (uses fallback-computed values)."""
+    parts: list[str] = []
+    bw_e = analysis.get("beamwidth_e_deg")
+    bw_h = analysis.get("beamwidth_h_deg")
+    if bw_e is not None:
+        parts.append(f"E-plane {float(bw_e):.1f}°")
+    if bw_h is not None:
+        parts.append(f"H-plane {float(bw_h):.1f}°")
+    return ", ".join(parts) if parts else "—"
+
+
+def _sample_cut(cut: Sequence[tuple[float, float]], step: float | None) -> list[tuple[float, float]]:
+    if not cut or step is None or step <= 0 or len(cut) < 2:
+        return list(cut)
+    src_step = abs(cut[1][0] - cut[0][0])
+    if src_step < 1e-9:
+        return list(cut)
+    stride = max(1, int(round(step / src_step)))
+    return list(cut[::stride])
+
+
+def _format_plane_cut(cut: Sequence[tuple[float, float]], label: str, step: float | None = None) -> str:
+    if not cut:
+        return "No data."
+    sampled = _sample_cut(cut, step)
+    peak = max(g for _, g in cut)
+    rows = [[f"{a:.1f}", f"{g:.2f}", f"{g - peak:+.2f}"] for a, g in sampled]
+    rows, trunc = _truncate_rows(rows, 37)
+    t = _format_table([label, "Gain dBi", "Rel dB"], rows)
+    return f"{t}\n\nNote: table truncated." if trunc else t
+
+
+def _format_cut_comparison(
+    cut1: Sequence[tuple[float, float]], cut2: Sequence[tuple[float, float]],
+    label: str, step: float | None, *, circular: bool,
+) -> str:
+    if not cut1 or not cut2:
+        return "No comparable data."
+    sampled = _sample_cut(cut1, step)
+    rows: list[list[str]] = []
+    for a, g1 in sampled:
+        g2 = _nearest_cut_gain(cut2, a, circular=circular)
+        if g2 is None:
+            continue
+        rows.append([f"{a:.1f}", f"{g1:.2f}", f"{g2:.2f}", f"{g1 - g2:+.2f}"])
+    if not rows:
+        return "No comparable data."
+    rows, trunc = _truncate_rows(rows, 37)
+    t = _format_table([label, "Gain 1 dBi", "Gain 2 dBi", "Δ1-2 dB"], rows)
+    return f"{t}\n\nNote: table truncated." if trunc else t
+
+
+def _fmt_opt(v: float | None, d: int = 2, s: str = "") -> str:
+    return "—" if v is None else f"{float(v):.{d}f}{s}"
+
+
+def _format_pattern_report(freq_result: Any, template_name: str, params_summary: str) -> str:
+    """Format a complete radiation pattern analysis report."""
+    analysis = _extract_pattern_analysis(freq_result)
+    title = f"Radiation pattern: {template_name}"
+    lines = [title, "=" * len(title),
+             f"Frequency: {float(freq_result.frequency_mhz):.3f} MHz",
+             f"Setup: {params_summary}",
+             f"Feed impedance: {_format_impedance(freq_result)}",
+             f"SWR(50Ω): {float(freq_result.swr_50):.2f}"]
+    if freq_result.efficiency_percent is not None:
+        lines.append(f"Efficiency: {float(freq_result.efficiency_percent):.1f}%")
+
+    if not analysis["available"]:
+        lines.extend(["", "Pattern data", f"- {analysis['reason']}"])
+        return "\n".join(lines).strip()
+
+    cl = analysis["classification"]
+    lines.extend([
+        "", "Pattern summary",
+        f"- Maximum gain: {analysis['max_gain_dbi']:.2f} dBi at theta {analysis['theta_deg']:.1f}°, phi {analysis['phi_deg']:.1f}°",
+        f"- Shape classification: {cl['shape']} ({cl['num_lobes']} lobe(s), "
+        f"azimuth variation {cl['azimuth_variation_db']:.2f} dB, std dev {cl['azimuth_stddev_db']:.2f} dB)",
+        f"- Directivity character: {analysis['directivity_character']}",
+        f"- Beamwidth: {_analysis_beamwidth_summary(analysis)}",
+        f"- Front-to-back: {_fmt_opt(analysis['front_to_back_db'], 2, ' dB')}",
+        f"- Front-to-side: {_fmt_opt(analysis['front_to_side_db'], 2, ' dB')}",
+        "",
+        f"H-plane cut (phi sweep at theta = {analysis['theta_deg']:.1f}°)",
+        _format_plane_cut(analysis["azimuth_cut"], "Phi°", 15.0),
+        "",
+        f"E-plane cut (theta sweep at phi = {analysis['phi_deg']:.1f}°)",
+        _format_plane_cut(analysis["elevation_cut"], "Theta°", 10.0),
+    ])
+    return "\n".join(lines).strip()
+
+
+# ---------------------------------------------------------------------------
+# Smith chart helpers
+# ---------------------------------------------------------------------------
+
+def _compute_smith_data(frequency_data: Sequence[Any], z0: float = 50.0) -> dict[str, Any]:
+    """Compute normalized impedance, reflection coefficient, and resonance data."""
+    points: list[dict[str, Any]] = []
+    for item in frequency_data:
+        r = float(item.impedance.real)
+        x = float(item.impedance.imag)
+        gm, gp = _compute_reflection_coefficient(r, x, z0)
+        vswr = 999.0 if gm >= 1.0 else (1.0 + gm) / (1.0 - gm)
+        region = "resonant" if abs(x) < 1e-6 else ("inductive" if x > 0 else "capacitive")
+        points.append({
+            "frequency_mhz": float(item.frequency_mhz), "r_ohm": r, "x_ohm": x,
+            "z_mag_ohm": math.hypot(r, x), "z_real": r / z0, "z_imag": x / z0,
+            "gamma_mag": gm, "gamma_phase_deg": gp, "vswr": vswr, "region": region,
+        })
+    points.sort(key=lambda p: p["frequency_mhz"])
+
+    resonances: list[dict[str, Any]] = []
+    for i in range(1, len(points)):
+        px, cx = points[i - 1]["x_ohm"], points[i]["x_ohm"]
+        if abs(px) < 1e-6 or abs(cx) < 1e-6 or px * cx >= 0:
+            continue
+        frac = -px / (cx - px)
+        freq = points[i - 1]["frequency_mhz"] + frac * (points[i]["frequency_mhz"] - points[i - 1]["frequency_mhz"])
+        r_res = points[i - 1]["r_ohm"] + frac * (points[i]["r_ohm"] - points[i - 1]["r_ohm"])
+        gm, gp = _compute_reflection_coefficient(r_res, 0.0, z0)
+        resonances.append({"frequency_mhz": freq, "r_ohm": r_res, "gamma_mag": gm,
+                           "vswr": 999.0 if gm >= 1.0 else (1.0 + gm) / (1.0 - gm)})
+
+    intervals: list[dict[str, Any]] = []
+    if points:
+        cur_region, start_f = points[0]["region"], points[0]["frequency_mhz"]
+        for p in points[1:]:
+            if p["region"] != cur_region:
+                intervals.append({"region": cur_region, "start_mhz": start_f, "stop_mhz": points[points.index(p) - 1]["frequency_mhz"] if p != points[0] else start_f})
+                cur_region, start_f = p["region"], p["frequency_mhz"]
+        intervals.append({"region": cur_region, "start_mhz": start_f, "stop_mhz": points[-1]["frequency_mhz"]})
+
+    best = min(points, key=lambda p: p["gamma_mag"]) if points else None
+    return {"points": points, "resonances": resonances, "trajectory_intervals": intervals, "best_match": best}
+
+
+def _format_smith_report(frequency_data: Sequence[Any], z0: float = 50.0) -> str:
+    """Format Smith chart impedance data across a sweep."""
+    sd = _compute_smith_data(frequency_data, z0)
+    pts = sd["points"]
+    if not pts:
+        return "Smith chart report\n==================\nNo frequency data available."
+
+    def vt(v: float) -> str:
+        return ">999" if v >= 999.0 else f"{v:.2f}"
+
+    best = sd["best_match"]
+    rows = [[f"{p['frequency_mhz']:.3f}", f"{p['r_ohm']:.2f}", f"{p['x_ohm']:+.2f}",
+             f"{p['z_mag_ohm']:.2f}", f"{p['z_real']:.3f}", f"{p['z_imag']:+.3f}",
+             f"{p['gamma_mag']:.3f}", f"{p['gamma_phase_deg']:+.1f}", vt(p["vswr"])]
+            for p in pts]
+    rows, trunc = _truncate_rows(rows, 61)
+
+    cap = sum(1 for p in pts if p["region"] == "capacitive")
+    ind = sum(1 for p in pts if p["region"] == "inductive")
+    res = sum(1 for p in pts if p["region"] == "resonant")
+
+    lines = [
+        "Smith chart report", "==================",
+        f"Reference impedance Z0: {z0:.2f} Ω",
+        f"Closest to center: {best['frequency_mhz']:.3f} MHz, "
+        f"Z = {best['r_ohm']:.2f} {'+' if best['x_ohm'] >= 0 else '-'} j{abs(best['x_ohm']):.2f} Ω, "
+        f"|Γ| = {best['gamma_mag']:.3f}, VSWR = {vt(best['vswr'])}",
+        "",
+        "Impedance sweep",
+        _format_table(["Freq MHz", "R Ω", "X Ω", "|Z| Ω", "z_r", "z_i", "|Γ|", "Γ°", "VSWR"], rows),
+    ]
+    if trunc:
+        lines.append("\nNote: table truncated.")
+
+    lines.extend(["", "Resonance identification"])
+    if sd["resonances"]:
+        for r in sd["resonances"]:
+            lines.append(f"- X≈0 near {r['frequency_mhz']:.3f} MHz, R≈{r['r_ohm']:.2f} Ω, "
+                         f"|Γ|≈{r['gamma_mag']:.3f}, VSWR≈{vt(r['vswr'])}")
+    else:
+        lines.append("- No zero-reactance crossing found in sweep.")
+
+    lines.extend(["", "Impedance trajectory",
+                   f"- Points: {cap} capacitive, {ind} inductive, {res} near-resonant"])
+    for iv in sd["trajectory_intervals"]:
+        region = iv["region"].capitalize()
+        if math.isclose(iv["start_mhz"], iv["stop_mhz"], abs_tol=1e-9):
+            lines.append(f"- {region} at {iv['start_mhz']:.3f} MHz")
+        else:
+            lines.append(f"- {region}: {iv['start_mhz']:.3f} to {iv['stop_mhz']:.3f} MHz")
+
+    return "\n".join(lines).strip()
+
+
 def _format_sweep_table(frequency_data: Sequence[Any], max_rows: int = 61) -> str:
     rows = [
         [
@@ -1479,6 +1873,209 @@ def get_nec2_card_deck(
             ),
             default_ground_type=template.default_ground.type,
         )
+    except Exception as exc:
+        return _format_exception(exc)
+
+
+@mcp.tool()
+def get_radiation_pattern(
+    template_id: str,
+    params: str = "",
+    frequency_mhz: float | None = None,
+    ground_type: str = "average",
+) -> str:
+    """Simulate one antenna at a single frequency and return a detailed radiation pattern report.
+
+    Shows pattern shape classification (omnidirectional, bidirectional, directional),
+    H-plane and E-plane cuts with gain at each angle, beamwidth, front-to-back ratio,
+    and front-to-side ratio. Useful for understanding if an antenna pattern is
+    omnidirectional or directional.
+    """
+    try:
+        template = get_template(template_id)
+        resolved_params = resolve_params(template, _parse_json_object(params, "params"))
+        default_range = template.default_frequency_range(resolved_params)
+        target = (
+            float(frequency_mhz)
+            if frequency_mhz is not None
+            else (default_range.start_mhz + default_range.stop_mhz) / 2.0
+        )
+        run = _run_template_simulation(
+            template_id=template_id, params_json=params, ground_type=ground_type,
+            freq_start_mhz=target, freq_stop_mhz=target, freq_steps=1,
+        )
+        if not run.artifacts.result.frequency_data:
+            raise ValueError("Simulation did not return any frequency data.")
+        report = _format_pattern_report(
+            run.artifacts.result.frequency_data[0], run.template.name,
+            f"template_id={run.template.id}, params={json.dumps(run.params, sort_keys=True)}, "
+            f"ground={_format_ground_display(run.ground_spec)}",
+        )
+        if run.artifacts.result.warnings:
+            report += "\n\nWarnings\n" + "\n".join(f"- {w}" for w in run.artifacts.result.warnings)
+        return report
+    except Exception as exc:
+        return _format_exception(exc)
+
+
+@mcp.tool()
+def get_smith_chart(
+    template_id: str,
+    params: str = "",
+    ground_type: str = "average",
+    freq_start_mhz: float | None = None,
+    freq_stop_mhz: float | None = None,
+    freq_steps: int | None = None,
+    z0: float = 50.0,
+) -> str:
+    """Simulate one antenna across a frequency sweep and return Smith chart impedance data.
+
+    Shows normalized impedance (z = Z/Z0), reflection coefficient magnitude and phase,
+    VSWR at each frequency, resonance identification where reactance crosses zero,
+    and impedance trajectory (capacitive/inductive regions).
+    """
+    try:
+        if z0 <= 0.0:
+            raise ValueError("z0 must be greater than zero.")
+        run = _run_template_simulation(
+            template_id=template_id, params_json=params, ground_type=ground_type,
+            freq_start_mhz=freq_start_mhz, freq_stop_mhz=freq_stop_mhz, freq_steps=freq_steps,
+        )
+        if not run.artifacts.result.frequency_data:
+            raise ValueError("Simulation did not return any frequency data.")
+        lines = [
+            f"Template: {run.template.name} ({run.template.id})",
+            f"Params: {json.dumps(run.params, sort_keys=True)}",
+            f"Ground: {_format_ground_display(run.ground_spec)}",
+            f"Sweep: {_format_frequency_range(run.frequency_range)}",
+            "",
+            _format_smith_report(run.artifacts.result.frequency_data, z0),
+        ]
+        if run.artifacts.result.warnings:
+            lines.extend(["", "Warnings"] + [f"- {w}" for w in run.artifacts.result.warnings])
+        return "\n".join(lines).strip()
+    except Exception as exc:
+        return _format_exception(exc)
+
+
+@mcp.tool()
+def compare_radiation_patterns(
+    antenna1_template: str,
+    antenna2_template: str,
+    antenna1_params: str = "",
+    antenna2_params: str = "",
+    frequency_mhz: float | None = None,
+    ground_type: str = "average",
+) -> str:
+    """Simulate two antennas at one frequency and compare their radiation patterns.
+
+    Shows side-by-side pattern shape classification, beamwidth, front-to-back,
+    front-to-side, directivity assessment, and gain-at-each-angle comparison tables
+    for both H-plane and E-plane cuts. Useful for determining which antenna is more
+    omnidirectional vs more directional.
+    """
+    try:
+        template1 = get_template(antenna1_template)
+        template2 = get_template(antenna2_template)
+        params1 = resolve_params(template1, _parse_json_object(antenna1_params, "antenna1_params"))
+        params2 = resolve_params(template2, _parse_json_object(antenna2_params, "antenna2_params"))
+
+        if frequency_mhz is not None:
+            target = float(frequency_mhz)
+            freq_note = "user-specified"
+        else:
+            d1 = template1.default_frequency_range(params1)
+            d2 = template2.default_frequency_range(params2)
+            lo = max(d1.start_mhz, d2.start_mhz)
+            hi = min(d1.stop_mhz, d2.stop_mhz)
+            if lo <= hi:
+                target = (lo + hi) / 2.0
+                freq_note = "center of default-sweep overlap"
+            else:
+                target = ((d1.start_mhz + d1.stop_mhz) / 2.0 + (d2.start_mhz + d2.stop_mhz) / 2.0) / 2.0
+                freq_note = "midpoint of default-sweep centers (no overlap)"
+
+        run1 = _run_template_simulation(antenna1_template, antenna1_params, ground_type, target, target, 1)
+        run2 = _run_template_simulation(antenna2_template, antenna2_params, ground_type, target, target, 1)
+
+        if not run1.artifacts.result.frequency_data or not run2.artifacts.result.frequency_data:
+            raise ValueError("One or both simulations returned no data.")
+
+        r1 = run1.artifacts.result.frequency_data[0]
+        r2 = run2.artifacts.result.frequency_data[0]
+        a1 = _extract_pattern_analysis(r1)
+        a2 = _extract_pattern_analysis(r2)
+
+        if not a1["available"] or not a2["available"]:
+            raise ValueError("Pattern data not available for one or both antennas.")
+
+        v1 = float(a1["classification"]["azimuth_variation_db"])
+        v2 = float(a2["classification"]["azimuth_variation_db"])
+        unif = _winner_lower(v1, v2)
+        unif_text = "—" if unif in {"—", "Tie"} else f"{unif} more uniform"
+
+        summary_rows = [
+            ["Impedance", _format_impedance(r1), _format_impedance(r2), "—"],
+            ["SWR(50Ω)", f"{r1.swr_50:.2f}", f"{r2.swr_50:.2f}", _winner_lower(r1.swr_50, r2.swr_50)],
+            ["Max gain", f"{a1['max_gain_dbi']:.2f} dBi", f"{a2['max_gain_dbi']:.2f} dBi",
+             _winner_higher(a1["max_gain_dbi"], a2["max_gain_dbi"])],
+            ["Peak dir", f"θ{a1['theta_deg']:.1f}° φ{a1['phi_deg']:.1f}°",
+             f"θ{a2['theta_deg']:.1f}° φ{a2['phi_deg']:.1f}°", "—"],
+            ["Shape", a1["shape"], a2["shape"], "—"],
+            ["Directivity", a1["directivity_character"], a2["directivity_character"], "—"],
+            ["Az variation", f"{v1:.2f} dB", f"{v2:.2f} dB", unif_text],
+            ["Lobes", str(a1["classification"]["num_lobes"]), str(a2["classification"]["num_lobes"]), "—"],
+            ["Beamwidth", _analysis_beamwidth_summary(a1), _analysis_beamwidth_summary(a2), "—"],
+            ["F/B", _fmt_opt(a1["front_to_back_db"], 2, " dB"), _fmt_opt(a2["front_to_back_db"], 2, " dB"),
+             _winner_higher(a1["front_to_back_db"], a2["front_to_back_db"])],
+            ["F/S", _fmt_opt(a1["front_to_side_db"], 2, " dB"), _fmt_opt(a2["front_to_side_db"], 2, " dB"),
+             _winner_higher(a1["front_to_side_db"], a2["front_to_side_db"])],
+            ["Efficiency", _fmt_opt(r1.efficiency_percent, 1, "%"), _fmt_opt(r2.efficiency_percent, 1, "%"),
+             _winner_higher(r1.efficiency_percent, r2.efficiency_percent)],
+        ]
+
+        title = f"Pattern comparison: {run1.template.name} vs {run2.template.name}"
+        lines = [
+            title, "=" * len(title),
+            f"Antenna 1: {run1.template.name} ({run1.template.id})",
+            f"Antenna 1 params: {json.dumps(run1.params, sort_keys=True)}",
+            f"Antenna 2: {run2.template.name} ({run2.template.id})",
+            f"Antenna 2 params: {json.dumps(run2.params, sort_keys=True)}",
+            f"Frequency: {r1.frequency_mhz:.3f} MHz ({freq_note})",
+            f"Ground: {_format_ground_display(run1.ground_spec)}",
+            "", "Summary",
+            _format_table(["Metric", "Antenna 1", "Antenna 2", "Assessment"], summary_rows),
+            "", "Directivity assessment",
+            f"- Ant 1: {a1['directivity_character']} ({a1['shape']}, {a1['classification']['num_lobes']} lobe(s), az var {v1:.2f} dB)",
+            f"- Ant 2: {a2['directivity_character']} ({a2['shape']}, {a2['classification']['num_lobes']} lobe(s), az var {v2:.2f} dB)",
+        ]
+        if v1 + 1.0 < v2:
+            lines.append(f"- {run1.template.name} is more omnidirectional in azimuth.")
+        elif v2 + 1.0 < v1:
+            lines.append(f"- {run2.template.name} is more omnidirectional in azimuth.")
+        else:
+            lines.append("- Similar azimuth uniformity.")
+
+        gd = a1["max_gain_dbi"] - a2["max_gain_dbi"]
+        if abs(gd) < 0.1:
+            lines.append("- Peak gain effectively the same.")
+        elif gd > 0:
+            lines.append(f"- {run1.template.name} has {gd:.2f} dB more peak gain.")
+        else:
+            lines.append(f"- {run2.template.name} has {abs(gd):.2f} dB more peak gain.")
+
+        lines.extend([
+            "", "H-plane comparison (phi sweep)",
+            _format_cut_comparison(a1["azimuth_cut"], a2["azimuth_cut"], "Phi°", 15.0, circular=True),
+            "", "E-plane comparison (theta sweep)",
+            _format_cut_comparison(a1["elevation_cut"], a2["elevation_cut"], "Theta°", 10.0, circular=False),
+        ])
+
+        for label, run in [("Antenna 1", run1), ("Antenna 2", run2)]:
+            if run.artifacts.result.warnings:
+                lines.extend([f"", f"Warnings from {label}"] + [f"- {w}" for w in run.artifacts.result.warnings])
+
+        return "\n".join(lines).strip()
     except Exception as exc:
         return _format_exception(exc)
 
