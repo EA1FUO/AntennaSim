@@ -42,10 +42,15 @@ The server provides these tool families:
    - `compare_antennas`
    - `analyze_antenna_for_band`
 
-3. **Guided custom wire design**
+3. **Radiation pattern and impedance analysis**
+   - `get_radiation_pattern`
+   - `get_smith_chart`
+   - `compare_radiation_patterns`
+
+4. **Guided custom wire design**
    - `design_wire_antenna`
 
-4. **Raw geometry and export**
+5. **Raw geometry and export**
    - `simulate_custom_antenna`
    - `get_nec2_card_deck`
 
@@ -474,7 +479,71 @@ Band definitions currently use the Region 1 table for band-targeted analysis.
 
 ---
 
-## 7) `design_wire_antenna`
+## 7) `get_radiation_pattern`
+
+Simulate one antenna at a single frequency and return a detailed radiation pattern report.
+
+Shows:
+- **Pattern shape classification**: omnidirectional, nearly omnidirectional, bidirectional, directional, or highly directional
+- **Key metrics**: maximum gain, beamwidth (H-plane and E-plane), front-to-back ratio, front-to-side ratio
+- **Directivity character**: omnidirectional, bidirectional, unidirectional
+- **Azimuth variation**: how much gain varies around the azimuth (low = omnidirectional)
+- **H-plane cut table**: gain at each azimuth angle (phi sweep at the elevation of max gain)
+- **E-plane cut table**: gain at each elevation angle (theta sweep at the azimuth of max gain)
+
+Arguments:
+
+- `template_id` — required
+- `params` — JSON object string, optional
+- `frequency_mhz` — single frequency to analyze (default: center of template's sweep)
+- `ground_type` — preset string, optional
+
+This is the primary tool for understanding whether an antenna radiates omnidirectionally or in a specific direction.
+
+---
+
+## 8) `get_smith_chart`
+
+Simulate one antenna across a frequency sweep and return Smith chart impedance data.
+
+Shows:
+- **Impedance sweep table**: R, X, |Z|, normalized impedance (z = Z/Z0), reflection coefficient |Γ| and phase, VSWR at each frequency
+- **Closest point to center**: the frequency where |Γ| is minimized (best match to Z0)
+- **Resonance identification**: frequencies where reactance X crosses zero, with the resistance and VSWR at each crossing
+- **Impedance trajectory**: regions where the antenna is capacitive (X < 0) vs inductive (X > 0) across the sweep
+
+Arguments:
+
+- `template_id` — required
+- `params` — JSON object string, optional
+- `ground_type` — optional
+- `freq_start_mhz`, `freq_stop_mhz`, `freq_steps` — optional
+- `z0` — reference impedance in ohms (default 50)
+
+---
+
+## 9) `compare_radiation_patterns`
+
+Simulate two antennas at the same frequency and compare their radiation patterns side by side.
+
+Shows:
+- **Summary table**: max gain, pattern shape, directivity character, azimuth variation, beamwidth, F/B, F/S, efficiency for both antennas
+- **Directivity assessment**: which antenna is more omnidirectional, which has more gain, which has better F/B discrimination
+- **H-plane comparison table**: gain at each azimuth angle for both antennas with a difference (Δ) column
+- **E-plane comparison table**: gain at each elevation angle for both antennas with a difference column
+
+Arguments:
+
+- `antenna1_template`, `antenna2_template` — required
+- `antenna1_params`, `antenna2_params` — JSON, optional
+- `frequency_mhz` — single frequency (default: center of overlapping sweep)
+- `ground_type` — optional
+
+This tool directly answers questions like "is a dipole or a Yagi more omnidirectional?" or "which antenna has a flatter pattern?"
+
+---
+
+## 10) `design_wire_antenna`
 
 Simulates a custom wire antenna from a compact semicolon-separated wire list instead of raw JSON.
 
@@ -516,7 +585,7 @@ That example describes two wires starting from the same feedpoint at 10 m height
 
 ---
 
-## 8) `simulate_custom_antenna`
+## 11) `simulate_custom_antenna`
 
 Advanced raw geometry simulation.
 
@@ -588,7 +657,7 @@ Or an array of excitations:
 
 ---
 
-## 9) `get_nec2_card_deck`
+## 12) `get_nec2_card_deck`
 
 Returns the raw NEC2 card deck for a **template configuration** without running `nec2c`.
 
@@ -654,6 +723,15 @@ Here are good prompts to try in an MCP-capable client.
 - “Analyze a 40 meter EFHW for the 40m band.”
 - “Check how well a G5RV covers the 20 meter band.”
 - “Analyze an off-center-fed dipole for 80 meters.”
+
+### Radiation patterns and Smith chart
+
+- "Show me the radiation pattern of a 20 meter dipole at 10 meters height — is it omnidirectional?"
+- "Get the radiation pattern of a 3-element Yagi at 14.15 MHz and tell me the beamwidth and front-to-back ratio."
+- "Compare the radiation patterns of a vertical and a Moxon at 14.15 MHz — which is more omnidirectional?"
+- "Compare the pattern of a dipole vs a delta loop at 7.1 MHz — which one has a flatter pattern?"
+- "Show me the Smith chart for an EFHW on the 20m band."
+- "Get the Smith chart for a J-Pole at 145 MHz — where does it resonate and what's the impedance at resonance?"
 
 ### Advanced custom geometry and export
 
