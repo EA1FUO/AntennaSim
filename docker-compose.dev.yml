@@ -33,6 +33,25 @@ services:
       - NEC_WORKDIR=/tmp/nec_workdir
     command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 
+  mcp:
+    build:
+      context: .
+      dockerfile: mcp/Dockerfile.dev
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./mcp:/app/mcp
+      - ./backend/src:/app/backend/src
+      - ./VERSION:/app/VERSION:ro
+      - ./VERSION:/app/backend/VERSION:ro
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8080
+      - ANTENNASIM_BACKEND_DIR=/app/backend
+      - SIM_TIMEOUT_SECONDS=180
+      - NEC_WORKDIR=/tmp/nec_workdir
+
   redis:
     image: redis:7-alpine
     ports:
