@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- Frequency slider SWR display ignoring transformer/matching configuration
+- Multi-band analysis table ignoring transformer/matching configuration
+
+### Changed
+
+- Move matching/balun selector next to band presets in Wire Editor for discoverability
+
 ## [1.0.1] - 2026-03-24
 
 ### Added

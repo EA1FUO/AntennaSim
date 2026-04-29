@@ -618,9 +618,6 @@ export function EditorPage() {
                     {/* Ground */}
                     <GroundEditor ground={ground} onChange={setGround} />
 
-                    {/* Matching / Balun */}
-                    <BalunEditor matching={matching} onChange={setMatching} />
-
                     {/* Pattern resolution */}
                     <div>
                       <label className="text-[10px] text-text-secondary font-semibold uppercase tracking-wider block mb-1">
@@ -679,6 +676,9 @@ export function EditorPage() {
               segments={frequencySegments}
               onSegmentsChange={setFrequencySegments}
             />
+
+            {/* Matching / Balun — near band presets for discoverability */}
+            <BalunEditor matching={matching} onChange={setMatching} />
 
             {/* Antenna height */}
             {wires.length > 0 && (
@@ -807,6 +807,8 @@ export function EditorPage() {
                 onSegmentsChange={setFrequencySegments}
                 size="sm"
               />
+              {/* Matching / Balun — near band presets for discoverability */}
+              <BalunEditor matching={matching} onChange={setMatching} />
               {/* Snap size */}
               <div>
                 <label className="text-[11px] text-text-secondary font-semibold uppercase tracking-wider block mb-1">Snap Size</label>
@@ -833,7 +835,6 @@ export function EditorPage() {
                 </select>
               </div>
               <GroundEditor ground={ground} onChange={setGround} />
-              <BalunEditor matching={matching} onChange={setMatching} />
             </div>
           )}
           {mobileTab === "tools" && (
