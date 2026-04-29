@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Frequency slider SWR display ignoring transformer/matching configuration
 - Multi-band analysis table ignoring transformer/matching configuration
 
+### Added
+
+- Templates now set their recommended transformer automatically (EFHW → 49:1, OCFD → 4:1, delta loop → 4:1)
+
 ### Changed
 
 - Move matching/balun selector next to band presets in Wire Editor for discoverability

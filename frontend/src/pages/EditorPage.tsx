@@ -252,12 +252,13 @@ export function EditorPage() {
     setDesignFrequency(freqParam);
     setFrequencyRange(freqRange);
 
-    // Set ground from template default
+    // Set ground and matching from template defaults
     setGround(selectedTemplate.defaultGround);
+    setMatching(selectedTemplate.defaultMatching ?? { type: "none", ratio: 1, feedlineZ0: 50 });
 
     // Switch to wires section after loading
     setEditorSection("wires");
-  }, [selectedTemplate, templateParams, clearAll, setWires, setDesignFrequency, setFrequencyRange, setGround]);
+  }, [selectedTemplate, templateParams, clearAll, setWires, setDesignFrequency, setFrequencyRange, setGround, setMatching]);
 
   const handleBandSelect = useCallback(
     (range: FrequencyRange, _band: HamBand) => {

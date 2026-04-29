@@ -90,8 +90,11 @@ export function SimulatorPage() {
 
   // Handlers
   const handleTemplateSelect = useCallback(
-    (t: AntennaTemplate) => setTemplate(t),
-    [setTemplate]
+    (t: AntennaTemplate) => {
+      setTemplate(t);
+      setMatching(t.defaultMatching ?? { type: "none", ratio: 1, feedlineZ0: 50 });
+    },
+    [setTemplate, setMatching]
   );
 
   const handleToggle = useCallback(
