@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- Frequency slider displaying bands in click order instead of ascending frequency order
+- Impedance chart zigzag lines when simulating non-contiguous multi-band sweeps
+
 ## [1.0.1] - 2026-03-24
 
 ### Added
