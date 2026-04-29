@@ -491,9 +491,32 @@ function buildFrequencyResult(
     );
   }
 
-  // Efficiency from power budget
+  // Efficiency from pattern integration: η = (1/4π) ∫∫ G(θ,φ) sinθ dθ dφ.
+  // For a lossless antenna this integral equals 4π → η = 1.0 (100%).
+  // Ground absorption reduces the integral → η < 1.0.
+  // Uses exact solid angle elements: ΔΩ = |cos(θ-dθ/2) - cos(θ+dθ/2)| × dφ
+  // instead of the midpoint approximation sin(θ)×dθ×dφ for better accuracy.
   let efficiency: number | null = null;
+  if (patternData.length > 0) {
+    const halfDth = ((thetaStep / 2) * Math.PI) / 180.0;
+    const dph = (phiStep * Math.PI) / 180.0;
+    let weightedGain = 0;
+    let totalWeight = 0;
+    for (const [theta, _phi, gainDb] of patternData) {
+      const thetaRad = (theta * Math.PI) / 180.0;
+      const gainLinear = gainDb > -999.0 ? Math.pow(10, gainDb / 10.0) : 0;
+      // Exact solid angle of this cell
+      const w = Math.abs(Math.cos(thetaRad - halfDth) - Math.cos(thetaRad + halfDth)) * dph;
+      weightedGain += gainLinear * w;
+      totalWeight += w;
+    }
+    if (totalWeight > 1e-30) {
+      const avgGain = weightedGain / totalWeight;
+      efficiency = round(Math.min(avgGain * 100.0, 100.0), 1);
+    }
+  }
   if (
+    efficiency === null &&
     powerRadiated !== null &&
     powerInput !== null &&
     powerInput > 1e-30
@@ -717,6 +740,7 @@ export function parseNecOutput(
       currentPowerInput = parseFloat(pwrInMatch[1]!);
       continue;
     }
+
   }
 
   // Don't forget the last frequency
