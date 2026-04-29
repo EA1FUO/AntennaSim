@@ -172,6 +172,40 @@ function EditorSceneContent({
     [raycaster, camera, snapSize]
   );
 
+  /** Raycast to a sphere surface — returns the closest NEC2 point on the sphere.
+   *  Used for length-locked endpoint dragging: the endpoint slides on the sphere. */
+  const raycastToSphere = useCallback(
+    (event: ThreeEvent<PointerEvent>, center: [number, number, number], radius: number): [number, number, number] | null => {
+      const ray = event.ray ?? raycaster.ray;
+      // Sphere center in Three.js coords: NEC2 [x, y, z] -> Three.js [x, z, -y]
+      const sphereCenter = new Vector3(center[0], center[2], -center[1]);
+      // Ray-sphere intersection: |O + tD - C|² = r²
+      const oc = new Vector3().subVectors(ray.origin, sphereCenter);
+      const a = ray.direction.dot(ray.direction);
+      const b = 2 * oc.dot(ray.direction);
+      const c = oc.dot(oc) - radius * radius;
+      const discriminant = b * b - 4 * a * c;
+
+      let hitPoint: Vector3;
+      if (discriminant >= 0) {
+        // Ray hits the sphere — use the closer intersection
+        const t = (-b - Math.sqrt(discriminant)) / (2 * a);
+        hitPoint = new Vector3().copy(ray.origin).addScaledVector(ray.direction, t > 0 ? t : (-b + Math.sqrt(discriminant)) / (2 * a));
+      } else {
+        // Ray misses — find the closest point on the sphere to the ray
+        // Project sphere center onto the ray to find closest approach
+        const tClosest = -b / (2 * a);
+        const closest = new Vector3().copy(ray.origin).addScaledVector(ray.direction, Math.max(0, tClosest));
+        // Project from center to closest point, clamp to sphere surface
+        hitPoint = new Vector3().subVectors(closest, sphereCenter).normalize().multiplyScalar(radius).add(sphereCenter);
+      }
+
+      // Three.js [x, y, z] -> NEC2 [x, -z, y]
+      return [snap(hitPoint.x, snapSize), snap(-hitPoint.z, snapSize), snap(hitPoint.y, snapSize)];
+    },
+    [raycaster, snapSize]
+  );
+
   /** Handle clicking on empty space */
   const handleBackgroundClick = useCallback(
     (event: ThreeEvent<MouseEvent>) => {
@@ -217,6 +251,32 @@ function EditorSceneContent({
         const target = dragRef.current;
         const shiftHeld = event.nativeEvent.shiftKey || verticalDrag;
 
+        // Length-locked endpoint drag: raycast directly onto the constant-length
+        // sphere for smooth movement in all directions (no Shift needed).
+        if (target.type === "endpoint") {
+          const wire = wires.find((w) => w.tag === target.tag);
+          if (wire?.lengthLocked) {
+            const { tag, endpoint } = target;
+            const fixed: [number, number, number] = endpoint === "start"
+              ? [wire.x2, wire.y2, wire.z2]
+              : [wire.x1, wire.y1, wire.z1];
+            const wireLen = Math.sqrt(
+              (wire.x2 - wire.x1) ** 2 + (wire.y2 - wire.y1) ** 2 + (wire.z2 - wire.z1) ** 2
+            );
+            if (wireLen > 1e-9) {
+              const hit = raycastToSphere(event, fixed, wireLen);
+              if (hit) {
+                if (endpoint === "start") {
+                  updateWire(tag, { x1: hit[0], y1: hit[1], z1: hit[2] });
+                } else {
+                  updateWire(tag, { x2: hit[0], y2: hit[1], z2: hit[2] });
+                }
+              }
+            }
+            return;
+          }
+        }
+
         // Shift+drag (or vertical-drag toggle on mobile) = vertical (Z-axis in NEC2) movement only
         if (shiftHeld) {
           const yVal = raycastVertical(event);
@@ -224,7 +284,6 @@ function EditorSceneContent({
 
           if (target.type === "endpoint") {
             const { tag, endpoint } = target;
-            // Only update NEC2 Z coordinate (Three.js Y)
             if (endpoint === "start") {
               updateWire(tag, { z1: yVal });
             } else {
@@ -247,7 +306,6 @@ function EditorSceneContent({
 
         if (target.type === "endpoint") {
           const { tag, endpoint } = target;
-          // Only update X/Y from ground raycast; keep the endpoint's original Z
           if (endpoint === "start") {
             updateWire(tag, { x1: pos[0], y1: pos[1], z1: target.origZ });
           } else {

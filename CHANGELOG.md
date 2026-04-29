@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Editable wire length field in Wire Editor properties panel and wire table
+- Length lock toggle to maintain wire length during 3D endpoint drags
+- Bend Wire tool to split a straight wire at a configurable angle and position while preserving total length
+
 ## [1.0.1] - 2026-03-24
 
 ### Added

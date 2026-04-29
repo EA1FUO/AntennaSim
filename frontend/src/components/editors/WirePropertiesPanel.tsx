@@ -6,7 +6,7 @@
  * shows a summary.
  */
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useEditorStore } from "../../stores/editorStore";
 import type { EditorWire } from "../../stores/editorStore";
 import { centerSegment } from "../../engine/segmentation";
@@ -34,6 +34,126 @@ function CoordField({
   );
 }
 
+function WireLengthSection({
+  wire,
+  onSetLength,
+  onToggleLock,
+  onBend,
+}: {
+  wire: EditorWire;
+  onSetLength: (len: number) => void;
+  onToggleLock: () => void;
+  onBend: (position: number, angleDeg: number, plane: "horizontal" | "vertical", numSegments: number) => void;
+}) {
+  const [showBend, setShowBend] = useState(false);
+  const [bendAngle, setBendAngle] = useState(90);
+  const [bendPlane, setBendPlane] = useState<"horizontal" | "vertical">("horizontal");
+  const [bendSegments, setBendSegments] = useState(2);
+
+  const length = Math.sqrt(
+    (wire.x2 - wire.x1) ** 2 + (wire.y2 - wire.y1) ** 2 + (wire.z2 - wire.z1) ** 2
+  );
+
+  return (
+    <div className="border-t border-border pt-2 space-y-1.5">
+      <div className="text-[11px] text-text-secondary font-medium">Length</div>
+      <div className="flex items-center gap-1">
+        <div className="flex-1">
+          <NumberInput
+            value={length}
+            onChange={(v) => { if (v > 0) onSetLength(v); }}
+            min={0.01}
+            max={1000}
+            decimals={3}
+            unit="m"
+          />
+        </div>
+        <button
+          onClick={onToggleLock}
+          className={`p-1 rounded transition-colors ${
+            wire.lengthLocked
+              ? "bg-accent/20 text-accent"
+              : "bg-surface-hover text-text-secondary hover:text-text-primary"
+          }`}
+          title={wire.lengthLocked ? "Length locked — unlock to allow free movement" : "Lock length — endpoint drags maintain wire length"}
+        >
+          <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="currentColor">
+            {wire.lengthLocked ? (
+              <path d="M4 7V5a4 4 0 118 0v2h1a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1h1zm2 0h4V5a2 2 0 10-4 0v2zm2 3a1 1 0 100 2 1 1 0 000-2z" />
+            ) : (
+              <path d="M10 7V5a2 2 0 10-4 0v1H4V5a4 4 0 118 0v2h1a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1h7zm-2 3a1 1 0 100 2 1 1 0 000-2z" />
+            )}
+          </svg>
+        </button>
+      </div>
+
+      {/* Bend wire tool */}
+      <button
+        onClick={() => setShowBend(!showBend)}
+        className="w-full py-0.5 text-[11px] rounded bg-surface-hover text-text-secondary hover:text-text-primary transition-colors"
+      >
+        {showBend ? "Cancel bend" : "Bend wire"}
+      </button>
+
+      {showBend && (
+        <div className="space-y-1.5 bg-background rounded p-2 border border-border">
+          <div className="flex items-center gap-1.5">
+            <label className="text-[10px] text-text-secondary w-12 shrink-0">Angle</label>
+            <NumberInput
+              value={bendAngle}
+              onChange={setBendAngle}
+              min={-180}
+              max={180}
+              decimals={0}
+              unit="deg"
+              size="sm"
+            />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <label className="text-[10px] text-text-secondary w-12 shrink-0">Plane</label>
+            <select
+              value={bendPlane}
+              onChange={(e) => setBendPlane(e.target.value as "horizontal" | "vertical")}
+              className="flex-1 bg-background text-text-primary text-[10px] px-1.5 py-0.5 rounded border border-border outline-none"
+            >
+              <option value="horizontal">Horizontal (XY)</option>
+              <option value="vertical">Vertical (up/down)</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <label className="text-[10px] text-text-secondary w-12 shrink-0">Wires</label>
+            <NumberInput
+              value={bendSegments}
+              onChange={(v) => setBendSegments(Math.max(2, Math.min(20, Math.round(v))))}
+              min={2}
+              max={20}
+              decimals={0}
+              size="sm"
+            />
+          </div>
+          <button
+            onClick={() => {
+              onBend(0.5, bendAngle, bendPlane, bendSegments);
+              setShowBend(false);
+            }}
+            className="w-full py-1 text-[11px] rounded bg-accent/20 text-accent hover:bg-accent/30 transition-colors"
+          >
+            Apply bend
+          </button>
+          {bendSegments > 10 && (
+            <p className="text-[9px] text-swr-warning leading-tight">
+              Many wire segments may slow simulation.
+            </p>
+          )}
+          <p className="text-[9px] text-text-secondary/70 leading-tight">
+            Splits wire into {bendSegments} segments. Total length is preserved.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function WirePropertiesPanel() {
   const selectedTags = useEditorStore((s) => s.selectedTags);
   const wires = useEditorStore((s) => s.wires);
@@ -44,6 +164,9 @@ export function WirePropertiesPanel() {
   const splitWire = useEditorStore((s) => s.splitWire);
   const resetSegments = useEditorStore((s) => s.resetSegments);
   const deleteWires = useEditorStore((s) => s.deleteWires);
+  const setWireLength = useEditorStore((s) => s.setWireLength);
+  const toggleLengthLock = useEditorStore((s) => s.toggleLengthLock);
+  const bendWire = useEditorStore((s) => s.bendWire);
   const pickingExcitationForTag = useEditorStore((s) => s.pickingExcitationForTag);
   const setPickingExcitationForTag = useEditorStore((s) => s.setPickingExcitationForTag);
   const accurateFeedpoint = useUIStore((s) => s.accurateFeedpoint);
@@ -194,16 +317,13 @@ export function WirePropertiesPanel() {
         />
       </div>
 
-      {/* Wire length (computed) */}
-      <div className="text-[11px] font-mono text-text-secondary border-t border-border pt-2">
-        Length:{" "}
-        {Math.sqrt(
-          (wire.x2 - wire.x1) ** 2 +
-            (wire.y2 - wire.y1) ** 2 +
-            (wire.z2 - wire.z1) ** 2
-        ).toFixed(3)}{" "}
-        m
-      </div>
+      {/* Wire length — editable + lock toggle */}
+      <WireLengthSection
+        wire={wire}
+        onSetLength={(len) => setWireLength(wire.tag, len, "end")}
+        onToggleLock={() => toggleLengthLock(wire.tag)}
+        onBend={(pos, angle, plane, segs) => bendWire(wire.tag, pos, angle, plane, segs)}
+      />
 
       {/* Excitation */}
       <div className="border-t border-border pt-2 space-y-1.5">
