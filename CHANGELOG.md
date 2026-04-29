@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- Incorrect `end_mhz` field name in README API example (should be `stop_mhz`)
+
 ## [1.0.1] - 2026-03-24
 
 ### Added
