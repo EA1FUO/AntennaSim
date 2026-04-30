@@ -173,6 +173,8 @@ interface EditorState {
   toggleLengthLock: (tag: number) => void;
   /** Bend a wire: split at position and rotate the second half by angle */
   bendWire: (tag: number, position: number, angleDeg: number, plane: "horizontal" | "vertical", numSegments?: number) => void;
+  /** Simulate wire hanging between its endpoints with gravity sag */
+  hangWire: (tag: number, numSegments: number, targetLength?: number) => void;
 
   // ---- Clipboard / Transform ----
   /** Clipboard for copy/paste */
@@ -597,6 +599,89 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     const newWires = state.wires.filter((w) => w.tag !== tag).concat(newWiresList);
 
+    set({
+      ...pushUndo(state),
+      wires: newWires,
+      excitations: newExcitations,
+      selectedTags: newSelected,
+      nextTag,
+    });
+  },
+
+  hangWire: (tag, numSegments, targetLength) => {
+    const state = get();
+    const wire = state.wires.find((w) => w.tag === tag);
+    if (!wire || numSegments < 2) return;
+
+    const n = Math.min(numSegments, 30);
+
+    // Endpoints (NEC2 coords)
+    const ax = wire.x1, ay = wire.y1, az = wire.z1;
+    const bx = wire.x2, by = wire.y2, bz = wire.z2;
+
+    // Use target length if provided, otherwise current wire length
+    const currentLen = Math.sqrt((bx - ax) ** 2 + (by - ay) ** 2 + (bz - az) ** 2);
+    const wireLen = targetLength ?? currentLen;
+    if (wireLen < 1e-9) return;
+
+    // Horizontal span (XY distance) and vertical difference
+    const hSpan = Math.sqrt((bx - ax) ** 2 + (by - ay) ** 2);
+    const vDiff = bz - az; // height difference
+
+    // Straight-line 3D span
+    const span = Math.sqrt(hSpan * hSpan + vDiff * vDiff);
+
+    // Sag: parabolic approximation. If wire is taut (L ≈ span), minimal sag.
+    // maxSag = sqrt(3 * span * (wireLen - span) / 8)
+    const slack = Math.max(0, wireLen - span);
+    const maxSag = slack > 1e-6 ? Math.sqrt(3 * span * slack / 8) : 0;
+
+    // Build points along the catenary/parabolic curve
+    const points: Array<{ x: number; y: number; z: number }> = [];
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      // Linear interpolation for the straight-line baseline
+      const lx = ax + (bx - ax) * t;
+      const ly = ay + (by - ay) * t;
+      const lz = az + (bz - az) * t;
+      // Parabolic sag below the baseline (4*s*t*(1-t) peaks at midpoint)
+      const sag = 4 * maxSag * t * (1 - t);
+      points.push({ x: lx, y: ly, z: lz - sag });
+    }
+
+    // Create wire segments
+    const newWiresList: EditorWire[] = [];
+    const newSelected = new Set(state.selectedTags);
+    newSelected.delete(tag);
+    let nextTag = state.nextTag;
+
+    for (let i = 0; i < n; i++) {
+      const p1 = points[i]!, p2 = points[i + 1]!;
+      const newTag = nextTag++;
+      newWiresList.push({
+        ...wire,
+        tag: newTag,
+        x1: p1.x, y1: p1.y, z1: p1.z,
+        x2: p2.x, y2: p2.y, z2: p2.z,
+        segments: computeSegments(
+          { x1: p1.x, y1: p1.y, z1: p1.z, x2: p2.x, y2: p2.y, z2: p2.z },
+          state.designFrequencyMhz,
+        ),
+        segmentsManual: false,
+        lengthLocked: false,
+      });
+      newSelected.add(newTag);
+    }
+
+    // Remap excitations to first segment
+    const newExcitations = state.excitations.map((e) => {
+      if (e.wire_tag !== tag) return e;
+      const firstWire = newWiresList[0]!;
+      const ratio = e.segment / wire.segments;
+      return { ...e, wire_tag: firstWire.tag, segment: Math.max(1, Math.min(firstWire.segments, Math.round(ratio * firstWire.segments))) };
+    });
+
+    const newWires = state.wires.filter((w) => w.tag !== tag).concat(newWiresList);
     set({
       ...pushUndo(state),
       wires: newWires,

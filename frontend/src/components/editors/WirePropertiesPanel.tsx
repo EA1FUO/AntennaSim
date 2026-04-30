@@ -39,16 +39,21 @@ function WireLengthSection({
   onSetLength,
   onToggleLock,
   onBend,
+  onHang,
 }: {
   wire: EditorWire;
   onSetLength: (len: number) => void;
   onToggleLock: () => void;
   onBend: (position: number, angleDeg: number, plane: "horizontal" | "vertical", numSegments: number) => void;
+  onHang: (numSegments: number, targetLength?: number) => void;
 }) {
   const [showBend, setShowBend] = useState(false);
   const [bendAngle, setBendAngle] = useState(90);
   const [bendPlane, setBendPlane] = useState<"horizontal" | "vertical">("horizontal");
   const [bendSegments, setBendSegments] = useState(2);
+  const [showHang, setShowHang] = useState(false);
+  const [hangSegments, setHangSegments] = useState(5);
+  const [hangLength, setHangLength] = useState<number | null>(null); // null = wire length + 1m
 
   const length = Math.sqrt(
     (wire.x2 - wire.x1) ** 2 + (wire.y2 - wire.y1) ** 2 + (wire.z2 - wire.z1) ** 2
@@ -89,7 +94,7 @@ function WireLengthSection({
 
       {/* Bend wire tool */}
       <button
-        onClick={() => setShowBend(!showBend)}
+        onClick={() => { setShowBend(!showBend); if (!showBend) setShowHang(false); }}
         className="w-full py-0.5 text-[11px] rounded bg-surface-hover text-text-secondary hover:text-text-primary transition-colors"
       >
         {showBend ? "Cancel bend" : "Bend wire"}
@@ -150,6 +155,65 @@ function WireLengthSection({
           </p>
         </div>
       )}
+
+      {/* Hang wire (catenary sag) */}
+      <button
+        onClick={() => { setShowHang(!showHang); if (!showHang) setShowBend(false); }}
+        className="w-full py-0.5 text-[11px] rounded bg-surface-hover text-text-secondary hover:text-text-primary transition-colors"
+      >
+        {showHang ? "Cancel hang" : "Hang wire"}
+      </button>
+
+      {showHang && (() => {
+        const span = Math.sqrt(
+          (wire.x2 - wire.x1) ** 2 + (wire.y2 - wire.y1) ** 2 + (wire.z2 - wire.z1) ** 2
+        );
+        const effectiveLength = hangLength ?? (length + 1);
+        const slack = Math.max(0, effectiveLength - span);
+        const sag = slack > 1e-6 ? Math.sqrt(3 * span * slack / 8) : 0;
+        return (
+        <div className="space-y-1.5 bg-background rounded p-2 border border-border">
+          <div className="flex items-center gap-1.5">
+            <label className="text-[10px] text-text-secondary w-12 shrink-0">Length</label>
+            <NumberInput
+              value={effectiveLength}
+              onChange={(v) => setHangLength(Math.max(length, v))}
+              min={length}
+              max={span * 3}
+              decimals={2}
+              unit="m"
+              size="sm"
+            />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <label className="text-[10px] text-text-secondary w-12 shrink-0">Wires</label>
+            <NumberInput
+              value={hangSegments}
+              onChange={(v) => setHangSegments(Math.max(2, Math.min(30, Math.round(v))))}
+              min={2}
+              max={30}
+              decimals={0}
+              size="sm"
+            />
+          </div>
+          <div className="text-[9px] font-mono text-text-secondary">
+            Span: {span.toFixed(2)} m | Sag: {sag.toFixed(2)} m
+          </div>
+          <button
+            onClick={() => {
+              onHang(hangSegments, hangLength ?? undefined);
+              setShowHang(false);
+            }}
+            className="w-full py-1 text-[11px] rounded bg-accent/20 text-accent hover:bg-accent/30 transition-colors"
+          >
+            Apply hang
+          </button>
+          <p className="text-[9px] text-text-secondary/70 leading-tight">
+            Set length longer than the span to increase droop. More wire = more sag.
+          </p>
+        </div>
+        );
+      })()}
     </div>
   );
 }
@@ -167,6 +231,7 @@ export function WirePropertiesPanel() {
   const setWireLength = useEditorStore((s) => s.setWireLength);
   const toggleLengthLock = useEditorStore((s) => s.toggleLengthLock);
   const bendWire = useEditorStore((s) => s.bendWire);
+  const hangWire = useEditorStore((s) => s.hangWire);
   const pickingExcitationForTag = useEditorStore((s) => s.pickingExcitationForTag);
   const setPickingExcitationForTag = useEditorStore((s) => s.setPickingExcitationForTag);
   const accurateFeedpoint = useUIStore((s) => s.accurateFeedpoint);
@@ -323,6 +388,7 @@ export function WirePropertiesPanel() {
         onSetLength={(len) => setWireLength(wire.tag, len, "end")}
         onToggleLock={() => toggleLengthLock(wire.tag)}
         onBend={(pos, angle, plane, segs) => bendWire(wire.tag, pos, angle, plane, segs)}
+        onHang={(segs, len) => hangWire(wire.tag, segs, len)}
       />
 
       {/* Excitation */}
