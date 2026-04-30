@@ -177,6 +177,156 @@ describe("parseNecOutput — fixture", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Efficiency integration — direct unit tests with synthetic pattern data.
+// These test the buildFrequencyResult integration math, not NEC2 parsing.
+// We import buildFrequencyResult indirectly by calling parseNecOutput with
+// crafted output strings that produce known pattern data.
+// ---------------------------------------------------------------------------
+
+describe("efficiency — pattern integration", () => {
+  // Helper: build a minimal NEC2 output string with arbitrary pattern data.
+  // patternLines: array of { theta, phi, totalDb } objects.
+  function makeOutput(patternLines: Array<{ theta: number; phi: number; db: number }>): string {
+    const header = `
+  FREQUENCY : 1.4000E+01 MHZ
+
+                               ***ANTENNA INPUT PARAMETERS***
+
+  TAG   SEG.    VOLTAGE (VOLTS)         CURRENT (AMPS)         IMPEDANCE (OHMS)        ADMITTANCE (MHOS)       POWER
+  NO.   NO.     REAL        IMAG.       REAL        IMAG.       REAL        IMAG.       REAL        IMAG.      (WATTS)
+   1    11  1.0000E+00  0.0000E+00  1.3699E-02 -9.4425E-05  7.3000E+01  5.0268E-01  1.3699E-02 -9.4425E-05  6.8496E-03
+
+                               ***RADIATION PATTERNS***
+
+       ---- ANGLES ----           ---- POWER GAINS ----          ---- POLARIZATION ----
+       THETA      PHI         VERTC.    HORIZ.     TOTAL       AXIAL      TILT       SENSE
+      DEGREES   DEGREES        DB        DB         DB        RATIO      DEG.
+`;
+    const lines = patternLines.map(
+      (p) =>
+        `     ${p.theta.toFixed(2).padStart(7)}   ${p.phi.toFixed(2).padStart(7)}      -999.99    -999.99   ${p.db.toFixed(2).padStart(8)}     0.00000     0.00      LINEAR`,
+    );
+    return header + lines.join("\n") + "\n";
+  }
+
+  // Build a full-sphere isotropic pattern (theta -180 to +180, like free space)
+  function makeIsotropicFullSphere(gainDb: number, step: number) {
+    const points: Array<{ theta: number; phi: number; db: number }> = [];
+    for (let theta = -180; theta <= 180; theta += step) {
+      for (let phi = 0; phi < 360; phi += step) {
+        points.push({ theta, phi, db: gainDb });
+      }
+    }
+    const nTheta = Math.floor(360 / step) + 1;
+    const nPhi = Math.floor(360 / step);
+    return { points, nTheta, nPhi, thetaStart: -180, thetaStep: step, phiStart: 0, phiStep: step };
+  }
+
+  // Build a hemisphere pattern (theta -90 to +90, like ground-based)
+  // Upper hemisphere (theta < 0) has the given gain, lower (theta > 0) has -999.99
+  function makeHemisphere(gainDb: number, step: number) {
+    const points: Array<{ theta: number; phi: number; db: number }> = [];
+    for (let theta = -90; theta <= 90; theta += step) {
+      for (let phi = 0; phi < 360; phi += step) {
+        // theta < 0 = upper hemisphere (above ground), theta > 0 = below ground
+        const db = theta <= 0 ? gainDb : -999.99;
+        points.push({ theta, phi, db });
+      }
+    }
+    const nTheta = Math.floor(180 / step) + 1;
+    const nPhi = Math.floor(360 / step);
+    return { points, nTheta, nPhi, thetaStart: -90, thetaStep: step, phiStart: 0, phiStep: step };
+  }
+
+  it("isotropic full sphere at 0 dBi → 100% efficiency", () => {
+    // An isotropic radiator with G=1 (0 dBi) everywhere → lossless → η=100%
+    const { points, nTheta, nPhi, thetaStart, thetaStep, phiStart, phiStep } =
+      makeIsotropicFullSphere(0, 10);
+    const output = makeOutput(points);
+    const results = parseNecOutput(output, nTheta, nPhi, thetaStart, thetaStep, phiStart, phiStep);
+    expect(results[0]!.efficiency_percent).toBeCloseTo(100, 0);
+  });
+
+  it("isotropic full sphere at -3 dBi → 50% efficiency", () => {
+    // G = -3 dBi = 0.5 linear everywhere → half the power is lost → η=50%
+    const { points, nTheta, nPhi, thetaStart, thetaStep, phiStart, phiStep } =
+      makeIsotropicFullSphere(-3.0103, 10);
+    const output = makeOutput(points);
+    const results = parseNecOutput(output, nTheta, nPhi, thetaStart, thetaStep, phiStart, phiStep);
+    expect(results[0]!.efficiency_percent).toBeCloseTo(50, 0);
+  });
+
+  it("lossless hemisphere (perfect ground) → 100% efficiency", () => {
+    // Over perfect ground, all power goes into the upper hemisphere.
+    // NEC2 reports gain values that are ~doubled (image effect).
+    // For an isotropic-equivalent antenna: G=2 (3.01 dBi) in upper hemisphere.
+    // avg_gain = (G_upper × Ω_upper + 0 × Ω_lower) / Ω_total = (2 × 2π) / 4π = 1.0
+    // → η = 100%
+    const { points, nTheta, nPhi, thetaStart, thetaStep, phiStart, phiStep } =
+      makeHemisphere(3.0103, 10); // 3.01 dBi = gain of 2 linear
+    const output = makeOutput(points);
+    const results = parseNecOutput(output, nTheta, nPhi, thetaStart, thetaStep, phiStart, phiStep);
+    expect(results[0]!.efficiency_percent).toBeCloseTo(100, 0);
+  });
+
+  it("lossy hemisphere (50% ground loss) → 50% efficiency", () => {
+    // Same hemisphere coverage, but gain = 0 dBi (1.0 linear) in upper half.
+    // A lossless antenna over perfect ground would have G=2 there.
+    // G=1 means half the power is lost to ground.
+    // avg_gain = (1 × 2π + 0 × 2π) / 4π = 0.5 → η = 50%
+    const { points, nTheta, nPhi, thetaStart, thetaStep, phiStart, phiStep } =
+      makeHemisphere(0, 10); // 0 dBi = gain of 1 linear
+    const output = makeOutput(points);
+    const results = parseNecOutput(output, nTheta, nPhi, thetaStart, thetaStep, phiStart, phiStep);
+    expect(results[0]!.efficiency_percent).toBeCloseTo(50, 0);
+  });
+
+  it("very lossy hemisphere → ~25% efficiency", () => {
+    // G = -3 dBi (0.5 linear) in upper hemisphere, -999.99 below.
+    // avg_gain = (0.5 × 2π) / 4π = 0.25 → η = 25%
+    const { points, nTheta, nPhi, thetaStart, thetaStep, phiStart, phiStep } =
+      makeHemisphere(-3.0103, 10);
+    const output = makeOutput(points);
+    const results = parseNecOutput(output, nTheta, nPhi, thetaStart, thetaStep, phiStart, phiStep);
+    expect(results[0]!.efficiency_percent).toBeCloseTo(25, 0);
+  });
+
+  it("higher resolution (5° step) gives same result as 10°", () => {
+    // Verify the integration is resolution-independent for uniform gain
+    const coarse = makeIsotropicFullSphere(0, 10);
+    const fine = makeIsotropicFullSphere(0, 5);
+    const r1 = parseNecOutput(
+      makeOutput(coarse.points), coarse.nTheta, coarse.nPhi,
+      coarse.thetaStart, coarse.thetaStep, coarse.phiStart, coarse.phiStep,
+    );
+    const r2 = parseNecOutput(
+      makeOutput(fine.points), fine.nTheta, fine.nPhi,
+      fine.thetaStart, fine.thetaStep, fine.phiStart, fine.phiStep,
+    );
+    expect(r1[0]!.efficiency_percent).toBeCloseTo(r2[0]!.efficiency_percent!, 0);
+  });
+
+  it("falls back to power budget when no pattern data", () => {
+    const output = `
+  FREQUENCY : 1.4000E+01 MHZ
+
+                               ***ANTENNA INPUT PARAMETERS***
+
+  TAG   SEG.    VOLTAGE (VOLTS)         CURRENT (AMPS)         IMPEDANCE (OHMS)        ADMITTANCE (MHOS)       POWER
+  NO.   NO.     REAL        IMAG.       REAL        IMAG.       REAL        IMAG.       REAL        IMAG.      (WATTS)
+   1    11  1.0000E+00  0.0000E+00  1.2000E-02 -2.0000E-03  7.0000E+01  1.1667E+01  1.2000E-02 -2.0000E-03  6.0000E-03
+
+                               ---------- POWER BUDGET ---------
+                               INPUT POWER   =  6.0000E-03 Watts
+                               RADIATED POWER=  6.0000E-03 Watts
+`;
+    const results = parseNecOutput(output, 1, 1, -90, 5, 0, 5);
+    expect(results).toHaveLength(1);
+    expect(results[0]!.efficiency_percent).toBe(100);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // parseNecOutput — multi-frequency
 // ---------------------------------------------------------------------------
 

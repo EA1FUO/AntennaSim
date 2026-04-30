@@ -7,6 +7,7 @@
 
 import type { FrequencyRange, FrequencySegment } from "../templates/types";
 import type { FrequencyResult } from "../api/nec";
+import { applyMatching, DEFAULT_MATCHING, type MatchingConfig } from "./units";
 
 // ---------------------------------------------------------------------------
 // Band definitions
@@ -169,6 +170,7 @@ export function analyzeBandPerformance(
   results: FrequencyResult[],
   region: "r1" | "r2" | "r3" = "r1",
   swrThreshold: number = 2.0,
+  matching: MatchingConfig = DEFAULT_MATCHING,
 ): BandPerformance[] {
   const bands = getBandsForRegion(region);
 
@@ -192,18 +194,23 @@ export function analyzeBandPerformance(
       };
     }
 
+    // Compute SWR with matching applied
+    const swrForResult = (r: FrequencyResult) =>
+      applyMatching(r.impedance.real, r.impedance.imag, matching).swr;
+
     // Min SWR
     let minSwr = Infinity;
     let minSwrFreq = 0;
     for (const r of inBand) {
-      if (r.swr_50 < minSwr) {
-        minSwr = r.swr_50;
+      const swr = swrForResult(r);
+      if (swr < minSwr) {
+        minSwr = swr;
         minSwrFreq = r.frequency_mhz;
       }
     }
 
     // Usable bandwidth (contiguous range where SWR < threshold)
-    const usable = inBand.filter((r) => r.swr_50 <= swrThreshold);
+    const usable = inBand.filter((r) => swrForResult(r) <= swrThreshold);
     let usableBwKhz: number | null = null;
     if (usable.length > 0) {
       const minFreq = Math.min(...usable.map((r) => r.frequency_mhz));

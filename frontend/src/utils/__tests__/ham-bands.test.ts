@@ -225,11 +225,15 @@ describe("removeBandSegment", () => {
 // ---------------------------------------------------------------------------
 
 describe("analyzeBandPerformance", () => {
-  // Helper to create a minimal FrequencyResult
+  // Helper to create a minimal FrequencyResult.
+  // Impedance is derived from the target SWR so that applyMatching
+  // with default matching (50Ω, 1:1) reproduces the expected SWR.
   function makeResult(freq: number, swr: number, gain: number): FrequencyResult {
+    // For a pure-real impedance: R = swr * Z0 gives the desired SWR
+    const impedanceReal = swr * 50;
     return {
       frequency_mhz: freq,
-      impedance: { real: 50, imag: 0 },
+      impedance: { real: impedanceReal, imag: 0 },
       swr_50: swr,
       gain_max_dbi: gain,
       gain_max_theta: 0,

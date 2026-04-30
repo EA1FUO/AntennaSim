@@ -9,10 +9,13 @@ import { useMemo } from "react";
 import { analyzeBandPerformance } from "../../utils/ham-bands";
 import type { BandPerformance } from "../../utils/ham-bands";
 import type { FrequencyResult } from "../../api/nec";
+import type { MatchingConfig } from "../../utils/units";
+import { DEFAULT_MATCHING } from "../../utils/units";
 
 interface BandAnalysisProps {
   data: FrequencyResult[];
   region?: "r1" | "r2" | "r3";
+  matching?: MatchingConfig;
 }
 
 const QUALITY_STYLES: Record<BandPerformance["quality"], { bg: string; text: string; label: string }> = {
@@ -23,10 +26,10 @@ const QUALITY_STYLES: Record<BandPerformance["quality"], { bg: string; text: str
   not_simulated:  { bg: "bg-surface", text: "text-text-secondary", label: "No data" },
 };
 
-export function BandAnalysis({ data, region = "r1" }: BandAnalysisProps) {
+export function BandAnalysis({ data, region = "r1", matching = DEFAULT_MATCHING }: BandAnalysisProps) {
   const bands = useMemo(
-    () => analyzeBandPerformance(data, region).filter((b) => b.band.stop_mhz <= 30),
-    [data, region]
+    () => analyzeBandPerformance(data, region, 2.0, matching).filter((b) => b.band.stop_mhz <= 30),
+    [data, region, matching]
   );
 
   // Separate simulated vs not

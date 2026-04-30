@@ -45,6 +45,7 @@ export const deltaLoopTemplate: AntennaTemplate = {
   difficulty: "intermediate",
   bands: ["80m", "40m", "20m", "15m", "10m"],
   defaultGround: { type: "average" },
+  defaultMatching: { type: "balun", ratio: 4, feedlineZ0: 50 },
   tips: [
     "Feed impedance is ~100-120 ohms — use a 4:1 balun or 75-ohm quarter-wave match.",
     "Apex-up with bottom feed gives horizontal polarization (good for DX).",

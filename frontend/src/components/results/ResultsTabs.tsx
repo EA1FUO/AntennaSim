@@ -344,7 +344,7 @@ export function ResultsPanel() {
                   <h4 className="text-xs font-medium text-text-secondary">
                     Multi-Band Analysis
                   </h4>
-                  <BandAnalysis data={result.frequency_data} />
+                  <BandAnalysis data={result.frequency_data} matching={matching} />
                 </div>
               )}
 

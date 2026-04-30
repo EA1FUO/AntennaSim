@@ -142,7 +142,8 @@ def build_card_deck(request: SimulationRequest) -> str:
         lines.append(rp_card)
 
     if request.frequency_segments:
-        for seg in request.frequency_segments:
+        sorted_segments = sorted(request.frequency_segments, key=lambda s: s.start_mhz)
+        for seg in sorted_segments:
             emit_frequency_block(seg.start_mhz, seg.stop_mhz, seg.steps)
     else:
         freq = request.frequency
