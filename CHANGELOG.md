@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Radiation efficiency always showing 100% regardless of ground type by computing it from NEC2 average gain
 - Frequency slider SWR display ignoring transformer/matching configuration
 - Multi-band analysis table ignoring transformer/matching configuration
 

@@ -536,9 +536,25 @@ def _build_frequency_result(
             theta_step, phi_step,
         )
 
-    # Efficiency from power budget
+    # Efficiency from pattern integration: η = (1/4π) ∫∫ G(θ,φ) sinθ dθ dφ.
+    # For a lossless antenna this equals 1.0 (100%). Ground absorption reduces it.
+    # Uses exact solid angle elements: ΔΩ = |cos(θ-dθ/2) - cos(θ+dθ/2)| × dφ
     efficiency: float | None = None
-    if (power_radiated is not None and power_input is not None
+    if pattern_data:
+        half_dth = math.radians(theta_step / 2.0)
+        dph = math.radians(phi_step)
+        weighted_gain = 0.0
+        total_weight = 0.0
+        for theta, _phi, gain_db in pattern_data:
+            theta_rad = math.radians(theta)
+            gain_linear = 10.0 ** (gain_db / 10.0) if gain_db > -999.0 else 0.0
+            w = abs(math.cos(theta_rad - half_dth) - math.cos(theta_rad + half_dth)) * dph
+            weighted_gain += gain_linear * w
+            total_weight += w
+        if total_weight > 1e-30:
+            avg_gain = weighted_gain / total_weight
+            efficiency = round(min(avg_gain * 100.0, 100.0), 1)
+    if efficiency is None and (power_radiated is not None and power_input is not None
             and power_input > 1e-30):
         eff = (power_radiated / power_input) * 100.0
         efficiency = round(min(eff, 100.0), 1)
