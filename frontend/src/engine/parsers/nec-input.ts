@@ -181,7 +181,8 @@ export function buildCardDeck(request: SimulateAdvancedRequest): string {
 
   const freqSegments = request.frequencySegments;
   if (freqSegments && freqSegments.length > 0) {
-    for (const seg of freqSegments) {
+    const sortedSegments = [...freqSegments].sort((a, b) => a.start_mhz - b.start_mhz);
+    for (const seg of sortedSegments) {
       emitFrequencyBlock(seg.start_mhz, seg.stop_mhz, seg.steps);
     }
   } else {

@@ -8,7 +8,8 @@
 
 import { useCallback, useMemo } from "react";
 import { useSimulationStore } from "../../stores/simulationStore";
-import { formatSwr, swrColorClass } from "../../utils/units";
+import { useUIStore } from "../../stores/uiStore";
+import { applyMatching, formatSwr, swrColorClass } from "../../utils/units";
 
 interface PatternFrequencySliderProps {
   /** Additional CSS classes */
@@ -24,6 +25,7 @@ export function PatternFrequencySlider({
   const result = useSimulationStore((s) => s.result);
   const selectedFreqIndex = useSimulationStore((s) => s.selectedFreqIndex);
   const setSelectedFreqIndex = useSimulationStore((s) => s.setSelectedFreqIndex);
+  const matching = useUIStore((s) => s.matching);
 
   const freqData = result?.frequency_data;
   const count = freqData?.length ?? 0;
@@ -33,6 +35,12 @@ export function PatternFrequencySlider({
     const idx = Math.min(selectedFreqIndex, count - 1);
     return freqData[idx] ?? null;
   }, [freqData, count, selectedFreqIndex]);
+
+  const displaySwr = useMemo(() => {
+    if (!currentData) return 0;
+    const m = applyMatching(currentData.impedance.real, currentData.impedance.imag, matching);
+    return m.swr;
+  }, [currentData, matching]);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,9 +71,9 @@ export function PatternFrequencySlider({
               {currentData.frequency_mhz.toFixed(compact ? 2 : 3)} MHz
             </span>
             <span
-              className={`font-mono ${compact ? "text-[9px]" : "text-[10px]"} ${swrColorClass(currentData.swr_50)}`}
+              className={`font-mono ${compact ? "text-[9px]" : "text-[10px]"} ${swrColorClass(displaySwr)}`}
             >
-              SWR {formatSwr(currentData.swr_50)}
+              SWR {formatSwr(displaySwr)}
             </span>
           </div>
         )}

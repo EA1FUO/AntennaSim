@@ -32,6 +32,7 @@ export const efhwTemplate: AntennaTemplate = {
   difficulty: "beginner",
   bands: ["80m", "40m", "20m", "15m", "10m"],
   defaultGround: { type: "average" },
+  defaultMatching: { type: "unun", ratio: 49, feedlineZ0: 50 },
   tips: [
     "The 49:1 transformer is critical — without it, SWR will be extremely high.",
     "Works well as a sloper: feed point at top of mast, far end near ground.",
