@@ -399,8 +399,8 @@ export function EditorPage() {
               )}
               {mode === "move" && (
                 <span className="text-text-secondary ml-1">
-                  <span className="hidden lg:inline">(Shift = vertical)</span>
-                  <span className="lg:hidden">{verticalDrag ? "(vertical)" : "(horizontal)"}</span>
+                  <span className="hidden lg:inline">(X/Y/Z = lock axis, Shift+X/Y/Z = exclude axis)</span>
+                  <span className="lg:hidden">{verticalDrag ? "(vertical)" : "(drag to move)"}</span>
                 </span>
               )}
             </div>

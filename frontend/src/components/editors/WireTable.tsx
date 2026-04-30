@@ -208,6 +208,7 @@ export function WireTable() {
                   {col.label}
                 </th>
               ))}
+              <th className="w-14 px-1 py-1 text-text-secondary font-medium text-right border-b border-border">Len</th>
               <th className="w-6 px-1 py-1 border-b border-border" />
             </tr>
           </thead>
@@ -272,6 +273,12 @@ export function WireTable() {
                       </td>
                     );
                   })}
+                  {/* Computed length column */}
+                  <td className="w-14 px-1 py-0.5 text-right text-text-secondary">
+                    {formatNum(Math.sqrt(
+                      (wire.x2 - wire.x1) ** 2 + (wire.y2 - wire.y1) ** 2 + (wire.z2 - wire.z1) ** 2
+                    ))}
+                  </td>
                   <td className="w-6 px-0.5 py-0.5 text-center">
                     {isSelected && (
                       <span className="text-accent text-xs">*</span>

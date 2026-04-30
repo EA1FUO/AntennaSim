@@ -28,6 +28,8 @@ export interface EditorWire extends WireGeometry {
   selected?: boolean;
   /** Whether segments were manually set by the user (sticky override) */
   segmentsManual?: boolean;
+  /** Whether wire length is locked during endpoint drags */
+  lengthLocked?: boolean;
 }
 
 /** A snapshot of the editor state for undo/redo */
@@ -98,6 +100,8 @@ interface EditorState {
   deleteSelected: () => void;
   /** Move an entire wire by a delta in NEC2 coordinates */
   moveWire: (tag: number, dx: number, dy: number, dz: number) => void;
+  /** Move all selected wires by the same delta */
+  moveSelected: (dx: number, dy: number, dz: number) => void;
   /** Move ALL wires by a delta in NEC2 Z (height) */
   moveAllWiresZ: (dz: number) => void;
   /** Split a wire at its midpoint into two wires */
@@ -161,6 +165,16 @@ interface EditorState {
 
   // ---- V2: Currents ----
   setComputeCurrents: (compute: boolean) => void;
+
+  // ---- Wire Length ----
+  /** Set wire to a specific length, keeping the anchor endpoint fixed */
+  setWireLength: (tag: number, length: number, anchor: "start" | "end") => void;
+  /** Toggle length lock on a wire */
+  toggleLengthLock: (tag: number) => void;
+  /** Bend a wire: split at position and rotate the second half by angle */
+  bendWire: (tag: number, position: number, angleDeg: number, plane: "horizontal" | "vertical", numSegments?: number) => void;
+  /** Simulate wire hanging between its endpoints with gravity sag */
+  hangWire: (tag: number, numSegments: number, targetLength?: number) => void;
 
   // ---- Clipboard / Transform ----
   /** Clipboard for copy/paste */
@@ -347,6 +361,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ ...pushUndo(state), wires: newWires });
   },
 
+  moveSelected: (dx, dy, dz) => {
+    const state = get();
+    if (state.selectedTags.size === 0) return;
+    if (dx === 0 && dy === 0 && dz === 0) return;
+    const newWires = state.wires.map((w) =>
+      state.selectedTags.has(w.tag)
+        ? { ...w, x1: w.x1 + dx, y1: w.y1 + dy, z1: w.z1 + dz, x2: w.x2 + dx, y2: w.y2 + dy, z2: w.z2 + dz }
+        : w
+    );
+    set({ ...pushUndo(state), wires: newWires });
+  },
+
   moveAllWiresZ: (dz) => {
     const state = get();
     if (dz === 0 || state.wires.length === 0) return;
@@ -444,6 +470,224 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       excitations: newExcitations,
       selectedTags: newSelected,
       nextTag: tag2 + 1,
+    });
+  },
+
+  setWireLength: (tag, length, anchor) => {
+    const state = get();
+    const wire = state.wires.find((w) => w.tag === tag);
+    if (!wire || length <= 0) return;
+
+    // Anchor is the fixed end; the other end moves along the direction vector
+    const [ax, ay, az] = anchor === "start"
+      ? [wire.x1, wire.y1, wire.z1]
+      : [wire.x2, wire.y2, wire.z2];
+    const [mx, my, mz] = anchor === "start"
+      ? [wire.x2, wire.y2, wire.z2]
+      : [wire.x1, wire.y1, wire.z1];
+
+    let dx = mx - ax, dy = my - ay, dz = mz - az;
+    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+    if (dist < 1e-9) {
+      // Zero-length wire: extend along +Z
+      dx = 0; dy = 0; dz = 1;
+    } else {
+      dx /= dist; dy /= dist; dz /= dist;
+    }
+
+    const newX = ax + dx * length;
+    const newY = ay + dy * length;
+    const newZ = az + dz * length;
+
+    const updates: Partial<EditorWire> = anchor === "start"
+      ? { x2: newX, y2: newY, z2: newZ }
+      : { x1: newX, y1: newY, z1: newZ };
+
+    const newWires = state.wires.map((w) => {
+      if (w.tag !== tag) return w;
+      const updated = { ...w, ...updates };
+      if (!w.segmentsManual) {
+        updated.segments = computeSegments(updated, state.designFrequencyMhz);
+      }
+      return updated;
+    });
+
+    set({ ...pushUndo(state), wires: newWires });
+  },
+
+  toggleLengthLock: (tag) => {
+    const state = get();
+    const newWires = state.wires.map((w) =>
+      w.tag === tag ? { ...w, lengthLocked: !w.lengthLocked } : w
+    );
+    set({ ...pushUndo(state), wires: newWires });
+  },
+
+  bendWire: (tag, _position, angleDeg, plane, numSegments = 2) => {
+    const state = get();
+    const wire = state.wires.find((w) => w.tag === tag);
+    if (!wire || numSegments < 2) return;
+
+    const n = Math.min(numSegments, 20);
+
+    const totalDx = wire.x2 - wire.x1, totalDy = wire.y2 - wire.y1, totalDz = wire.z2 - wire.z1;
+    const totalLen = Math.sqrt(totalDx * totalDx + totalDy * totalDy + totalDz * totalDz);
+    if (totalLen < 1e-9) return;
+
+    // Equal-length segments, bend angle distributed at each joint
+    const segmentLen = totalLen / n;
+    const anglePerJoint = (angleDeg * Math.PI) / 180 / (n - 1);
+
+    // Helper: rotate direction vector in the chosen plane
+    const rotateDir = (dx: number, dy: number, dz: number, angle: number): [number, number, number] => {
+      const cos = Math.cos(angle), sin = Math.sin(angle);
+      if (plane === "horizontal") {
+        return [dx * cos - dy * sin, dx * sin + dy * cos, dz];
+      }
+      const hLen = Math.sqrt(dx * dx + dy * dy);
+      if (hLen < 1e-9) {
+        return [dz * sin, 0, dz * cos];
+      }
+      const hx = dx / hLen, hy = dy / hLen;
+      const newH = hLen * cos - dz * sin;
+      const newV = hLen * sin + dz * cos;
+      return [hx * newH, hy * newH, newV];
+    };
+
+    let dirX = totalDx / totalLen, dirY = totalDy / totalLen, dirZ = totalDz / totalLen;
+    let curX = wire.x1, curY = wire.y1, curZ = wire.z1;
+
+    const newWiresList: EditorWire[] = [];
+    const newSelected = new Set(state.selectedTags);
+    newSelected.delete(tag);
+    let nextTag = state.nextTag;
+
+    for (let i = 0; i < n; i++) {
+      if (i > 0) {
+        [dirX, dirY, dirZ] = rotateDir(dirX, dirY, dirZ, anglePerJoint);
+      }
+
+      const endX = curX + dirX * segmentLen;
+      const endY = curY + dirY * segmentLen;
+      const endZ = curZ + dirZ * segmentLen;
+
+      const newTag = nextTag++;
+      newWiresList.push({
+        ...wire,
+        tag: newTag,
+        x1: curX, y1: curY, z1: curZ,
+        x2: endX, y2: endY, z2: endZ,
+        segments: computeSegments(
+          { x1: curX, y1: curY, z1: curZ, x2: endX, y2: endY, z2: endZ },
+          state.designFrequencyMhz,
+        ),
+        segmentsManual: false,
+      });
+      newSelected.add(newTag);
+
+      curX = endX; curY = endY; curZ = endZ;
+    }
+
+    // Remap excitations: assign to the first new wire at a scaled segment
+    const newExcitations = state.excitations.map((e) => {
+      if (e.wire_tag !== tag) return e;
+      const firstWire = newWiresList[0]!;
+      const ratio = e.segment / wire.segments;
+      return { ...e, wire_tag: firstWire.tag, segment: Math.max(1, Math.min(firstWire.segments, Math.round(ratio * firstWire.segments))) };
+    });
+
+    const newWires = state.wires.filter((w) => w.tag !== tag).concat(newWiresList);
+
+    set({
+      ...pushUndo(state),
+      wires: newWires,
+      excitations: newExcitations,
+      selectedTags: newSelected,
+      nextTag,
+    });
+  },
+
+  hangWire: (tag, numSegments, targetLength) => {
+    const state = get();
+    const wire = state.wires.find((w) => w.tag === tag);
+    if (!wire || numSegments < 2) return;
+
+    const n = Math.min(numSegments, 30);
+
+    // Endpoints (NEC2 coords)
+    const ax = wire.x1, ay = wire.y1, az = wire.z1;
+    const bx = wire.x2, by = wire.y2, bz = wire.z2;
+
+    // Use target length if provided, otherwise current wire length
+    const currentLen = Math.sqrt((bx - ax) ** 2 + (by - ay) ** 2 + (bz - az) ** 2);
+    const wireLen = targetLength ?? currentLen;
+    if (wireLen < 1e-9) return;
+
+    // Horizontal span (XY distance) and vertical difference
+    const hSpan = Math.sqrt((bx - ax) ** 2 + (by - ay) ** 2);
+    const vDiff = bz - az; // height difference
+
+    // Straight-line 3D span
+    const span = Math.sqrt(hSpan * hSpan + vDiff * vDiff);
+
+    // Sag: parabolic approximation. If wire is taut (L ≈ span), minimal sag.
+    // maxSag = sqrt(3 * span * (wireLen - span) / 8)
+    const slack = Math.max(0, wireLen - span);
+    const maxSag = slack > 1e-6 ? Math.sqrt(3 * span * slack / 8) : 0;
+
+    // Build points along the catenary/parabolic curve
+    const points: Array<{ x: number; y: number; z: number }> = [];
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      // Linear interpolation for the straight-line baseline
+      const lx = ax + (bx - ax) * t;
+      const ly = ay + (by - ay) * t;
+      const lz = az + (bz - az) * t;
+      // Parabolic sag below the baseline (4*s*t*(1-t) peaks at midpoint)
+      const sag = 4 * maxSag * t * (1 - t);
+      points.push({ x: lx, y: ly, z: lz - sag });
+    }
+
+    // Create wire segments
+    const newWiresList: EditorWire[] = [];
+    const newSelected = new Set(state.selectedTags);
+    newSelected.delete(tag);
+    let nextTag = state.nextTag;
+
+    for (let i = 0; i < n; i++) {
+      const p1 = points[i]!, p2 = points[i + 1]!;
+      const newTag = nextTag++;
+      newWiresList.push({
+        ...wire,
+        tag: newTag,
+        x1: p1.x, y1: p1.y, z1: p1.z,
+        x2: p2.x, y2: p2.y, z2: p2.z,
+        segments: computeSegments(
+          { x1: p1.x, y1: p1.y, z1: p1.z, x2: p2.x, y2: p2.y, z2: p2.z },
+          state.designFrequencyMhz,
+        ),
+        segmentsManual: false,
+        lengthLocked: false,
+      });
+      newSelected.add(newTag);
+    }
+
+    // Remap excitations to first segment
+    const newExcitations = state.excitations.map((e) => {
+      if (e.wire_tag !== tag) return e;
+      const firstWire = newWiresList[0]!;
+      const ratio = e.segment / wire.segments;
+      return { ...e, wire_tag: firstWire.tag, segment: Math.max(1, Math.min(firstWire.segments, Math.round(ratio * firstWire.segments))) };
+    });
+
+    const newWires = state.wires.filter((w) => w.tag !== tag).concat(newWiresList);
+    set({
+      ...pushUndo(state),
+      wires: newWires,
+      excitations: newExcitations,
+      selectedTags: newSelected,
+      nextTag,
     });
   },
 

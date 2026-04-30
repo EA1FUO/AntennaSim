@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Editable wire length field in Wire Editor properties panel and wire table
+- Length lock toggle to maintain wire length during 3D endpoint drags
+- Bend Wire tool to split a straight wire at a configurable angle and position while preserving total length
+- Multi-wire move: dragging one wire in a multi-selection moves all selected wires together
+- Blender-style axis constraints: press X/Y/Z during drag to lock to that axis, Shift+X/Y/Z to exclude an axis, with colored axis indicator lines
+- Hang Wire tool to simulate gravity sag (catenary) between wire endpoints with configurable segment count
+
+### Fixed
+
+- Wire dragging at elevated heights no longer jumps to distant positions
+- Whole-wire drag sensitivity now matches mouse movement regardless of camera angle
 ### Fixed
 
 - Radiation efficiency always showing 100% regardless of ground type by computing it from NEC2 average gain

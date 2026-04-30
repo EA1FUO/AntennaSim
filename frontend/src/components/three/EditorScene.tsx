@@ -12,7 +12,7 @@
  */
 
 import { Canvas, useThree, ThreeEvent } from "@react-three/fiber";
-import { Suspense, useMemo, useCallback, useState, useRef, type RefObject } from "react";
+import { Suspense, useMemo, useCallback, useState, useRef, useEffect, type RefObject } from "react";
 import { ACESFilmicToneMapping, SRGBColorSpace, Vector3, Plane, LineCurve3, TubeGeometry, MeshBasicMaterial } from "three";
 import { GroundPlane } from "./GroundPlane";
 import { CompassRose } from "./CompassRose";
@@ -71,11 +71,56 @@ function GhostWire({ start, end }: { start: Vector3; end: Vector3 }) {
   );
 }
 
-/** Drag target: either an endpoint or the entire wire, optionally vertical-only.
- *  origZ tracks the NEC2 Z of the dragged point at drag start so we can preserve height. */
+/** Visual axis constraint indicator — colored line(s) through the dragged point */
+function AxisConstraintLine({ axis, position }: { axis: AxisConstraint; position: [number, number, number] }) {
+  if (!axis) return null;
+  const LEN = 50;
+  const [px, py, pz] = position;
+  // NEC2 coords → Three.js: [x, z, -y]
+  const cx = px, cy = pz, cz = -py;
+
+  const colors: Record<string, string> = { x: "#ef4444", y: "#22c55e", z: "#3b82f6" };
+  // For single axis: show that axis line. For plane (xy/xz/yz): show both axis lines.
+  const axes = axis.length === 1 ? [axis] : axis.split("");
+
+  return (
+    <group>
+      {axes.map((a) => {
+        const dir: [number, number, number] =
+          a === "x" ? [LEN, 0, 0] : a === "y" ? [0, 0, -LEN] : [0, LEN, 0];
+        const points = [
+          [cx - dir[0], cy - dir[1], cz - dir[2]] as [number, number, number],
+          [cx + dir[0], cy + dir[1], cz + dir[2]] as [number, number, number],
+        ];
+        return (
+          <line key={a}>
+            <bufferGeometry>
+              <bufferAttribute
+                attach="attributes-position"
+                args={[new Float32Array(points.flat()), 3]}
+                count={2}
+              />
+            </bufferGeometry>
+            <lineBasicMaterial color={colors[a]} opacity={0.7} transparent linewidth={1} />
+          </line>
+        );
+      })}
+    </group>
+  );
+}
+
+/** Axis constraint during drag: null=free, "x"/"y"/"z"=lock to axis, "xy"/"xz"/"yz"=exclude axis */
+type AxisConstraint = null | "x" | "y" | "z" | "xy" | "xz" | "yz";
+
 type DragTarget =
-  | { type: "endpoint"; tag: number; endpoint: "start" | "end"; origZ: number; lastY?: number }
-  | { type: "wire"; tag: number; offsetX: number; offsetY: number; offsetZ: number; origZ: number; lastY?: number };
+  | { type: "endpoint"; tag: number; endpoint: "start" | "end";
+      lastHit?: { x: number; y: number; z: number };
+      axisConstraint: AxisConstraint }
+  | { type: "wire"; tag: number;
+      lastHit?: { x: number; y: number; z: number };
+      /** Fixed camera-plane anchor so the plane doesn't drift with the wire */
+      planeAnchor?: { x: number; y: number; z: number };
+      axisConstraint: AxisConstraint };
 
 /** Inner scene content — needs access to useThree */
 function EditorSceneContent({
@@ -101,8 +146,8 @@ function EditorSceneContent({
   const addWire = useEditorStore((s) => s.addWire);
   const updateWire = useEditorStore((s) => s.updateWire);
   const moveWire = useEditorStore((s) => s.moveWire);
+  const moveSelected = useEditorStore((s) => s.moveSelected);
   const toggleSelection = useEditorStore((s) => s.toggleSelection);
-  const verticalDrag = useEditorStore((s) => s.verticalDrag);
   const pickingExcitationForTag = useEditorStore((s) => s.pickingExcitationForTag);
   const setExcitation = useEditorStore((s) => s.setExcitation);
   const setPickingExcitationForTag = useEditorStore((s) => s.setPickingExcitationForTag);
@@ -130,11 +175,58 @@ function EditorSceneContent({
   // Ghost wire preview position
   const [ghostEnd, setGhostEnd] = useState<[number, number, number] | null>(null);
 
+  // Axis constraint visual indicator (shown in 3D during drag)
+  const [axisIndicator, setAxisIndicator] = useState<{ axis: AxisConstraint; pos: [number, number, number] } | null>(null);
+
   // Drag state — when non-null, orbit controls are disabled
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef<DragTarget | null>(null);
 
   const { raycaster, camera, controls } = useThree();
+
+  // Listen for X/Y/Z key presses during drag to set axis constraint
+  useEffect(() => {
+    if (!isDragging) {
+      setAxisIndicator(null);
+      return;
+    }
+    const handleKey = (e: KeyboardEvent) => {
+      if (!dragRef.current) return;
+      const key = e.key.toLowerCase();
+      const shift = e.shiftKey;
+      if (key === "x" || key === "y" || key === "z") {
+        e.preventDefault();
+        const current = dragRef.current.axisConstraint;
+        let next: AxisConstraint;
+        if (shift) {
+          // Shift+X = exclude X (move YZ), etc.
+          const exclude = key === "x" ? "yz" : key === "y" ? "xz" : "xy";
+          next = current === exclude ? null : exclude;
+        } else {
+          // X = lock to X, press again = free
+          next = current === key ? null : key;
+        }
+        dragRef.current.axisConstraint = next;
+        // Update indicator position from current wire/endpoint
+        const target = dragRef.current;
+        const wire = wires.find((w) => w.tag === target.tag);
+        if (wire && next) {
+          const pos: [number, number, number] = target.type === "endpoint"
+            ? (target.endpoint === "start" ? [wire.x1, wire.y1, wire.z1] : [wire.x2, wire.y2, wire.z2])
+            : [(wire.x1 + wire.x2) / 2, (wire.y1 + wire.y2) / 2, (wire.z1 + wire.z2) / 2];
+          setAxisIndicator({ axis: next, pos });
+        } else {
+          setAxisIndicator(null);
+        }
+      }
+      if (key === "escape") {
+        dragRef.current.axisConstraint = null;
+        setAxisIndicator(null);
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [isDragging, wires]);
 
   /** Raycast to ground plane to get NEC2 coordinates (horizontal movement: X/Y) */
   const raycastToGround = useCallback(
@@ -153,23 +245,21 @@ function EditorSceneContent({
     [raycaster, snapSize]
   );
 
-  /** Raycast to a camera-facing vertical plane for Shift+drag (Z-axis movement).
-   *  Returns the Y coordinate in Three.js (= Z in NEC2) for vertical offset. */
-  const raycastVertical = useCallback(
-    (event: ThreeEvent<PointerEvent>): number | null => {
+  /** Raycast to a plane perpendicular to the camera, passing through a given
+   *  Three.js world point. Returns the intersection in Three.js coordinates.
+   *  This is how Blender/Unity do 3D dragging — the object follows the mouse
+   *  naturally from any camera angle with no dead zones. */
+  const raycastCameraPlane = useCallback(
+    (event: ThreeEvent<PointerEvent | MouseEvent>, throughPoint: Vector3): Vector3 | null => {
       const intersection = new Vector3();
       const ray = event.ray ?? raycaster.ray;
-      // Build a vertical plane that faces the camera (perpendicular to camera's XZ direction)
       const camDir = new Vector3();
       camera.getWorldDirection(camDir);
-      camDir.y = 0; // project to horizontal
-      camDir.normalize();
-      const vPlane = new Plane().setFromNormalAndCoplanarPoint(camDir, new Vector3(0, 0, 0));
-      const hit = ray.intersectPlane(vPlane, intersection);
-      if (!hit) return null;
-      return snap(intersection.y, snapSize); // Three.js Y = NEC2 Z
+      const plane = new Plane().setFromNormalAndCoplanarPoint(camDir, throughPoint);
+      const hit = ray.intersectPlane(plane, intersection);
+      return hit ? intersection : null;
     },
-    [raycaster, camera, snapSize]
+    [raycaster, camera]
   );
 
   /** Handle clicking on empty space */
@@ -212,61 +302,138 @@ function EditorSceneContent({
         if (pos) setGhostEnd(pos);
       }
 
-      // Drag operations
+      // Drag operations — camera-facing plane approach.
+      // Raycast onto a plane perpendicular to the camera passing through
+      // the object's position. Compute delta from last hit. Apply constraints.
       if (isDragging && dragRef.current) {
         const target = dragRef.current;
-        const shiftHeld = event.nativeEvent.shiftKey || verticalDrag;
+        if (!target.lastHit) return;
 
-        // Shift+drag (or vertical-drag toggle on mobile) = vertical (Z-axis in NEC2) movement only
-        if (shiftHeld) {
-          const yVal = raycastVertical(event);
-          if (yVal === null) return;
+        // For wires: use fixed planeAnchor so the plane doesn't drift as the wire moves.
+        // For endpoints: use lastHit (which tracks the endpoint position).
+        const anchorSrc = (target.type === "wire" && target.planeAnchor) ? target.planeAnchor : target.lastHit;
+        const anchor = new Vector3(anchorSrc.x, anchorSrc.y, anchorSrc.z);
+        const hit = raycastCameraPlane(event, anchor);
+        if (!hit) return;
 
-          if (target.type === "endpoint") {
-            const { tag, endpoint } = target;
-            // Only update NEC2 Z coordinate (Three.js Y)
-            if (endpoint === "start") {
-              updateWire(tag, { z1: yVal });
-            } else {
-              updateWire(tag, { z2: yVal });
-            }
-          } else if (target.type === "wire") {
-            const lastY = target.lastY ?? yVal;
-            const dz = yVal - lastY; // NEC2 dz = Three.js dy
-            if (dz !== 0) {
-              moveWire(target.tag, 0, 0, dz);
-            }
-            target.lastY = yVal;
-          }
-          return;
-        }
+        const dtx = hit.x - target.lastHit.x;
+        const dty = hit.y - target.lastHit.y; // Three.js Y = NEC2 Z
+        const dtz = hit.z - target.lastHit.z;
 
-        // Normal drag on ground plane (horizontal X/Y movement only — preserve Z height)
-        const pos = raycastToGround(event);
-        if (!pos) return;
+        // Convert to NEC2 before applying axis constraint
+        // Three.js (dtx, dty, dtz) -> NEC2 (dtx, -dtz, dty)
+        let necDx = dtx;
+        let necDy = -dtz;
+        let necDz = dty;
+
+        // Apply axis constraint in NEC2 space
+        const ac = target.axisConstraint;
+        if (ac === "x") { necDy = 0; necDz = 0; }
+        else if (ac === "y") { necDx = 0; necDz = 0; }
+        else if (ac === "z") { necDx = 0; necDy = 0; }
+        else if (ac === "xy") { necDz = 0; }
+        else if (ac === "xz") { necDy = 0; }
+        else if (ac === "yz") { necDx = 0; }
+
+        // Update lastHit: freeze the Three.js axes that map to zeroed NEC2 axes
+        // to prevent drift on constrained axes
+        const newLastHit = { x: hit.x, y: hit.y, z: hit.z };
+        // NEC2 X = Three.js X, NEC2 Y = -Three.js Z, NEC2 Z = Three.js Y
+        if (necDx === 0 && dtx !== 0) newLastHit.x = target.lastHit.x;
+        if (necDy === 0 && dtz !== 0) newLastHit.z = target.lastHit.z;
+        if (necDz === 0 && dty !== 0) newLastHit.y = target.lastHit.y;
+        target.lastHit = newLastHit;
+
+        if (Math.abs(necDx) < 1e-9 && Math.abs(necDy) < 1e-9 && Math.abs(necDz) < 1e-9) return;
 
         if (target.type === "endpoint") {
           const { tag, endpoint } = target;
-          // Only update X/Y from ground raycast; keep the endpoint's original Z
+          const wire = wires.find((w) => w.tag === tag);
+          if (!wire) return;
+
+          let newX = (endpoint === "start" ? wire.x1 : wire.x2) + necDx;
+          let newY = (endpoint === "start" ? wire.y1 : wire.y2) + necDy;
+          let newZ = (endpoint === "start" ? wire.z1 : wire.z2) + necDz;
+
+          // Length lock: clamp to sphere while respecting axis constraint
+          if (wire.lengthLocked) {
+            const [fx, fy, fz] = endpoint === "start"
+              ? [wire.x2, wire.y2, wire.z2]
+              : [wire.x1, wire.y1, wire.z1];
+            const L = Math.sqrt(
+              (wire.x2 - wire.x1) ** 2 + (wire.y2 - wire.y1) ** 2 + (wire.z2 - wire.z1) ** 2
+            );
+            if (L > 1e-9) {
+              if (ac === "x" || ac === "y" || ac === "z") {
+                // Single axis: only 2 valid positions on that axis line
+                // Fixed axes use current endpoint values
+                const fixedSq = (ac !== "x" ? 0 : (newY - fy) ** 2 + (newZ - fz) ** 2)
+                             + (ac !== "y" ? 0 : (newX - fx) ** 2 + (newZ - fz) ** 2)
+                             + (ac !== "z" ? 0 : (newX - fx) ** 2 + (newY - fy) ** 2);
+                const rem = L * L - fixedSq;
+                if (rem >= 0) {
+                  const d = Math.sqrt(rem);
+                  // Pick the closer of the two valid positions
+                  const cur = ac === "x" ? newX - fx : ac === "y" ? newY - fy : newZ - fz;
+                  const clamped = Math.abs(cur - d) < Math.abs(cur + d) ? d : -d;
+                  if (ac === "x") newX = fx + clamped;
+                  else if (ac === "y") newY = fy + clamped;
+                  else newZ = fz + clamped;
+                } else {
+                  // Unreachable on this axis — clamp to max
+                  if (ac === "x") { newX = fx + (newX >= fx ? L : -L); newY = fy; newZ = fz; }
+                  else if (ac === "y") { newY = fy + (newY >= fy ? L : -L); newX = fx; newZ = fz; }
+                  else { newZ = fz + (newZ >= fz ? L : -L); newX = fx; newY = fy; }
+                }
+              } else if (ac === "xy" || ac === "xz" || ac === "yz") {
+                // Plane: scale the 2 free axes to maintain length with the fixed axis
+                const fixedD = ac === "xy" ? newZ - fz : ac === "xz" ? newY - fy : newX - fx;
+                const needed = L * L - fixedD * fixedD;
+                if (needed > 0) {
+                  const a1 = ac === "yz" ? newY - fy : newX - fx;
+                  const a2 = ac === "xy" ? newY - fy : newZ - fz;
+                  const dist = Math.sqrt(a1 * a1 + a2 * a2);
+                  if (dist > 1e-9) {
+                    const scale = Math.sqrt(needed) / dist;
+                    if (ac === "yz") { newY = fy + a1 * scale; newZ = fz + a2 * scale; }
+                    else if (ac === "xz") { newX = fx + a1 * scale; newZ = fz + a2 * scale; }
+                    else { newX = fx + a1 * scale; newY = fy + a2 * scale; }
+                  }
+                }
+              } else {
+                // Free: project onto sphere
+                const dx = newX - fx, dy = newY - fy, dz = newZ - fz;
+                const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                if (dist > 1e-9) {
+                  const scale = L / dist;
+                  newX = fx + dx * scale;
+                  newY = fy + dy * scale;
+                  newZ = fz + dz * scale;
+                }
+              }
+            }
+          }
+
           if (endpoint === "start") {
-            updateWire(tag, { x1: pos[0], y1: pos[1], z1: target.origZ });
+            updateWire(tag, { x1: newX, y1: newY, z1: newZ });
           } else {
-            updateWire(tag, { x2: pos[0], y2: pos[1], z2: target.origZ });
+            updateWire(tag, { x2: newX, y2: newY, z2: newZ });
+          }
+
+          // Re-sync lastHit to actual endpoint after length-lock projection
+          if (wire.lengthLocked && target.lastHit) {
+            target.lastHit = { x: newX, y: newZ, z: -newY };
           }
         } else if (target.type === "wire") {
-          // Whole-wire move: only apply horizontal delta (X/Y), preserve Z
-          const dx = pos[0] - target.offsetX;
-          const dy = pos[1] - target.offsetY;
-          if (dx !== 0 || dy !== 0) {
-            moveWire(target.tag, dx, dy, 0);
+          if (selectedTags.size > 1 && selectedTags.has(target.tag)) {
+            moveSelected(necDx, necDy, necDz);
+          } else {
+            moveWire(target.tag, necDx, necDy, necDz);
           }
-          // Update offset to current position for next delta
-          target.offsetX = pos[0];
-          target.offsetY = pos[1];
         }
       }
     },
-    [mode, addStart, isDragging, verticalDrag, raycastToGround, raycastVertical, updateWire, moveWire]
+    [mode, addStart, isDragging, wires, selectedTags, raycastToGround, raycastCameraPlane, updateWire, moveWire, moveSelected]
   );
 
   const handlePointerUp = useCallback(() => {
@@ -294,19 +461,19 @@ function EditorSceneContent({
 
   /** Handle endpoint drag start (move mode — endpoint only) */
   const handleEndpointDragStart = useCallback(
-    (tag: number, endpoint: "start" | "end", _event: ThreeEvent<PointerEvent>) => {
+    (tag: number, endpoint: "start" | "end", event: ThreeEvent<PointerEvent>) => {
       if (mode === "move") {
-        // Capture the endpoint's current NEC2 Z so we can preserve it during horizontal drags
         const wire = wires.find((w) => w.tag === tag);
-        const origZ = wire ? (endpoint === "start" ? wire.z1 : wire.z2) : 0;
-        // Imperatively disable orbit controls before the React re-render — prevents
-        // touch devices from simultaneously orbiting the camera during a wire drag.
+        const ep = event.point ?? (wire
+          ? (endpoint === "start" ? new Vector3(wire.x1, wire.z1, -wire.y1) : new Vector3(wire.x2, wire.z2, -wire.y2))
+          : new Vector3());
+        const hit = raycastCameraPlane(event, ep);
         if (controls) (controls as unknown as { enabled: boolean }).enabled = false;
         setIsDragging(true);
-        dragRef.current = { type: "endpoint", tag, endpoint, origZ };
+        dragRef.current = { type: "endpoint", tag, endpoint, axisConstraint: null, lastHit: hit ? { x: hit.x, y: hit.y, z: hit.z } : undefined };
       }
     },
-    [mode, wires, controls]
+    [mode, wires, controls, raycastCameraPlane]
   );
 
   /** Handle wire body drag start (move mode — whole wire) */
@@ -314,27 +481,18 @@ function EditorSceneContent({
     (tag: number, event: ThreeEvent<PointerEvent>) => {
       if (mode === "move") {
         event.stopPropagation();
-        const pos = raycastToGround(event);
-        if (!pos) return;
-        const yVal = raycastVertical(event);
-        // Capture wire's average Z so Shift+drag has a baseline
-        const wire = wires.find((w) => w.tag === tag);
-        const origZ = wire ? (wire.z1 + wire.z2) / 2 : 0;
-        // Imperatively disable orbit controls before the React re-render
+        // Use the actual click point on the wire tube as the anchor.
+        // This matches the camera-plane depth to where the user clicked,
+        // giving 1:1 cursor tracking without sensitivity jumps.
+        const clickPoint = event.point ?? new Vector3();
+        const hit = raycastCameraPlane(event, clickPoint);
         if (controls) (controls as unknown as { enabled: boolean }).enabled = false;
         setIsDragging(true);
-        dragRef.current = {
-          type: "wire",
-          tag,
-          offsetX: pos[0],
-          offsetY: pos[1],
-          offsetZ: pos[2],
-          origZ,
-          lastY: yVal ?? undefined,
-        };
+        const hitObj = hit ? { x: hit.x, y: hit.y, z: hit.z } : undefined;
+        dragRef.current = { type: "wire", tag, axisConstraint: null, lastHit: hitObj, planeAnchor: hitObj ? { ...hitObj } : undefined };
       }
     },
-    [mode, wires, raycastToGround, raycastVertical, controls]
+    [mode, controls, raycastCameraPlane]
   );
 
   // Convert wires to WireData format
@@ -433,6 +591,11 @@ function EditorSceneContent({
       {/* Ghost wire preview (add mode) */}
       {ghostWire && (
         <GhostWire start={ghostWire.start} end={ghostWire.end} />
+      )}
+
+      {/* Axis constraint indicator during drag */}
+      {axisIndicator && axisIndicator.axis && (
+        <AxisConstraintLine axis={axisIndicator.axis} position={axisIndicator.pos} />
       )}
 
       {/* Radiation pattern — surface mode */}
