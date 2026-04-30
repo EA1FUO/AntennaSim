@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Editable wire length field in Wire Editor properties panel and wire table
 - Length lock toggle to maintain wire length during 3D endpoint drags
 - Bend Wire tool to split a straight wire at a configurable angle and position while preserving total length
+- Multi-wire move: dragging one wire in a multi-selection moves all selected wires together
+
+### Fixed
+
+- Wire dragging at elevated heights no longer jumps to distant positions
+- Whole-wire drag sensitivity now matches mouse movement regardless of camera angle
 
 ## [1.0.1] - 2026-03-24
 

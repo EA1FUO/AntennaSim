@@ -74,8 +74,15 @@ function GhostWire({ start, end }: { start: Vector3; end: Vector3 }) {
 /** Drag target: either an endpoint or the entire wire, optionally vertical-only.
  *  origZ tracks the NEC2 Z of the dragged point at drag start so we can preserve height. */
 type DragTarget =
-  | { type: "endpoint"; tag: number; endpoint: "start" | "end"; origZ: number; lastY?: number }
-  | { type: "wire"; tag: number; offsetX: number; offsetY: number; offsetZ: number; origZ: number; lastY?: number };
+  | { type: "endpoint"; tag: number; endpoint: "start" | "end";
+      /** Last camera-plane intersection in Three.js coords for delta computation */
+      lastHit?: { x: number; y: number; z: number };
+      /** NEC2 XY unit direction in the wire's horizontal plane (for Shift+lock arc) */
+      initDirX?: number; initDirY?: number;
+      /** Current angle in radians from horizontal for Shift+lock pendulum (0=horizontal, π/2=up) */
+      arcAngle?: number }
+  | { type: "wire"; tag: number;
+      lastHit?: { x: number; y: number; z: number } };
 
 /** Inner scene content — needs access to useThree */
 function EditorSceneContent({
@@ -101,6 +108,7 @@ function EditorSceneContent({
   const addWire = useEditorStore((s) => s.addWire);
   const updateWire = useEditorStore((s) => s.updateWire);
   const moveWire = useEditorStore((s) => s.moveWire);
+  const moveSelected = useEditorStore((s) => s.moveSelected);
   const toggleSelection = useEditorStore((s) => s.toggleSelection);
   const verticalDrag = useEditorStore((s) => s.verticalDrag);
   const pickingExcitationForTag = useEditorStore((s) => s.pickingExcitationForTag);
@@ -153,57 +161,21 @@ function EditorSceneContent({
     [raycaster, snapSize]
   );
 
-  /** Raycast to a camera-facing vertical plane for Shift+drag (Z-axis movement).
-   *  Returns the Y coordinate in Three.js (= Z in NEC2) for vertical offset. */
-  const raycastVertical = useCallback(
-    (event: ThreeEvent<PointerEvent>): number | null => {
+  /** Raycast to a plane perpendicular to the camera, passing through a given
+   *  Three.js world point. Returns the intersection in Three.js coordinates.
+   *  This is how Blender/Unity do 3D dragging — the object follows the mouse
+   *  naturally from any camera angle with no dead zones. */
+  const raycastCameraPlane = useCallback(
+    (event: ThreeEvent<PointerEvent | MouseEvent>, throughPoint: Vector3): Vector3 | null => {
       const intersection = new Vector3();
       const ray = event.ray ?? raycaster.ray;
-      // Build a vertical plane that faces the camera (perpendicular to camera's XZ direction)
       const camDir = new Vector3();
       camera.getWorldDirection(camDir);
-      camDir.y = 0; // project to horizontal
-      camDir.normalize();
-      const vPlane = new Plane().setFromNormalAndCoplanarPoint(camDir, new Vector3(0, 0, 0));
-      const hit = ray.intersectPlane(vPlane, intersection);
-      if (!hit) return null;
-      return snap(intersection.y, snapSize); // Three.js Y = NEC2 Z
+      const plane = new Plane().setFromNormalAndCoplanarPoint(camDir, throughPoint);
+      const hit = ray.intersectPlane(plane, intersection);
+      return hit ? intersection : null;
     },
-    [raycaster, camera, snapSize]
-  );
-
-  /** Raycast to a sphere surface — returns the closest NEC2 point on the sphere.
-   *  Used for length-locked endpoint dragging: the endpoint slides on the sphere. */
-  const raycastToSphere = useCallback(
-    (event: ThreeEvent<PointerEvent>, center: [number, number, number], radius: number): [number, number, number] | null => {
-      const ray = event.ray ?? raycaster.ray;
-      // Sphere center in Three.js coords: NEC2 [x, y, z] -> Three.js [x, z, -y]
-      const sphereCenter = new Vector3(center[0], center[2], -center[1]);
-      // Ray-sphere intersection: |O + tD - C|² = r²
-      const oc = new Vector3().subVectors(ray.origin, sphereCenter);
-      const a = ray.direction.dot(ray.direction);
-      const b = 2 * oc.dot(ray.direction);
-      const c = oc.dot(oc) - radius * radius;
-      const discriminant = b * b - 4 * a * c;
-
-      let hitPoint: Vector3;
-      if (discriminant >= 0) {
-        // Ray hits the sphere — use the closer intersection
-        const t = (-b - Math.sqrt(discriminant)) / (2 * a);
-        hitPoint = new Vector3().copy(ray.origin).addScaledVector(ray.direction, t > 0 ? t : (-b + Math.sqrt(discriminant)) / (2 * a));
-      } else {
-        // Ray misses — find the closest point on the sphere to the ray
-        // Project sphere center onto the ray to find closest approach
-        const tClosest = -b / (2 * a);
-        const closest = new Vector3().copy(ray.origin).addScaledVector(ray.direction, Math.max(0, tClosest));
-        // Project from center to closest point, clamp to sphere surface
-        hitPoint = new Vector3().subVectors(closest, sphereCenter).normalize().multiplyScalar(radius).add(sphereCenter);
-      }
-
-      // Three.js [x, y, z] -> NEC2 [x, -z, y]
-      return [snap(hitPoint.x, snapSize), snap(-hitPoint.z, snapSize), snap(hitPoint.y, snapSize)];
-    },
-    [raycaster, snapSize]
+    [raycaster, camera]
   );
 
   /** Handle clicking on empty space */
@@ -246,85 +218,125 @@ function EditorSceneContent({
         if (pos) setGhostEnd(pos);
       }
 
-      // Drag operations
+      // Drag operations — camera-facing plane approach.
+      // Raycast onto a plane perpendicular to the camera passing through
+      // the object's position. Compute delta from last hit. Apply constraints.
       if (isDragging && dragRef.current) {
         const target = dragRef.current;
-        const shiftHeld = event.nativeEvent.shiftKey || verticalDrag;
+        if (!target.lastHit) return;
 
-        // Length-locked endpoint drag: raycast directly onto the constant-length
-        // sphere for smooth movement in all directions (no Shift needed).
+        const shiftHeld = event.nativeEvent.shiftKey || verticalDrag;
+        const altHeld = event.nativeEvent.altKey;
+        const anchor = new Vector3(target.lastHit.x, target.lastHit.y, target.lastHit.z);
+
+        // Camera-facing plane for all modes — orbit controls are disabled
+        // during dragging so the plane stays stable between frames.
+        const hit = raycastCameraPlane(event, anchor);
+        if (!hit) return;
+
+        let dtx = hit.x - target.lastHit.x;
+        let dty = hit.y - target.lastHit.y;
+        let dtz = hit.z - target.lastHit.z;
+
+        if (shiftHeld) {
+          dtx = 0; dtz = 0;
+          target.lastHit = { x: target.lastHit.x, y: hit.y, z: target.lastHit.z };
+        } else if (altHeld) {
+          dty = 0;
+          target.lastHit = { x: hit.x, y: target.lastHit.y, z: hit.z };
+        } else {
+          target.lastHit = { x: hit.x, y: hit.y, z: hit.z };
+        }
+
+        // Convert delta: Three.js (dtx, dty, dtz) -> NEC2 (dtx, -dtz, dty)
+        const necDx = dtx;
+        const necDy = -dtz;
+        const necDz = dty;
+
+        if (Math.abs(necDx) < 1e-9 && Math.abs(necDy) < 1e-9 && Math.abs(necDz) < 1e-9) return;
+
         if (target.type === "endpoint") {
-          const wire = wires.find((w) => w.tag === target.tag);
-          if (wire?.lengthLocked) {
-            const { tag, endpoint } = target;
-            const fixed: [number, number, number] = endpoint === "start"
+          const { tag, endpoint } = target;
+          const wire = wires.find((w) => w.tag === tag);
+          if (!wire) return;
+
+          let newX = (endpoint === "start" ? wire.x1 : wire.x2) + necDx;
+          let newY = (endpoint === "start" ? wire.y1 : wire.y2) + necDy;
+          let newZ = (endpoint === "start" ? wire.z1 : wire.z2) + necDz;
+
+          // Length lock: maintain wire length while respecting axis constraints
+          if (wire.lengthLocked) {
+            const [fx, fy, fz] = endpoint === "start"
               ? [wire.x2, wire.y2, wire.z2]
               : [wire.x1, wire.y1, wire.z1];
             const wireLen = Math.sqrt(
               (wire.x2 - wire.x1) ** 2 + (wire.y2 - wire.y1) ** 2 + (wire.z2 - wire.z1) ** 2
             );
             if (wireLen > 1e-9) {
-              const hit = raycastToSphere(event, fixed, wireLen);
-              if (hit) {
-                if (endpoint === "start") {
-                  updateWire(tag, { x1: hit[0], y1: hit[1], z1: hit[2] });
-                } else {
-                  updateWire(tag, { x2: hit[0], y2: hit[1], z2: hit[2] });
+              if (altHeld) {
+                // Horizontal only: keep Z fixed, scale XY to maintain length
+                const dz = newZ - fz;
+                const hNeededSq = wireLen * wireLen - dz * dz;
+                if (hNeededSq > 0) {
+                  const hx = newX - fx, hy = newY - fy;
+                  const hDist = Math.sqrt(hx * hx + hy * hy);
+                  if (hDist > 1e-9) {
+                    const scale = Math.sqrt(hNeededSq) / hDist;
+                    newX = fx + hx * scale;
+                    newY = fy + hy * scale;
+                  }
+                }
+              } else if (shiftHeld) {
+                // Vertical arc: update the angle from Z delta, compute
+                // position on the circle. Full 360° rotation.
+                const prevAngle = target.arcAngle ?? 0;
+                const angleDelta = necDz / wireLen; // scale Z delta to angle
+                const angle = prevAngle + angleDelta;
+                target.arcAngle = angle;
+                const dirX = target.initDirX ?? 1;
+                const dirY = target.initDirY ?? 0;
+                newX = fx + dirX * wireLen * Math.cos(angle);
+                newY = fy + dirY * wireLen * Math.cos(angle);
+                newZ = fz + wireLen * Math.sin(angle);
+              } else {
+                // Free movement: project onto sphere
+                const dx = newX - fx, dy = newY - fy, dz = newZ - fz;
+                const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                if (dist > 1e-9) {
+                  const scale = wireLen / dist;
+                  newX = fx + dx * scale;
+                  newY = fy + dy * scale;
+                  newZ = fz + dz * scale;
                 }
               }
             }
-            return;
           }
-        }
 
-        // Shift+drag (or vertical-drag toggle on mobile) = vertical (Z-axis in NEC2) movement only
-        if (shiftHeld) {
-          const yVal = raycastVertical(event);
-          if (yVal === null) return;
-
-          if (target.type === "endpoint") {
-            const { tag, endpoint } = target;
-            if (endpoint === "start") {
-              updateWire(tag, { z1: yVal });
-            } else {
-              updateWire(tag, { z2: yVal });
-            }
-          } else if (target.type === "wire") {
-            const lastY = target.lastY ?? yVal;
-            const dz = yVal - lastY; // NEC2 dz = Three.js dy
-            if (dz !== 0) {
-              moveWire(target.tag, 0, 0, dz);
-            }
-            target.lastY = yVal;
-          }
-          return;
-        }
-
-        // Normal drag on ground plane (horizontal X/Y movement only — preserve Z height)
-        const pos = raycastToGround(event);
-        if (!pos) return;
-
-        if (target.type === "endpoint") {
-          const { tag, endpoint } = target;
           if (endpoint === "start") {
-            updateWire(tag, { x1: pos[0], y1: pos[1], z1: target.origZ });
+            updateWire(tag, { x1: newX, y1: newY, z1: newZ });
           } else {
-            updateWire(tag, { x2: pos[0], y2: pos[1], z2: target.origZ });
+            updateWire(tag, { x2: newX, y2: newY, z2: newZ });
+          }
+
+          // Length-lock projection moves the endpoint to a different position
+          // than the raw camera-plane hit. Re-sync lastHit to the actual
+          // endpoint so the next frame's delta starts from where it really is.
+          // Exception: Shift uses angle tracking where lastHit must stay on
+          // the camera plane for consistent sensitivity through 360°.
+          if (wire.lengthLocked && target.lastHit && !shiftHeld) {
+            // NEC2 (newX, newY, newZ) -> Three.js (newX, newZ, -newY)
+            target.lastHit = { x: newX, y: newZ, z: -newY };
           }
         } else if (target.type === "wire") {
-          // Whole-wire move: only apply horizontal delta (X/Y), preserve Z
-          const dx = pos[0] - target.offsetX;
-          const dy = pos[1] - target.offsetY;
-          if (dx !== 0 || dy !== 0) {
-            moveWire(target.tag, dx, dy, 0);
+          if (selectedTags.size > 1 && selectedTags.has(target.tag)) {
+            moveSelected(necDx, necDy, necDz);
+          } else {
+            moveWire(target.tag, necDx, necDy, necDz);
           }
-          // Update offset to current position for next delta
-          target.offsetX = pos[0];
-          target.offsetY = pos[1];
         }
       }
     },
-    [mode, addStart, isDragging, verticalDrag, raycastToGround, raycastVertical, updateWire, moveWire]
+    [mode, addStart, isDragging, verticalDrag, snapSize, wires, selectedTags, raycastToGround, raycastCameraPlane, updateWire, moveWire, moveSelected]
   );
 
   const handlePointerUp = useCallback(() => {
@@ -352,19 +364,37 @@ function EditorSceneContent({
 
   /** Handle endpoint drag start (move mode — endpoint only) */
   const handleEndpointDragStart = useCallback(
-    (tag: number, endpoint: "start" | "end", _event: ThreeEvent<PointerEvent>) => {
+    (tag: number, endpoint: "start" | "end", event: ThreeEvent<PointerEvent>) => {
       if (mode === "move") {
-        // Capture the endpoint's current NEC2 Z so we can preserve it during horizontal drags
         const wire = wires.find((w) => w.tag === tag);
-        const origZ = wire ? (endpoint === "start" ? wire.z1 : wire.z2) : 0;
-        // Imperatively disable orbit controls before the React re-render — prevents
-        // touch devices from simultaneously orbiting the camera during a wire drag.
+        // Use actual click point on the endpoint sphere as camera-plane anchor
+        const ep = event.point ?? (wire
+          ? (endpoint === "start" ? new Vector3(wire.x1, wire.z1, -wire.y1) : new Vector3(wire.x2, wire.z2, -wire.y2))
+          : new Vector3());
+        const hit = raycastCameraPlane(event, ep);
+        // Capture initial XY direction for length-lock fallback when XY shrinks to 0
+        let initDirX = 0, initDirY = 0;
+        if (wire) {
+          const [fx, fy] = endpoint === "start" ? [wire.x2, wire.y2] : [wire.x1, wire.y1];
+          const [mx, my] = endpoint === "start" ? [wire.x1, wire.y1] : [wire.x2, wire.y2];
+          const hd = Math.sqrt((mx - fx) ** 2 + (my - fy) ** 2);
+          if (hd > 1e-9) { initDirX = (mx - fx) / hd; initDirY = (my - fy) / hd; }
+          else { initDirX = 1; initDirY = 0; }
+        }
+        // Compute initial arc angle for Shift+lock pendulum
+        let arcAngle = 0;
+        if (wire) {
+          const [fx2, fy2, fz2] = endpoint === "start" ? [wire.x2, wire.y2, wire.z2] : [wire.x1, wire.y1, wire.z1];
+          const [mx2, my2, mz2] = endpoint === "start" ? [wire.x1, wire.y1, wire.z1] : [wire.x2, wire.y2, wire.z2];
+          const hd2 = Math.sqrt((mx2 - fx2) ** 2 + (my2 - fy2) ** 2);
+          arcAngle = Math.atan2(mz2 - fz2, hd2);
+        }
         if (controls) (controls as unknown as { enabled: boolean }).enabled = false;
         setIsDragging(true);
-        dragRef.current = { type: "endpoint", tag, endpoint, origZ };
+        dragRef.current = { type: "endpoint", tag, endpoint, initDirX, initDirY, arcAngle, lastHit: hit ? { x: hit.x, y: hit.y, z: hit.z } : undefined };
       }
     },
-    [mode, wires, controls]
+    [mode, wires, controls, raycastCameraPlane]
   );
 
   /** Handle wire body drag start (move mode — whole wire) */
@@ -372,27 +402,17 @@ function EditorSceneContent({
     (tag: number, event: ThreeEvent<PointerEvent>) => {
       if (mode === "move") {
         event.stopPropagation();
-        const pos = raycastToGround(event);
-        if (!pos) return;
-        const yVal = raycastVertical(event);
-        // Capture wire's average Z so Shift+drag has a baseline
-        const wire = wires.find((w) => w.tag === tag);
-        const origZ = wire ? (wire.z1 + wire.z2) / 2 : 0;
-        // Imperatively disable orbit controls before the React re-render
+        // Use the actual click point on the wire tube as the anchor.
+        // This matches the camera-plane depth to where the user clicked,
+        // giving 1:1 cursor tracking without sensitivity jumps.
+        const clickPoint = event.point ?? new Vector3();
+        const hit = raycastCameraPlane(event, clickPoint);
         if (controls) (controls as unknown as { enabled: boolean }).enabled = false;
         setIsDragging(true);
-        dragRef.current = {
-          type: "wire",
-          tag,
-          offsetX: pos[0],
-          offsetY: pos[1],
-          offsetZ: pos[2],
-          origZ,
-          lastY: yVal ?? undefined,
-        };
+        dragRef.current = { type: "wire", tag, lastHit: hit ? { x: hit.x, y: hit.y, z: hit.z } : undefined };
       }
     },
-    [mode, wires, raycastToGround, raycastVertical, controls]
+    [mode, controls, raycastCameraPlane]
   );
 
   // Convert wires to WireData format

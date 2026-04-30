@@ -100,6 +100,8 @@ interface EditorState {
   deleteSelected: () => void;
   /** Move an entire wire by a delta in NEC2 coordinates */
   moveWire: (tag: number, dx: number, dy: number, dz: number) => void;
+  /** Move all selected wires by the same delta */
+  moveSelected: (dx: number, dy: number, dz: number) => void;
   /** Move ALL wires by a delta in NEC2 Z (height) */
   moveAllWiresZ: (dz: number) => void;
   /** Split a wire at its midpoint into two wires */
@@ -354,6 +356,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     const newWires = [...state.wires];
     newWires[idx] = updated;
+    set({ ...pushUndo(state), wires: newWires });
+  },
+
+  moveSelected: (dx, dy, dz) => {
+    const state = get();
+    if (state.selectedTags.size === 0) return;
+    if (dx === 0 && dy === 0 && dz === 0) return;
+    const newWires = state.wires.map((w) =>
+      state.selectedTags.has(w.tag)
+        ? { ...w, x1: w.x1 + dx, y1: w.y1 + dy, z1: w.z1 + dz, x2: w.x2 + dx, y2: w.y2 + dy, z2: w.z2 + dz }
+        : w
+    );
     set({ ...pushUndo(state), wires: newWires });
   },
 
