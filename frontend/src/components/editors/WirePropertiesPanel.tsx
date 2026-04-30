@@ -201,7 +201,7 @@ function WireLengthSection({
           </div>
           <button
             onClick={() => {
-              onHang(hangSegments, hangLength ?? undefined);
+              onHang(hangSegments, hangLength ?? (length + 1));
               setShowHang(false);
             }}
             className="w-full py-1 text-[11px] rounded bg-accent/20 text-accent hover:bg-accent/30 transition-colors"
