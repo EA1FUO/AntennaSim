@@ -316,9 +316,9 @@ function EditorSceneContent({
         const hit = raycastCameraPlane(event, anchor);
         if (!hit) return;
 
-        let dtx = hit.x - target.lastHit.x;
-        let dty = hit.y - target.lastHit.y; // Three.js Y = NEC2 Z
-        let dtz = hit.z - target.lastHit.z;
+        const dtx = hit.x - target.lastHit.x;
+        const dty = hit.y - target.lastHit.y; // Three.js Y = NEC2 Z
+        const dtz = hit.z - target.lastHit.z;
 
         // Convert to NEC2 before applying axis constraint
         // Three.js (dtx, dty, dtz) -> NEC2 (dtx, -dtz, dty)
