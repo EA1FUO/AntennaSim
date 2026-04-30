@@ -6,7 +6,11 @@ import type { AntennaTemplate } from "./types";
 import { dipoleTemplate } from "./dipole";
 import { invertedVTemplate } from "./inverted-v";
 import { verticalTemplate } from "./vertical";
+import { invertedLTemplate } from "./inverted-l";
 import { efhwTemplate } from "./efhw";
+import { efhwInvertedLTemplate } from "./efhw-inverted-l";
+import { efhwInvertedVTemplate } from "./efhw-inverted-v";
+import { randomWireTemplate } from "./random-wire";
 import { yagiTemplate } from "./yagi";
 import { quadTemplate } from "./quad";
 import { moxonTemplate } from "./moxon";
@@ -27,12 +31,16 @@ export const templates: AntennaTemplate[] = [
   dipoleTemplate,
   invertedVTemplate,
   offCenterFedTemplate,
+  efhwTemplate,
+  efhwInvertedLTemplate,
+  efhwInvertedVTemplate,
+  randomWireTemplate,
   // Verticals
   verticalTemplate,
+  invertedLTemplate,
   jPoleTemplate,
   slimJimTemplate,
-  // End-fed / multiband
-  efhwTemplate,
+  // Multiband
   g5rvTemplate,
   fanDipoleTemplate,
   // Loops

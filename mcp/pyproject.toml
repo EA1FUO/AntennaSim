@@ -1,0 +1,22 @@
+[project]
+name = "antsim-mcp-server"
+version = "1.0.0"
+description = "MCP server exposing AntennaSim NEC2 antenna simulation tools"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "mcp>=1.0.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.6.0",
+]
+
+[project.scripts]
+antsim-mcp = "server:main"
+
+[build-system]
+requires = ["setuptools>=69.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = []
+py-modules = ["ham_bands", "templates", "simulator", "server"]
