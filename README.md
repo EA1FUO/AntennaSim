@@ -462,7 +462,7 @@ Run a NEC2 simulation.
     { "wire_tag": 1, "segment": 11, "real": 1.0, "imag": 0.0 }
   ],
   "ground": { "type": "average" },
-  "frequency": { "start_mhz": 13.5, "end_mhz": 15.0, "steps": 31 },
+  "frequency": { "start_mhz": 13.5, "stop_mhz": 15.0, "steps": 31 },
   "compute_currents": true,
   "near_field": {
     "enabled": true,

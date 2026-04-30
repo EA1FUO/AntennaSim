@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - Frequency slider displaying bands in click order instead of ascending frequency order
 - Impedance chart zigzag lines when simulating non-contiguous multi-band sweeps
+- Incorrect `end_mhz` field name in README API example (should be `stop_mhz`)
 
 ## [1.0.1] - 2026-03-24
 
