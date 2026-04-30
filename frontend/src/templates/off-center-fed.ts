@@ -43,6 +43,7 @@ export const offCenterFedTemplate: AntennaTemplate = {
   difficulty: "beginner",
   bands: ["80m", "40m", "20m", "10m"],
   defaultGround: { type: "average" },
+  defaultMatching: { type: "balun", ratio: 4, feedlineZ0: 50 },
   tips: [
     "Feed at ~36% from one end (not exactly 1/3) for best multiband impedance.",
     "A 4:1 current balun is essential — do NOT use a voltage balun.",

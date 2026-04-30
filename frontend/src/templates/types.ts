@@ -6,6 +6,7 @@
  */
 
 import type { WireData, FeedpointData } from "../components/three/types";
+import type { MatchingConfig } from "../utils/units";
 export type { FeedpointData } from "../components/three/types";
 
 /** Ground type enum matching backend GroundConfig */
@@ -122,6 +123,8 @@ export interface AntennaTemplate {
   parameters: ParameterDef[];
   /** Default ground configuration */
   defaultGround: GroundConfig;
+  /** Default matching/transformer for this antenna type (optional) */
+  defaultMatching?: MatchingConfig;
   /** Generate NEC2 wire geometry from parameter values */
   generateGeometry: (params: Record<string, number>) => WireGeometry[];
   /** Generate excitation source(s) from parameter values and wires */
