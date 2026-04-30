@@ -38,14 +38,16 @@ interface ImpedanceChartProps {
 export function ImpedanceChart({ data, matching = DEFAULT_MATCHING, heightClass = "h-56" }: ImpedanceChartProps) {
   const chartData = useMemo(
     () =>
-      data.map((d) => {
-        const m = applyMatching(d.impedance.real, d.impedance.imag, matching);
-        return {
-          freq: d.frequency_mhz,
-          r: m.real,
-          x: m.imag,
-        };
-      }),
+      data
+        .map((d) => {
+          const m = applyMatching(d.impedance.real, d.impedance.imag, matching);
+          return {
+            freq: d.frequency_mhz,
+            r: m.real,
+            x: m.imag,
+          };
+        })
+        .sort((a, b) => a.freq - b.freq),
     [data, matching]
   );
 

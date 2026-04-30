@@ -132,7 +132,11 @@ export function SimulatorPage() {
         const updated = removeBandSegment(frequencySegments, band);
         setFrequencySegments(updated);
       } else {
-        setFrequencySegments([...frequencySegments, bandToSegment(band)]);
+        setFrequencySegments(
+          [...frequencySegments, bandToSegment(band)].sort(
+            (a, b) => a.start_mhz - b.start_mhz
+          )
+        );
       }
     },
     [frequencySegments, setFrequencySegments]

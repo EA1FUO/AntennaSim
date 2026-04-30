@@ -275,7 +275,11 @@ export function EditorPage() {
       if (hasBandSegment(frequencySegments, band)) {
         setFrequencySegments(removeBandSegment(frequencySegments, band));
       } else {
-        setFrequencySegments([...frequencySegments, bandToSegment(band)]);
+        setFrequencySegments(
+          [...frequencySegments, bandToSegment(band)].sort(
+            (a, b) => a.start_mhz - b.start_mhz
+          )
+        );
       }
     },
     [frequencySegments, setFrequencySegments]
