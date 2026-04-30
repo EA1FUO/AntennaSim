@@ -5,37 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.1.0] - 2026-04-30
 
 ### Added
 
 - Editable wire length field in Wire Editor properties panel and wire table
 - Length lock toggle to maintain wire length during 3D endpoint drags
-- Bend Wire tool to split a straight wire at a configurable angle and position while preserving total length
-- Multi-wire move: dragging one wire in a multi-selection moves all selected wires together
+- Bend Wire tool to split a straight wire into equal-length segments at a configurable angle while preserving total length
+- Hang Wire tool to simulate catenary sag between wire endpoints with adjustable wire length and segment count
 - Blender-style axis constraints: press X/Y/Z during drag to lock to that axis, Shift+X/Y/Z to exclude an axis, with colored axis indicator lines
-- Hang Wire tool to simulate gravity sag (catenary) between wire endpoints with configurable segment count
+- Multi-wire move: dragging one wire in a multi-selection moves all selected wires together
+- Templates now set their recommended transformer automatically (EFHW → 49:1, OCFD → 4:1, delta loop → 4:1)
 
 ### Fixed
 
-- Wire dragging at elevated heights no longer jumps to distant positions
-- Whole-wire drag sensitivity now matches mouse movement regardless of camera angle
-### Fixed
-
-- Radiation efficiency always showing 100% regardless of ground type by computing it from NEC2 average gain
+- Incorrect `end_mhz` field name in README API example (should be `stop_mhz`)
+- Frequency slider displaying bands in click order instead of ascending frequency order
+- Impedance chart zigzag lines when simulating non-contiguous multi-band sweeps
 - Frequency slider SWR display ignoring transformer/matching configuration
 - Multi-band analysis table ignoring transformer/matching configuration
-
-### Added
-
-- Templates now set their recommended transformer automatically (EFHW → 49:1, OCFD → 4:1, delta loop → 4:1)
+- Radiation efficiency always showing 100% regardless of ground type
+- Wire dragging at elevated heights no longer jumps to distant positions
+- Whole-wire drag sensitivity now matches mouse movement regardless of camera angle
 
 ### Changed
 
+- Wire editor drag system rebuilt with camera-facing plane approach for smooth movement from any angle
 - Move matching/balun selector next to band presets in Wire Editor for discoverability
-- Frequency slider displaying bands in click order instead of ascending frequency order
-- Impedance chart zigzag lines when simulating non-contiguous multi-band sweeps
-- Incorrect `end_mhz` field name in README API example (should be `stop_mhz`)
 
 ## [1.0.1] - 2026-03-24
 
