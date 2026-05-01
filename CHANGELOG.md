@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- MCP (Model Context Protocol) server (`mcp/`) exposing AntennaSim NEC2 simulation as 12 LLM-callable tools over stdio and HTTP (streamable-http/SSE) transports
+- 4 new antenna templates: Inverted-L, Random Wire, EFHW Inverted-L, EFHW Inverted-V — added to both the frontend template picker and the MCP server
+- MCP tools: `list_antenna_templates`, `get_template_info`, `list_ham_bands`, `create_and_simulate_antenna`, `compare_antennas`, `analyze_antenna_for_band`, `get_radiation_pattern`, `get_smith_chart`, `compare_radiation_patterns`, `design_wire_antenna`, `simulate_custom_antenna`, `get_nec2_card_deck`
+- Docker integration for MCP: `mcp/Dockerfile`, `mcp/Dockerfile.dev`, `mcp` service in `docker-compose.yml` and `docker-compose.dev.yml`, nginx `/mcp` proxy route
+- `shared/ham-bands.json` — single source of truth for ITU band definitions consumed by both Python and TypeScript
+- `shared/antenna-templates.json` — single source of truth for template metadata (names, descriptions, parameters, tips) consumed by both Python and TypeScript
+- `mcp/constants.py` — named constants for all pattern-classification thresholds, frequency limits, and VSWR sentinel values
+- `mcp/utils.py` — shared utility functions (`is_non_string_sequence`, `get_field`) used across MCP modules
+- `mcp/tests/` — unit tests for `parse_ground_spec`, `resolve_params`, `_classify_pattern_shape`, and `_compute_cut_beamwidth`
+- `frontend/src/templates/metadata-loader.ts` — TypeScript loader that reads template metadata from the shared JSON
+
+### Changed
+
+- Template metadata (names, descriptions, parameter definitions, tips) extracted from hardcoded Python and TypeScript into `shared/antenna-templates.json` — future template changes require updating only one file
+- Ham band definitions extracted from hardcoded Python and TypeScript into `shared/ham-bands.json`
+- `GROUND_TYPE_VALUES` in `mcp/simulator.py` is now derived from the backend's `GroundType` enum after `load_backend_api()` instead of being hardcoded — new ground types added to the backend are automatically supported
+- MCP transport standardised to `streamable-http` for all Docker deployments (previously inconsistent between `sse` and `streamable-http` across config files)
+- Pattern-classification and beamwidth-computation functions in `mcp/server.py` now reference named constants and include citations to ARRL Antenna Book / IEC 60050-712
+- Import pattern in MCP modules changed from fragile `try/except ImportError` to explicit `if __package__:` check
+- `mcp/_ground_card()` now uses a local preset lookup table instead of the previously broken `GROUND_TYPE_VALUES.get()` call
+
 ## [1.0.1] - 2026-03-24
 
 ### Added

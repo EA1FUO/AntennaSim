@@ -19,4 +19,4 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = []
-py-modules = ["ham_bands", "templates", "simulator", "server"]
+py-modules = ["ham_bands", "templates", "simulator", "server", "utils", "constants", "pattern_helpers"]

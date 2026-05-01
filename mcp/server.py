@@ -10,7 +10,14 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-try:
+if __package__:
+    from .constants import (
+        BIDIR_ANGLE_TOL_DEG, BIDIR_GAIN_DIFF_DB,
+        FREQ_MAX_MHZ, FREQ_MIN_MHZ, FREQ_STEPS_MAX, FREQ_STEPS_MIN,
+        LOBE_HALF_POWER_DB, LOBE_MIN_SEPARATION_DEG,
+        PATTERN_HIGHLY_DIR_DB, PATTERN_NEAR_OMNI_DB, PATTERN_OMNI_DB,
+        SWR_USABLE_THRESHOLD, VSWR_UNDEFINED,
+    )
     from .ham_bands import (
         analyze_band_performance,
         band_to_frequency_range,
@@ -37,14 +44,22 @@ try:
         get_template,
         resolve_params,
     )
-except ImportError:
-    from ham_bands import (
+    from .utils import get_field, is_non_string_sequence
+else:
+    from constants import (  # type: ignore[no-redef]
+        BIDIR_ANGLE_TOL_DEG, BIDIR_GAIN_DIFF_DB,
+        FREQ_MAX_MHZ, FREQ_MIN_MHZ, FREQ_STEPS_MAX, FREQ_STEPS_MIN,
+        LOBE_HALF_POWER_DB, LOBE_MIN_SEPARATION_DEG,
+        PATTERN_HIGHLY_DIR_DB, PATTERN_NEAR_OMNI_DB, PATTERN_OMNI_DB,
+        SWR_USABLE_THRESHOLD, VSWR_UNDEFINED,
+    )
+    from ham_bands import (  # type: ignore[no-redef]
         analyze_band_performance,
         band_to_frequency_range,
         get_band_by_label,
         get_bands_for_region,
     )
-    from simulator import (
+    from simulator import (  # type: ignore[no-redef]
         BackendImportError,
         GROUND_TYPE_VALUES,
         NecNotFoundError,
@@ -53,7 +68,7 @@ except ImportError:
         parse_ground_spec,
         simulate,
     )
-    from templates import (
+    from templates import (  # type: ignore[no-redef]
         AntennaTemplate,
         Excitation,
         FrequencyRange,
@@ -64,9 +79,25 @@ except ImportError:
         get_template,
         resolve_params,
     )
+    from utils import get_field, is_non_string_sequence  # type: ignore[no-redef]
 
 
 mcp = FastMCP("AntennaSim MCP")
+
+# Ground parameters for the NEC2 card-deck export tool (_build_nec2_card_deck).
+# These mirror the backend's GROUND_PARAMS dict.  The backend's build_card_deck()
+# is the authoritative card builder for actual simulation runs; this local table
+# exists only so get_nec2_card_deck can produce a correct GN card without
+# loading the full backend.
+_GROUND_PARAMS_FOR_EXPORT: dict[str, tuple[float, float]] = {
+    "salt_water":  (80.0, 5.0),
+    "fresh_water": (80.0, 0.001),
+    "pastoral":    (14.0, 0.01),
+    "average":     (13.0, 0.005),
+    "rocky":       (12.0, 0.002),
+    "city":        (5.0,  0.001),
+    "dry_sandy":   (3.0,  0.0001),
+}
 
 
 @dataclass(slots=True)
@@ -410,15 +441,8 @@ def _ground_card(ground_spec: str, default_ground_type: str = "average") -> str:
         return "GN 1"
 
     if epsilon_r is None or conductivity is None:
-        raw_ground_value = (
-            GROUND_TYPE_VALUES.get(ground_name)
-            if isinstance(GROUND_TYPE_VALUES, Mapping)
-            else None
-        )
-        epsilon_r, conductivity = _extract_ground_constants(raw_ground_value)
-
-    if epsilon_r is None or conductivity is None:
-        epsilon_r, conductivity = 13.0, 0.005
+        preset = _GROUND_PARAMS_FOR_EXPORT.get(ground_name, (13.0, 0.005))
+        epsilon_r, conductivity = preset[0], preset[1]
 
     return (
         "GN 2 0 0 0 "
@@ -709,7 +733,16 @@ def _nearest_cut_gain(cut: Sequence[tuple[float, float]], target: float, *, circ
 def _compute_cut_beamwidth(
     cut: Sequence[tuple[float, float]], peak_angle: float, peak_gain: float, *, circular: bool
 ) -> float | None:
-    """Compute -3 dB beamwidth from a sorted 1-D gain cut."""
+    """Compute -3 dB half-power beamwidth from a sorted 1-D gain cut.
+
+    Uses the standard half-power (-3 dB) criterion as defined in
+    IEEE Std 149-1979 and IEC 60050-712.  The function searches left and
+    right of peak_angle for the first crossing of the peak_gain - 3 dB
+    threshold, then returns their angular separation.
+
+    Returns None if fewer than 3 points are available or if the threshold
+    is not crossed on both sides of the peak.
+    """
     if len(cut) < 3:
         return None
     threshold = peak_gain - 3.0
@@ -747,7 +780,22 @@ def _compute_cut_beamwidth(
 
 
 def _classify_pattern_shape(azimuth_gains: Sequence[tuple[float, float]]) -> dict[str, Any]:
-    """Classify azimuth pattern shape."""
+    """Classify azimuth pattern shape using azimuth variation criteria.
+
+    Classification thresholds follow the ARRL Antenna Book (24th ed., Chapter 2)
+    and IEC 60050-712 antenna pattern terminology:
+    - azimuth variation < PATTERN_OMNI_DB (3 dB) → omnidirectional
+    - azimuth variation < PATTERN_NEAR_OMNI_DB (6 dB) → nearly omnidirectional
+    - two lobes ≈180° apart with gain diff < BIDIR_GAIN_DIFF_DB (3 dB) → bidirectional
+    - azimuth variation > PATTERN_HIGHLY_DIR_DB (15 dB) → highly directional
+    - otherwise → directional
+
+    Lobe detection: a point is a lobe peak when its gain is within LOBE_HALF_POWER_DB
+    (3 dB) of the maximum and lobes closer than LOBE_MIN_SEPARATION_DEG (20°) are merged.
+
+    Bidirectional test: the two highest lobes are checked for ≈180° separation
+    (tolerance BIDIR_ANGLE_TOL_DEG = 40°) and similar gain (≤ BIDIR_GAIN_DIFF_DB = 3 dB).
+    """
     if not azimuth_gains:
         return {"shape": "unknown", "azimuth_variation_db": 0.0, "azimuth_stddev_db": 0.0,
                 "max_gain": None, "min_gain": None, "num_lobes": 0}
@@ -757,7 +805,7 @@ def _classify_pattern_shape(azimuth_gains: Sequence[tuple[float, float]]) -> dic
     mean = sum(gains) / len(gains)
     stddev = math.sqrt(sum((g - mean) ** 2 for g in gains) / len(gains))
 
-    thresh = mx - 3.0
+    thresh = mx - LOBE_HALF_POWER_DB
     n = len(azimuth_gains)
     lobes: list[tuple[float, float]] = []
     for i in range(n):
@@ -765,23 +813,26 @@ def _classify_pattern_shape(azimuth_gains: Sequence[tuple[float, float]]) -> dic
         a, g = azimuth_gains[i]
         _, gn = azimuth_gains[(i + 1) % n]
         if g >= thresh and g + 1e-9 >= gp and g + 1e-9 >= gn:
-            if not lobes or _circular_diff(a, lobes[-1][0]) > 20.0:
+            if not lobes or _circular_diff(a, lobes[-1][0]) > LOBE_MIN_SEPARATION_DEG:
                 lobes.append((a, g))
     num_lobes = max(1, len(lobes))
 
     bidirectional = False
     if len(lobes) >= 2:
         s = sorted(lobes, key=lambda p: p[1], reverse=True)[:2]
-        if abs(_circular_diff(s[0][0], s[1][0]) - 180.0) <= 40.0 and abs(s[0][1] - s[1][1]) <= 3.0:
+        if (
+            abs(_circular_diff(s[0][0], s[1][0]) - 180.0) <= BIDIR_ANGLE_TOL_DEG
+            and abs(s[0][1] - s[1][1]) <= BIDIR_GAIN_DIFF_DB
+        ):
             bidirectional = True
 
-    if variation < 3.0:
+    if variation < PATTERN_OMNI_DB:
         shape = "omnidirectional"
-    elif variation < 6.0:
+    elif variation < PATTERN_NEAR_OMNI_DB:
         shape = "nearly omnidirectional"
     elif bidirectional:
         shape = "bidirectional"
-    elif variation > 15.0:
+    elif variation > PATTERN_HIGHLY_DIR_DB:
         shape = "highly directional"
     else:
         shape = "directional"

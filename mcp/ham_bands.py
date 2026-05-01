@@ -1,13 +1,21 @@
 """Amateur radio band definitions and analysis helpers.
 
-Ported from frontend/src/utils/ham-bands.ts.
+Band data is loaded from shared/ham-bands.json which is consumed by both
+this Python module and the TypeScript frontend — eliminating duplication.
 """
 
 from __future__ import annotations
 
+import json
 import math
 from dataclasses import dataclass
-from typing import Any, Literal, Mapping, Sequence
+from pathlib import Path
+from typing import Any, Literal, Sequence
+
+if __package__:
+    from .utils import get_field
+else:
+    from utils import get_field  # type: ignore[no-redef]
 
 Region = Literal["all", "r1", "r2", "r3"]
 BandQuality = Literal["excellent", "good", "marginal", "poor", "not_simulated"]
@@ -40,28 +48,53 @@ class BandPerformance:
     quality: BandQuality
 
 
-HAM_BANDS: list[HamBand] = [
-    HamBand("160m", "160 meters", 1.800, 2.000, 1.900, "all"),
-    HamBand("80m", "80 meters", 3.500, 3.800, 3.650, "r1"),
-    HamBand("80m", "80 meters", 3.500, 4.000, 3.750, "r2"),
-    HamBand("60m", "60 meters", 5.3515, 5.3665, 5.359, "all"),
-    HamBand("40m", "40 meters", 7.000, 7.200, 7.100, "r1"),
-    HamBand("40m", "40 meters", 7.000, 7.300, 7.150, "r2"),
-    HamBand("30m", "30 meters", 10.100, 10.150, 10.125, "all"),
-    HamBand("20m", "20 meters", 14.000, 14.350, 14.175, "all"),
-    HamBand("17m", "17 meters", 18.068, 18.168, 18.118, "all"),
-    HamBand("15m", "15 meters", 21.000, 21.450, 21.225, "all"),
-    HamBand("12m", "12 meters", 24.890, 24.990, 24.940, "all"),
-    HamBand("10m", "10 meters", 28.000, 29.700, 28.850, "all"),
-    HamBand("6m", "6 meters", 50.000, 54.000, 52.000, "all"),
-    HamBand("2m", "2 meters", 144.000, 148.000, 146.000, "all"),
-    HamBand("70cm", "70 cm", 420.000, 450.000, 435.000, "all"),
-]
+def _find_shared_path() -> Path:
+    """Locate the shared/ data directory.
+
+    Checks two locations to support both Docker (shared/ copied alongside
+    the server files) and development (shared/ at the repository root).
+    """
+    here = Path(__file__).parent
+    # Docker layout: shared/ is copied to /opt/antsim_mcp/shared/
+    docker_path = here / "shared"
+    if docker_path.is_dir():
+        return docker_path
+    # Dev layout: shared/ is at the repo root (one level above mcp/)
+    dev_path = here.parent / "shared"
+    if dev_path.is_dir():
+        return dev_path
+    raise FileNotFoundError(
+        "Could not find shared/ directory.\n"
+        f"Searched:\n  {docker_path}\n  {dev_path}\n"
+        "Ensure the shared/ directory exists alongside or above the mcp/ directory."
+    )
+
+
+def _load_ham_bands() -> list[HamBand]:
+    """Load ham band definitions from shared/ham-bands.json."""
+    bands_file = _find_shared_path() / "ham-bands.json"
+    with open(bands_file, encoding="utf-8") as f:
+        raw = json.load(f)
+    return [
+        HamBand(
+            label=entry["label"],
+            name=entry["name"],
+            start_mhz=float(entry["start_mhz"]),
+            stop_mhz=float(entry["stop_mhz"]),
+            center_mhz=float(entry["center_mhz"]),
+            region=entry["region"],
+        )
+        for entry in raw
+    ]
+
+
+# Loaded at module initialisation — replaces the hardcoded list.
+HAM_BANDS: list[HamBand] = _load_ham_bands()
 
 
 def _js_round(value: float, digits: int = 0) -> float:
-    """Round like JavaScript's Math.round, including midpoint behavior."""
-    factor = 10**digits
+    """Round like JavaScript's Math.round, including midpoint behaviour."""
+    factor = 10 ** digits
     scaled = value * factor
     if scaled >= 0:
         return math.floor(scaled + 0.5) / factor
@@ -69,7 +102,7 @@ def _js_round(value: float, digits: int = 0) -> float:
 
 
 def compute_steps(start_mhz: float, stop_mhz: float) -> int:
-    """Compute sweep points exactly like the TypeScript helper."""
+    """Compute sweep points exactly like the TypeScript computeSteps helper."""
     bw = abs(stop_mhz - start_mhz)
     return int(max(21, min(101, _js_round(bw * 25) + 1)))
 
@@ -105,21 +138,14 @@ def band_to_frequency_range(band: HamBand) -> dict[str, float | int]:
     }
 
 
-def _result_value(result: Any, key: str) -> Any:
-    """Read a field from either a mapping or an object with attributes."""
-    if isinstance(result, Mapping):
-        return result[key]
-    return getattr(result, key)
-
-
 def analyze_band_performance(
     results: Sequence[Any],
     region: Literal["r1", "r2", "r3"] = "r1",
     swr_threshold: float = 2.0,
 ) -> list[BandPerformance]:
-    """Analyze simulation results across all defined bands for one region.
+    """Analyse simulation results across all defined bands for one region.
 
-    This matches the frontend logic:
+    Mirrors the TypeScript analyzeBandPerformance logic:
     - find all frequency points that fall inside each band
     - determine min SWR and where it occurs
     - estimate usable bandwidth where SWR <= threshold
@@ -132,7 +158,7 @@ def analyze_band_performance(
         in_band = [
             result
             for result in results
-            if band.start_mhz <= float(_result_value(result, "frequency_mhz")) <= band.stop_mhz
+            if band.start_mhz <= float(get_field(result, "frequency_mhz")) <= band.stop_mhz
         ]
 
         if not in_band:
@@ -154,22 +180,26 @@ def analyze_band_performance(
         min_swr = math.inf
         min_swr_freq = 0.0
         for result in in_band:
-            swr = float(_result_value(result, "swr_50"))
+            swr = float(get_field(result, "swr_50"))
             if swr < min_swr:
                 min_swr = swr
-                min_swr_freq = float(_result_value(result, "frequency_mhz"))
+                min_swr_freq = float(get_field(result, "frequency_mhz"))
 
-        usable = [result for result in in_band if float(_result_value(result, "swr_50")) <= swr_threshold]
+        usable = [
+            result
+            for result in in_band
+            if float(get_field(result, "swr_50")) <= swr_threshold
+        ]
         usable_bandwidth_khz: int | None = None
         if usable:
-            min_freq = min(float(_result_value(result, "frequency_mhz")) for result in usable)
-            max_freq = max(float(_result_value(result, "frequency_mhz")) for result in usable)
+            min_freq = min(float(get_field(r, "frequency_mhz")) for r in usable)
+            max_freq = max(float(get_field(r, "frequency_mhz")) for r in usable)
             usable_bandwidth_khz = int(_js_round((max_freq - min_freq) * 1000))
 
         gains = [
-            float(_result_value(result, "gain_max_dbi"))
+            float(get_field(result, "gain_max_dbi"))
             for result in in_band
-            if float(_result_value(result, "gain_max_dbi")) > -999.0
+            if float(get_field(result, "gain_max_dbi")) > -999.0
         ]
         avg_gain = sum(gains) / len(gains) if gains else None
         peak_gain = max(gains) if gains else None

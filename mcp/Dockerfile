@@ -22,7 +22,10 @@ COPY backend/pyproject.toml ./backend/
 
 # Copy MCP server source into /opt/antsim_mcp/ to avoid
 # shadowing the installed 'mcp' Python package
-COPY mcp/server.py mcp/simulator.py mcp/templates.py mcp/ham_bands.py /opt/antsim_mcp/
+COPY mcp/server.py mcp/simulator.py mcp/templates.py mcp/ham_bands.py mcp/utils.py mcp/constants.py /opt/antsim_mcp/
+
+# Copy shared JSON data (consumed by both Python MCP server and TypeScript frontend)
+COPY shared/ /opt/antsim_mcp/shared/
 
 # Copy shared VERSION file
 COPY VERSION ./VERSION

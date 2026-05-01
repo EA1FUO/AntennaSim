@@ -1,0 +1,17 @@
+[
+  {"label": "160m", "name": "160 meters", "start_mhz": 1.800, "stop_mhz": 2.000, "center_mhz": 1.900, "region": "all"},
+  {"label": "80m",  "name": "80 meters",  "start_mhz": 3.500, "stop_mhz": 3.800, "center_mhz": 3.650, "region": "r1"},
+  {"label": "80m",  "name": "80 meters",  "start_mhz": 3.500, "stop_mhz": 4.000, "center_mhz": 3.750, "region": "r2"},
+  {"label": "60m",  "name": "60 meters",  "start_mhz": 5.3515, "stop_mhz": 5.3665, "center_mhz": 5.359, "region": "all"},
+  {"label": "40m",  "name": "40 meters",  "start_mhz": 7.000, "stop_mhz": 7.200, "center_mhz": 7.100, "region": "r1"},
+  {"label": "40m",  "name": "40 meters",  "start_mhz": 7.000, "stop_mhz": 7.300, "center_mhz": 7.150, "region": "r2"},
+  {"label": "30m",  "name": "30 meters",  "start_mhz": 10.100, "stop_mhz": 10.150, "center_mhz": 10.125, "region": "all"},
+  {"label": "20m",  "name": "20 meters",  "start_mhz": 14.000, "stop_mhz": 14.350, "center_mhz": 14.175, "region": "all"},
+  {"label": "17m",  "name": "17 meters",  "start_mhz": 18.068, "stop_mhz": 18.168, "center_mhz": 18.118, "region": "all"},
+  {"label": "15m",  "name": "15 meters",  "start_mhz": 21.000, "stop_mhz": 21.450, "center_mhz": 21.225, "region": "all"},
+  {"label": "12m",  "name": "12 meters",  "start_mhz": 24.890, "stop_mhz": 24.990, "center_mhz": 24.940, "region": "all"},
+  {"label": "10m",  "name": "10 meters",  "start_mhz": 28.000, "stop_mhz": 29.700, "center_mhz": 28.850, "region": "all"},
+  {"label": "6m",   "name": "6 meters",   "start_mhz": 50.000, "stop_mhz": 54.000, "center_mhz": 52.000, "region": "all"},
+  {"label": "2m",   "name": "2 meters",   "start_mhz": 144.000, "stop_mhz": 148.000, "center_mhz": 146.000, "region": "all"},
+  {"label": "70cm", "name": "70 cm",      "start_mhz": 420.000, "stop_mhz": 450.000, "center_mhz": 435.000, "region": "all"}
+]

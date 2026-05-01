@@ -1,0 +1,559 @@
+[
+  {
+    "id": "dipole",
+    "name": "Half-Wave Dipole",
+    "nameShort": "Dipole",
+    "description": "Classic half-wave dipole — the fundamental antenna for any band.",
+    "longDescription": "A half-wave dipole consists of two equal-length wires fed at the center. Total length is approximately one-half wavelength at the design frequency. It produces a figure-8 pattern in the horizontal plane with ~2.15 dBi gain. The feed impedance at resonance is approximately 73 ohms in free space, varying with height above ground. This is the reference antenna for all other designs.",
+    "icon": "—|—",
+    "category": "wire",
+    "difficulty": "beginner",
+    "bands": ["160m", "80m", "40m", "20m", "15m", "10m", "6m", "2m"],
+    "parameters": [
+      {"key": "frequency", "label": "Design Frequency", "description": "Center frequency for half-wave resonance", "unit": "MHz", "min": 0.5, "max": 2000, "step": 0.1, "defaultValue": 14.1, "decimals": 3},
+      {"key": "height", "label": "Height", "description": "Height above ground at the feed point", "unit": "m", "min": 0.5, "max": 100, "step": 0.5, "defaultValue": 10, "decimals": 1},
+      {"key": "wire_diameter", "label": "Wire Diameter", "description": "Conductor diameter", "unit": "mm", "min": 0.5, "max": 10, "step": 0.1, "defaultValue": 2.0, "decimals": 1}
+    ],
+    "defaultGround": {"type": "average"},
+    "tips": [
+      "Height above ground significantly affects impedance and pattern.",
+      "At λ/2 height, gain maximizes at low angles — ideal for DX.",
+      "At λ/4 height, the pattern tilts upward — better for NVIS.",
+      "Use thicker wire (larger diameter) for broader SWR bandwidth.",
+      "Resonant frequency is slightly lower than the formula λ/2 due to end effects."
+    ],
+    "relatedTemplates": ["inverted-v", "fan-dipole", "off-center-fed"]
+  },
+  {
+    "id": "inverted-v",
+    "name": "Inverted V",
+    "nameShort": "Inv V",
+    "description": "Dipole with drooping arms — needs only one support point.",
+    "longDescription": "An Inverted V is a half-wave dipole with its arms sloping downward from a single center support. The included angle between arms affects performance: 90-120 degrees is optimal. Feed impedance is lower than a flat dipole (typically 50-60 ohms) which can be advantageous for direct coax feed. The radiation pattern is slightly more omnidirectional than a flat dipole, with ~1 dB less maximum gain.",
+    "icon": "/|\\",
+    "category": "wire",
+    "difficulty": "beginner",
+    "bands": ["160m", "80m", "40m", "20m", "15m", "10m"],
+    "parameters": [
+      {"key": "frequency", "label": "Design Frequency", "description": "Center frequency for half-wave resonance", "unit": "MHz", "min": 0.5, "max": 2000, "step": 0.1, "defaultValue": 7.1, "decimals": 3},
+      {"key": "apex_height", "label": "Apex Height", "description": "Height of the center feed point (top of mast)", "unit": "m", "min": 2, "max": 100, "step": 0.5, "defaultValue": 12, "decimals": 1},
+      {"key": "included_angle", "label": "Included Angle", "description": "Angle between the two arms (90-180 deg, 180=flat dipole)", "unit": "deg", "min": 60, "max": 180, "step": 5, "defaultValue": 120, "decimals": 0},
+      {"key": "wire_diameter", "label": "Wire Diameter", "description": "Conductor diameter", "unit": "mm", "min": 0.5, "max": 10, "step": 0.1, "defaultValue": 2.0, "decimals": 1}
+    ],
+    "defaultGround": {"type": "average"},
+    "tips": [
+      "90-120 degree included angle gives best compromise of gain vs. impedance.",
+      "At 90 degrees, feed impedance drops to ~50 ohms — perfect for direct coax feed.",
+      "Wire ends should be at least 2-3m above ground for safety and performance.",
+      "Broader horizontal pattern than flat dipole — less directional.",
+      "Popular for portable and field day operation (one mast + two stakes)."
+    ],
+    "relatedTemplates": ["dipole", "efhw", "delta-loop"]
+  },
+  {
+    "id": "off-center-fed",
+    "name": "Off-Center Fed Dipole",
+    "nameShort": "OCF",
+    "description": "Windom/OCF dipole — multiband operation from a single wire with off-center feed.",
+    "longDescription": "The Off-Center Fed (OCF) Dipole, also known as the Windom, is a half-wave dipole fed at a point approximately 1/3 from one end. This feed point location presents a feed impedance of approximately 200-300 ohms (matched with a 4:1 balun to 50 ohms). The key advantage is that the off-center feed point maintains a reasonable impedance on even harmonics, giving multiband operation on the fundamental and approximately every even multiple (e.g., 80m fundamental → works on 40m, 20m, 10m). Simple construction — just one wire, a 4:1 balun, and coax.",
+    "icon": "--|----",
+    "category": "multiband",
+    "difficulty": "beginner",
+    "bands": ["80m", "40m", "20m", "10m"],
+    "parameters": [
+      {"key": "frequency", "label": "Design Frequency", "description": "Fundamental resonant frequency", "unit": "MHz", "min": 0.5, "max": 2000, "step": 0.1, "defaultValue": 7.1, "decimals": 3},
+      {"key": "feed_offset", "label": "Feed Offset", "description": "Feed point position as fraction from one end (0.33 = classic Windom)", "unit": "", "min": 0.2, "max": 0.45, "step": 0.01, "defaultValue": 0.36, "decimals": 2},
+      {"key": "height", "label": "Height", "description": "Height above ground", "unit": "m", "min": 2, "max": 30, "step": 0.5, "defaultValue": 12, "decimals": 1},
+      {"key": "wire_diameter", "label": "Wire Diameter", "description": "Conductor diameter", "unit": "mm", "min": 0.5, "max": 5, "step": 0.1, "defaultValue": 2.0, "decimals": 1}
+    ],
+    "defaultGround": {"type": "average"},
+    "tips": [
+      "Feed at ~36% from one end (not exactly 1/3) for best multiband impedance.",
+      "A 4:1 current balun is essential — do NOT use a voltage balun.",
+      "Works on fundamental + even harmonics: e.g., 80/40/20/10m.",
+      "May not work well on odd harmonics (e.g., 15m for an 80m OCF).",
+      "Total wire length for 80m: ~40.5m (133 ft), for 40m: ~20.25m.",
+      "Keep the wire as straight and horizontal as possible."
+    ],
+    "relatedTemplates": ["dipole", "efhw", "g5rv", "fan-dipole"]
+  },
+  {
+    "id": "vertical",
+    "name": "Ground Plane Vertical",
+    "nameShort": "Vertical",
+    "description": "Quarter-wave vertical with radials — omnidirectional, low-angle radiation.",
+    "longDescription": "A ground plane vertical consists of a quarter-wave vertical radiator with horizontal or slightly drooping radial wires at its base. It produces an omnidirectional pattern in the horizontal plane with peak radiation at low elevation angles — excellent for DX. Feed impedance is approximately 36 ohms with horizontal radials (use a 4:1 or adjust radial droop). With drooping radials at 45 degrees, impedance rises to ~50 ohms for direct coax feed.",
+    "icon": "⊥",
+    "category": "vertical",
+    "difficulty": "beginner",
+    "bands": ["40m", "20m", "15m", "10m", "6m", "2m"],
+    "parameters": [
+      {"key": "frequency", "label": "Design Frequency", "description": "Center frequency for quarter-wave resonance", "unit": "MHz", "min": 1, "max": 2000, "step": 0.1, "defaultValue": 14.2, "decimals": 3},
+      {"key": "radial_count", "label": "Radials", "description": "Number of radial wires (2-8)", "unit": "", "min": 2, "max": 8, "step": 1, "defaultValue": 4, "decimals": 0},
+      {"key": "radial_droop", "label": "Radial Droop", "description": "Droop angle below horizontal (0=flat, 45=drooping)", "unit": "deg", "min": 0, "max": 60, "step": 5, "defaultValue": 0, "decimals": 0},
+      {"key": "base_height", "label": "Base Height", "description": "Height of the radial junction above ground", "unit": "m", "min": 0.3, "max": 30, "step": 0.1, "defaultValue": 0.5, "decimals": 1},
+      {"key": "wire_diameter", "label": "Wire Diameter", "description": "Conductor diameter", "unit": "mm", "min": 0.5, "max": 25, "step": 0.5, "defaultValue": 2.0, "decimals": 1}
+    ],
+    "defaultGround": {"type": "average"},
+    "tips": [
+      "4 radials is the minimum; more radials improve ground plane but with diminishing returns.",
+      "Droop radials at 45 degrees to raise impedance toward 50 ohms.",
+      "Elevated radials (not on ground) are more efficient than buried radials.",
+      "Height of the radial junction above ground affects low-angle performance.",
+      "For 20m band: vertical ~5.1m, radials ~5.1m each."
+    ],
+    "relatedTemplates": ["j-pole", "slim-jim", "efhw"]
+  },
+  {
+    "id": "inverted-l",
+    "name": "Inverted-L",
+    "nameShort": "Inv-L",
+    "description": "Quarter-wave vertical bent over at the top — practical HF radiator when height is limited.",
+    "longDescription": "The Inverted-L combines a vertical quarter-wave section with a horizontal top wire so the overall radiator remains close to a quarter wavelength even when a full straight vertical is impractical. The vertical section helps produce useful low-angle radiation, while the horizontal section provides top loading and makes the antenna easier to fit on lower HF bands. Like other base-fed verticals, it benefits from a good radial or counterpoise system. Compared with a straight quarter-wave vertical, the Inverted-L usually produces mixed polarization and somewhat different feed impedance, but it remains a classic choice for 40m and 80m installations where support height is limited.",
+    "icon": "┐",
+    "category": "vertical",
+    "difficulty": "beginner",
+    "bands": ["160m", "80m", "40m", "30m", "20m", "17m", "15m", "12m", "10m"],
+    "parameters": [
+      {"key": "frequency", "label": "Design Frequency", "description": "Center frequency for quarter-wave operation", "unit": "MHz", "min": 1, "max": 2000, "step": 0.1, "defaultValue": 7.1, "decimals": 3},
+      {"key": "vertical_height", "label": "Vertical Height", "description": "Height of the vertical section above the feed point", "unit": "m", "min": 1, "max": 30, "step": 0.5, "defaultValue": 6, "decimals": 1},
+      {"key": "base_height", "label": "Base Height", "description": "Height of the feed point and radial junction above ground", "unit": "m", "min": 0.3, "max": 10, "step": 0.1, "defaultValue": 0.5, "decimals": 1},
+      {"key": "radial_count", "label": "Radials", "description": "Number of radial wires (2-8)", "unit": "", "min": 2, "max": 8, "step": 1, "defaultValue": 4, "decimals": 0},
+      {"key": "radial_droop", "label": "Radial Droop", "description": "Droop angle below horizontal (0=flat, 45=drooping)", "unit": "deg", "min": 0, "max": 60, "step": 5, "defaultValue": 0, "decimals": 0},
+      {"key": "wire_diameter", "label": "Wire Diameter", "description": "Conductor diameter", "unit": "mm", "min": 0.5, "max": 10, "step": 0.1, "defaultValue": 2.0, "decimals": 1}
+    ],
+    "defaultGround": {"type": "average"},
+    "tips": [
+      "Keep the horizontal section away from metal supports and nearby conductors if possible.",
+      "A good radial or counterpoise system is still important for efficiency and impedance stability.",
+      "If the requested vertical section exceeds the electrical quarter-wave length, the model caps it and omits the horizontal section.",
+      "Drooping radials can move the feed impedance closer to 50 ohms, similar to other elevated verticals.",
+      "Expect a mix of vertical and horizontal polarization because the radiator bends at the top."
+    ],
+    "relatedTemplates": ["vertical", "efhw", "efhw-inverted-l"]
+  },
+  {
+    "id": "j-pole",
+    "name": "J-Pole",
+    "nameShort": "J-Pole",
+    "description": "End-fed half-wave vertical with quarter-wave matching stub.",
+    "longDescription": "The J-Pole is a half-wave vertical antenna with an integrated quarter-wave matching section (J-matching stub). It provides omnidirectional radiation with approximately 2-3 dBi gain and a low-angle pattern ideal for VHF/UHF. The matching stub transforms the high impedance at the end of the half-wave element to approximately 50 ohms. Popular for 2m and 70cm FM, and also works well on HF bands. No radials required.",
+    "icon": "J|",
+    "category": "vertical",
+    "difficulty": "beginner",
+    "bands": ["10m", "6m", "2m", "70cm"],
+    "parameters": [
+      {"key": "frequency", "label": "Design Frequency", "description": "Center frequency", "unit": "MHz", "min": 1, "max": 2000, "step": 0.1, "defaultValue": 145.0, "decimals": 3},
+      {"key": "base_height", "label": "Base Height", "description": "Height of the bottom of the J above ground", "unit": "m", "min": 0.1, "max": 30, "step": 0.1, "defaultValue": 1.5, "decimals": 1},
+      {"key": "spacing", "label": "Element Spacing", "description": "Gap between the two vertical sections", "unit": "mm", "min": 10, "max": 200, "step": 5, "defaultValue": 50, "decimals": 0},
+      {"key": "wire_diameter", "label": "Wire Diameter", "description": "Conductor diameter", "unit": "mm", "min": 0.5, "max": 25, "step": 0.5, "defaultValue": 2.0, "decimals": 1}
+    ],
+    "defaultGround": {"type": "average"},
+    "tips": [
+      "Feed point height on the short stub affects impedance — adjust for best SWR.",
+      "The spacing between the two vertical sections is typically 1-2 inches (25-50mm).",
+      "No ground radials needed — the J-match provides the current return path.",
+      "Can be made from ladder line, copper pipe, or aluminum tubing.",
+      "Excellent choice for a portable or emergency VHF/UHF antenna."
+    ],
+    "relatedTemplates": ["slim-jim", "vertical", "efhw"]
+  },
+  {
+    "id": "slim-jim",
+    "name": "Slim Jim",
+    "nameShort": "Slim Jim",
+    "description": "Full-wave folded vertical with J-match — more gain than a standard J-Pole.",
+    "longDescription": "The Slim Jim is an end-fed folded dipole with a J-matching stub. It combines a full-wavelength radiating section with a quarter-wave matching section, all in a slim, vertical package. The folded design provides slightly higher gain (~3 dBi) than a standard J-Pole due to the full-wave current distribution. The open gap at the bottom of one side creates the necessary impedance transformation. Very popular for portable VHF/UHF operation — can be made from 300-ohm TV twin-lead.",
+    "icon": "||",
+    "category": "vertical",
+    "difficulty": "beginner",
+    "bands": ["10m", "6m", "2m", "70cm"],
+    "parameters": [
+      {"key": "frequency", "label": "Design Frequency", "description": "Center frequency", "unit": "MHz", "min": 1, "max": 2000, "step": 0.1, "defaultValue": 145.0, "decimals": 3},
+      {"key": "base_height", "label": "Base Height", "description": "Height of the bottom above ground", "unit": "m", "min": 0.1, "max": 30, "step": 0.1, "defaultValue": 1.5, "decimals": 1},
+      {"key": "spacing", "label": "Element Spacing", "description": "Gap between the two vertical conductors", "unit": "mm", "min": 10, "max": 200, "step": 5, "defaultValue": 25, "decimals": 0},
+      {"key": "wire_diameter", "label": "Wire Diameter", "description": "Conductor diameter", "unit": "mm", "min": 0.5, "max": 25, "step": 0.5, "defaultValue": 2.0, "decimals": 1}
+    ],
+    "defaultGround": {"type": "average"},
+    "tips": [
+      "Can be made from 300-ohm TV twin-lead for an ultra-lightweight portable antenna.",
+      "Slightly more gain than a J-Pole due to full-wave current distribution.",
+      "The gap in one side is critical — it creates the matching impedance step.",
+      "Feed point tap position on the short side adjusts impedance (aim for 50 ohms).",
+      "Roll up and carry in your pocket for field/emergency use (twin-lead version)."
+    ],
+    "relatedTemplates": ["j-pole", "vertical", "efhw"]
+  },
+  {
+    "id": "efhw",
+    "name": "End-Fed Half-Wave",
+    "nameShort": "EFHW",
+    "description": "End-fed half-wave with transformer — easy single-support antenna.",
+    "longDescription": "An End-Fed Half-Wave (EFHW) is a half-wave wire fed at one end through a high-impedance matching transformer (typically 49:1 unun). The antenna presents roughly 2400-5000 ohms at the feed point, which the transformer steps down to ~50 ohms. It can be strung as a sloper from a single support, making it ideal for portable, stealth, and field day use. Multi-band operation is possible since harmonics (2nd, 4th) maintain high impedance at the feed.",
+    "icon": "—~",
+    "category": "wire",
+    "difficulty": "beginner",
+    "bands": ["80m", "40m", "20m", "15m", "10m"],
+    "parameters": [
+      {"key": "frequency", "label": "Design Frequency", "description": "Fundamental frequency for half-wave resonance", "unit": "MHz", "min": 0.5, "max": 2000, "step": 0.1, "defaultValue": 7.1, "decimals": 3},
+      {"key": "feed_height", "label": "Feed Height", "description": "Height of the feed point (typically at mast top)", "unit": "m", "min": 1, "max": 50, "step": 0.5, "defaultValue": 10, "decimals": 1},
+      {"key": "far_end_height", "label": "Far End Height", "description": "Height of the far end of the wire", "unit": "m", "min": 0.5, "max": 50, "step": 0.5, "defaultValue": 3, "decimals": 1},
+      {"key": "wire_diameter", "label": "Wire Diameter", "description": "Conductor diameter", "unit": "mm", "min": 0.5, "max": 10, "step": 0.1, "defaultValue": 2.0, "decimals": 1}
+    ],
+    "defaultGround": {"type": "average"},
+    "tips": [
+      "The 49:1 transformer is critical — without it, SWR will be extremely high.",
+      "Works well as a sloper: feed point at top of mast, far end near ground.",
+      "Resonant on even harmonics too (40m EFHW also works on 20m and 10m).",
+      "Keep the feed point coax away from the wire to minimize common-mode currents.",
+      "A short counterpoise wire (0.05λ) at the feed helps stabilize impedance."
+    ],
+    "relatedTemplates": ["dipole", "inverted-v"]
+  },
+  {
+    "id": "efhw-inverted-l",
+    "name": "EFHW Inverted-L",
+    "nameShort": "EFHW-L",
+    "description": "End-fed half-wave bent into an L shape — vertical section plus horizontal top wire.",
+    "longDescription": "An EFHW Inverted-L is an End-Fed Half-Wave antenna where the wire runs vertically from a low feed point up to the top of a mast, then continues horizontally. The total wire length remains approximately λ/2. This layout is very practical when only a single mast is available: the vertical section provides some low-angle radiation component, while the horizontal top section completes the half-wave resonance. Like all EFHW antennas, a 49:1 transformer and a short counterpoise are used at the feed point. Multiband operation on even harmonics is possible (e.g., a 40m EFHW-L also works on 20m and 10m).",
+    "icon": "┐~",
+    "category": "wire",
+    "difficulty": "beginner",
+    "bands": ["80m", "40m", "20m", "15m", "10m"],
+    "parameters": [
+      {"key": "frequency", "label": "Design Frequency", "description": "Fundamental frequency for half-wave resonance", "unit": "MHz", "min": 0.5, "max": 2000, "step": 0.1, "defaultValue": 7.1, "decimals": 3},
+      {"key": "vertical_height", "label": "Vertical Section", "description": "Height of the vertical wire section above the feed point", "unit": "m", "min": 1, "max": 30, "step": 0.5, "defaultValue": 8, "decimals": 1},
+      {"key": "feed_height", "label": "Feed Height", "description": "Height of the feed point above ground", "unit": "m", "min": 0.5, "max": 10, "step": 0.5, "defaultValue": 1.5, "decimals": 1},
+      {"key": "wire_diameter", "label": "Wire Diameter", "description": "Conductor diameter", "unit": "mm", "min": 0.5, "max": 10, "step": 0.1, "defaultValue": 2.0, "decimals": 1}
+    ],
+    "defaultGround": {"type": "average"},
+    "tips": [
+      "A 49:1 transformer at the feed point is essential — the end-fed impedance is several thousand ohms.",
+      "The vertical section adds a useful vertical radiation component, helpful for medium-distance contacts.",
+      "If the mast is taller than λ/2, the wire is entirely vertical and there is no horizontal section.",
+      "Works on even harmonics: a 40m EFHW-L also covers 20m and 10m.",
+      "Keep the counterpoise wire away from the vertical section to avoid coupling.",
+      "This configuration needs only one support point (the mast top) plus a low anchor for the far end of the horizontal wire."
+    ],
+    "relatedTemplates": ["efhw", "efhw-inverted-v", "inverted-l"]
+  },
+  {
+    "id": "efhw-inverted-v",
+    "name": "EFHW Inverted-V",
+    "nameShort": "EFHW-V",
+    "description": "End-fed half-wave draped over an apex — both ends slope down from a single high point.",
+    "longDescription": "An EFHW Inverted-V is an End-Fed Half-Wave antenna where the wire is draped over a single high support (mast, tree branch) with both ends sloping downward. The total wire length is approximately λ/2 and the feed point with 49:1 transformer is at one of the low ends. This is one of the simplest antennas to deploy in the field: throw a line over a branch, hoist the wire up, stake both ends, and connect the transformer. The inverted-V shape gives a slightly broader azimuthal pattern than a flat wire and the sloping ends lower the overall height requirement. Like the standard EFHW, multiband operation on even harmonics is possible.",
+    "icon": "/\\~",
+    "category": "wire",
+    "difficulty": "beginner",
+    "bands": ["80m", "40m", "20m", "15m", "10m"],
+    "parameters": [
+      {"key": "frequency", "label": "Design Frequency", "description": "Fundamental frequency for half-wave resonance", "unit": "MHz", "min": 0.5, "max": 2000, "step": 0.1, "defaultValue": 7.1, "decimals": 3},
+      {"key": "apex_height", "label": "Apex Height", "description": "Height of the apex (support point) above ground", "unit": "m", "min": 3, "max": 50, "step": 0.5, "defaultValue": 12, "decimals": 1},
+      {"key": "feed_height", "label": "Feed End Height", "description": "Height of the fed end above ground", "unit": "m", "min": 0.5, "max": 30, "step": 0.5, "defaultValue": 2, "decimals": 1},
+      {"key": "far_end_height", "label": "Far End Height", "description": "Height of the non-fed end above ground", "unit": "m", "min": 0.5, "max": 30, "step": 0.5, "defaultValue": 2, "decimals": 1},
+      {"key": "wire_diameter", "label": "Wire Diameter", "description": "Conductor diameter", "unit": "mm", "min": 0.5, "max": 10, "step": 0.1, "defaultValue": 2.0, "decimals": 1}
+    ],
+    "defaultGround": {"type": "average"},
+    "tips": [
+      "The 49:1 transformer is at the low (fed) end — keep the coax run along the ground, away from the wire.",
+      "Needs only one high support point (tree branch, mast, rope over a limb).",
+      "A slightly broader horizontal pattern than a flat EFHW due to the sloping geometry.",
+      "Works on even harmonics: a 40m EFHW-V also covers 20m and 10m.",
+      "Lower both ends symmetrically for a balanced pattern, or lower one end more for directional preference.",
+      "A short counterpoise wire (0.05λ) at the feed end stabilizes the impedance."
+    ],
+    "relatedTemplates": ["efhw", "efhw-inverted-l", "inverted-v"]
+  },
+  {
+    "id": "random-wire",
+    "name": "Random Wire",
+    "nameShort": "Rnd Wire",
+    "description": "End-fed non-resonant long wire with a short counterpoise.",
+    "longDescription": "A random wire antenna is a non-resonant end-fed wire that is intentionally not cut to a specific half-wave multiple. It is commonly used with an antenna tuner and a matching transformer or unun. Because feedpoint impedance can vary widely with frequency, a counterpoise or other RF return path at the feed point is important for predictable operation. Random wires are popular for portable HF use because they are easy to deploy: raise one end, slope the far end down, add a tuner and counterpoise, and operate across multiple bands.",
+    "icon": "↗",
+    "category": "wire",
+    "difficulty": "beginner",
+    "bands": ["160m", "80m", "40m", "30m", "20m", "17m", "15m", "12m", "10m"],
+    "parameters": [
+      {"key": "frequency", "label": "Center of Interest", "description": "Frequency of interest for segmentation and default sweep", "unit": "MHz", "min": 0.5, "max": 30, "step": 0.1, "defaultValue": 7.1, "decimals": 3},
+      {"key": "wire_length", "label": "Wire Length", "description": "Total length of the radiating wire", "unit": "m", "min": 5, "max": 100, "step": 0.5, "defaultValue": 25, "decimals": 1},
+      {"key": "feed_height", "label": "Feed Height", "description": "Height of the feed end above ground", "unit": "m", "min": 1, "max": 30, "step": 0.5, "defaultValue": 8, "decimals": 1},
+      {"key": "far_end_height", "label": "Far End Height", "description": "Height of the far end above ground", "unit": "m", "min": 0.5, "max": 30, "step": 0.5, "defaultValue": 3, "decimals": 1},
+      {"key": "counterpoise_length", "label": "Counterpoise Length", "description": "Length of the short feedpoint counterpoise", "unit": "m", "min": 1, "max": 20, "step": 0.5, "defaultValue": 5, "decimals": 1},
+      {"key": "wire_diameter", "label": "Wire Diameter", "description": "Conductor diameter", "unit": "mm", "min": 0.5, "max": 10, "step": 0.1, "defaultValue": 2.0, "decimals": 1}
+    ],
+    "defaultGround": {"type": "average"},
+    "tips": [
+      "Random wires usually need an external tuner and often benefit from a 9:1 or similar matching transformer.",
+      "A short counterpoise at the feed helps provide a more stable RF return path.",
+      "Keep the feedline away from the radiating wire to reduce common-mode current on the outside of the coax.",
+      "Avoid wire lengths that create extreme feedpoint impedances on the bands you use most.",
+      "The model preserves the requested total wire length, so impossible height differences are rejected."
+    ],
+    "relatedTemplates": ["efhw", "inverted-l", "g5rv"]
+  },
+  {
+    "id": "g5rv",
+    "name": "G5RV",
+    "nameShort": "G5RV",
+    "description": "Classic multiband dipole with open-wire matching section — 80m to 10m.",
+    "longDescription": "The G5RV is one of the most popular multiband wire antennas in amateur radio. Designed by Louis Varney (G5RV), it consists of a 102-foot (31.1m) center-fed dipole with a 34-foot (10.36m) open-wire (450-ohm ladder line) matching section dropping vertically from the center. The open-wire section transforms the impedance on multiple bands. It works well on 20m (where it's close to resonant) and provides acceptable performance on 80m through 10m with an antenna tuner. The G5RV is easy to build, inexpensive, and fits in most suburban lots.",
+    "icon": "T",
+    "category": "multiband",
+    "difficulty": "beginner",
+    "bands": ["80m", "40m", "20m", "17m", "15m", "12m", "10m"],
+    "parameters": [
+      {"key": "height", "label": "Dipole Height", "description": "Height of the horizontal dipole wire", "unit": "m", "min": 5, "max": 30, "step": 0.5, "defaultValue": 12, "decimals": 1},
+      {"key": "feeder_length", "label": "Feeder Length", "description": "Length of the open-wire matching section", "unit": "m", "min": 5, "max": 20, "step": 0.5, "defaultValue": 10.36, "decimals": 2},
+      {"key": "dipole_length", "label": "Dipole Length", "description": "Total horizontal wire length (full-size = 31.1m)", "unit": "m", "min": 10, "max": 50, "step": 0.5, "defaultValue": 31.1, "decimals": 1},
+      {"key": "wire_diameter", "label": "Wire Diameter", "description": "Conductor diameter", "unit": "mm", "min": 0.5, "max": 5, "step": 0.1, "defaultValue": 2.0, "decimals": 1}
+    ],
+    "defaultGround": {"type": "average"},
+    "tips": [
+      "Works best on 20m — close to resonant, ~60 ohm feedpoint impedance.",
+      "An antenna tuner is needed for most other bands.",
+      "Keep the open-wire section as vertical as possible for best performance.",
+      "Use real 450-ohm ladder line, not 300-ohm TV twin-lead (too lossy).",
+      "A 'G5RV Junior' (half-size) covers 40m through 10m in smaller spaces.",
+      "Total horizontal span is 31.1m (102 ft) — needs good supports at both ends."
+    ],
+    "relatedTemplates": ["dipole", "fan-dipole", "off-center-fed"]
+  },
+  {
+    "id": "fan-dipole",
+    "name": "Fan Dipole",
+    "nameShort": "Fan",
+    "description": "Multiband dipole with separate resonant elements for each band.",
+    "longDescription": "The Fan Dipole is a multiband antenna using multiple dipole pairs of different lengths, all connected at a common center feed point. Each pair is cut to be resonant on a different band, and the elements are spread apart vertically (like a fan) to minimize interaction. This simple approach provides multiband coverage with a single coax feed and no tuner required on the design bands. Performance on each band is similar to a single-band dipole. Common configurations cover 3-5 HF bands.",
+    "icon": "=|=",
+    "category": "multiband",
+    "difficulty": "beginner",
+    "bands": ["80m", "40m", "20m", "15m", "10m"],
+    "parameters": [
+      {"key": "num_bands", "label": "Number of Bands", "description": "How many band pairs (2-5)", "unit": "", "min": 2, "max": 5, "step": 1, "defaultValue": 3, "decimals": 0},
+      {"key": "height", "label": "Height", "description": "Height of the center feed point above ground", "unit": "m", "min": 3, "max": 30, "step": 0.5, "defaultValue": 10, "decimals": 1},
+      {"key": "fan_spread", "label": "Fan Spread", "description": "Vertical separation between longest and shortest elements", "unit": "m", "min": 0.1, "max": 3, "step": 0.1, "defaultValue": 1.0, "decimals": 1},
+      {"key": "wire_diameter", "label": "Wire Diameter", "description": "Conductor diameter", "unit": "mm", "min": 0.5, "max": 5, "step": 0.1, "defaultValue": 2.0, "decimals": 1}
+    ],
+    "defaultGround": {"type": "average"},
+    "tips": [
+      "Spread elements vertically by 0.3-0.5m to reduce interaction between bands.",
+      "Start by cutting each pair for single-band resonance, then trim in place.",
+      "The 15m element may need significant trimming due to interaction with the 20m element.",
+      "A common feed point means only one coax run is needed.",
+      "Use spreader bars (PVC, fiberglass) to maintain element spacing.",
+      "Harmonically related bands (40m/15m) may interact — check SWR on both."
+    ],
+    "relatedTemplates": ["dipole", "g5rv", "off-center-fed"]
+  },
+  {
+    "id": "delta-loop",
+    "name": "Delta Loop",
+    "nameShort": "Delta",
+    "description": "Full-wavelength triangular loop — ~1 dB more gain than a dipole.",
+    "longDescription": "The Delta Loop is a full-wavelength (1λ) wire loop in a triangular shape. It provides approximately 1 dB more gain than a half-wave dipole at the same height, with slightly lower noise pickup. When mounted with the apex up and fed at the bottom center, the polarization is horizontal. The feed impedance is approximately 100-120 ohms, which can be matched with a 4:1 balun or a quarter-wave 75-ohm coax transformer. Delta loops are popular on 40m and 80m where their triangular shape fits between trees or on a single tall support.",
+    "icon": "/\\",
+    "category": "loop",
+    "difficulty": "intermediate",
+    "bands": ["80m", "40m", "20m", "15m", "10m"],
+    "parameters": [
+      {"key": "frequency", "label": "Design Frequency", "description": "Resonant frequency of the loop", "unit": "MHz", "min": 0.5, "max": 2000, "step": 0.1, "defaultValue": 14.15, "decimals": 3},
+      {"key": "base_height", "label": "Base Height", "description": "Height of the bottom wire above ground", "unit": "m", "min": 0.5, "max": 50, "step": 0.5, "defaultValue": 5, "decimals": 1},
+      {"key": "wire_diameter", "label": "Wire Diameter", "description": "Conductor diameter", "unit": "mm", "min": 0.5, "max": 10, "step": 0.1, "defaultValue": 2.0, "decimals": 1}
+    ],
+    "defaultGround": {"type": "average"},
+    "tips": [
+      "Feed impedance is ~100-120 ohms — use a 4:1 balun or 75-ohm quarter-wave match.",
+      "Apex-up with bottom feed gives horizontal polarization (good for DX).",
+      "Base-down with top feed gives vertical polarization (good for local comms).",
+      "Perimeter = 1 wavelength; each side = λ/3 for equilateral triangle.",
+      "About 1 dB more gain and lower noise than a dipole at the same height."
+    ],
+    "relatedTemplates": ["horizontal-delta-loop", "quad", "dipole", "magnetic-loop"]
+  },
+  {
+    "id": "horizontal-delta-loop",
+    "name": "Horizontal Delta Loop",
+    "nameShort": "H-Delta",
+    "description": "Full-wavelength horizontal triangular loop (skyloop) for multi-band HF operation.",
+    "longDescription": "A Horizontal Delta Loop (often called a skyloop) is a full-wavelength triangular wire loop mounted parallel to the ground. It offers broad HF coverage with low noise pickup and can be effective for both regional and DX operation depending on height above ground. At lower heights it favors higher takeoff angles (NVIS/regional), and at greater heights it supports lower-angle radiation. As with other full-wave loops, feed impedance varies with installation details and may require matching.",
+    "icon": "/_\\",
+    "category": "loop",
+    "difficulty": "intermediate",
+    "bands": ["160m", "80m", "40m", "20m", "15m", "10m"],
+    "parameters": [
+      {"key": "frequency", "label": "Design Frequency", "description": "Resonant frequency of the loop", "unit": "MHz", "min": 0.5, "max": 2000, "step": 0.1, "defaultValue": 7.15, "decimals": 3},
+      {"key": "height", "label": "Loop Height", "description": "Height of the horizontal loop above ground", "unit": "m", "min": 0.5, "max": 50, "step": 0.5, "defaultValue": 10, "decimals": 1},
+      {"key": "wire_diameter", "label": "Wire Diameter", "description": "Conductor diameter", "unit": "mm", "min": 0.5, "max": 10, "step": 0.1, "defaultValue": 2.0, "decimals": 1}
+    ],
+    "defaultGround": {"type": "average"},
+    "tips": [
+      "Keep loop height as uniform as possible for predictable pattern behavior.",
+      "At lower heights, expect stronger high-angle radiation (regional/NVIS).",
+      "Higher installation heights improve lower-angle radiation for longer paths.",
+      "Use a tuner or matching network as feed impedance can vary with installation.",
+      "Perimeter is set near one wavelength at the design frequency."
+    ],
+    "relatedTemplates": ["delta-loop", "quad", "magnetic-loop"]
+  },
+  {
+    "id": "quad",
+    "name": "Cubical Quad",
+    "nameShort": "Quad",
+    "description": "Full-wave loop beam — higher gain per element than a Yagi.",
+    "longDescription": "The Cubical Quad uses full-wave square loop elements instead of linear dipoles. Each loop has a perimeter of approximately one wavelength. The quad provides about 1-2 dB more gain than a Yagi with the same number of elements and has lower radiation angle. A 2-element quad (reflector + driven) gives about 7 dBi gain. The feed impedance is approximately 100-125 ohms, requiring a matching section or 75-ohm feed with a 1.5:1 SWR.",
+    "icon": "[]",
+    "category": "directional",
+    "difficulty": "intermediate",
+    "bands": ["20m", "15m", "10m", "6m"],
+    "parameters": [
+      {"key": "frequency", "label": "Design Frequency", "description": "Center frequency for the quad design", "unit": "MHz", "min": 1, "max": 2000, "step": 0.1, "defaultValue": 14.15, "decimals": 3},
+      {"key": "num_elements", "label": "Elements", "description": "Number of loop elements (1-3)", "unit": "", "min": 1, "max": 3, "step": 1, "defaultValue": 2, "decimals": 0},
+      {"key": "height", "label": "Center Height", "description": "Height of the loop centers above ground", "unit": "m", "min": 3, "max": 50, "step": 0.5, "defaultValue": 12, "decimals": 1},
+      {"key": "wire_diameter", "label": "Wire Diameter", "description": "Conductor diameter", "unit": "mm", "min": 0.5, "max": 10, "step": 0.1, "defaultValue": 2.0, "decimals": 1}
+    ],
+    "defaultGround": {"type": "average"},
+    "tips": [
+      "Feed at the bottom center of the driven loop for horizontal polarization.",
+      "Feed at the side center for vertical polarization.",
+      "Quad loops are less affected by nearby metallic objects than Yagi elements.",
+      "A 2-element quad roughly equals a 3-element Yagi in gain.",
+      "The bamboo/fiberglass spreader arms make this lighter than it looks."
+    ],
+    "relatedTemplates": ["yagi", "delta-loop", "hex-beam"]
+  },
+  {
+    "id": "magnetic-loop",
+    "name": "Small Magnetic Loop",
+    "nameShort": "Mag Loop",
+    "description": "Small transmitting loop with tuning capacitor, excellent for HF in limited space.",
+    "longDescription": "A small magnetic loop antenna (also called a small transmitting loop or STL) is a full circle of conductor tuned to resonance by a high-voltage variable capacitor. Despite its small size (typically 1-3 ft diameter for HF), it can be surprisingly efficient on 40m-10m. The radiation pattern is broadside to the plane of the loop (figure-8 in the plane of the loop). Key advantages: very compact, low-noise receiving, sharp tuning rejects out-of-band interference. Key limitations: very narrow bandwidth (a few kHz on 40m), high voltages at the capacitor (several kV at 100W).",
+    "icon": "O",
+    "category": "loop",
+    "difficulty": "intermediate",
+    "bands": ["40m", "30m", "20m", "17m", "15m", "12m", "10m"],
+    "parameters": [
+      {"key": "frequency", "label": "Design Frequency", "description": "Center frequency for the loop", "unit": "MHz", "min": 3.5, "max": 30, "step": 0.1, "defaultValue": 14.1, "decimals": 3},
+      {"key": "radius", "label": "Loop Radius", "description": "Radius of the circular loop", "unit": "m", "min": 0.2, "max": 2.0, "step": 0.05, "defaultValue": 0.5, "decimals": 2},
+      {"key": "tube_dia", "label": "Tube Diameter", "description": "Diameter of the conductor tube/wire", "unit": "mm", "min": 3, "max": 25, "step": 1, "defaultValue": 12, "decimals": 0},
+      {"key": "height", "label": "Center Height", "description": "Height of the loop center above ground", "unit": "m", "min": 0.5, "max": 15, "step": 0.5, "defaultValue": 3, "decimals": 1}
+    ],
+    "defaultGround": {"type": "average"},
+    "tips": [
+      "The tuning capacitor must handle very high voltages (several kV at 100W). Use a vacuum variable or high-voltage air variable.",
+      "Bandwidth is extremely narrow (a few kHz on 40m). You will need to retune for every frequency change.",
+      "Use the largest diameter conductor you can find (copper tube, 12-25mm). Efficiency improves dramatically with thicker conductors.",
+      "Keep the loop at least 1/4 wavelength from any metal structures for best performance.",
+      "The radiation pattern is broadside to the loop plane — orient the loop to point at your target direction.",
+      "This simulation uses the wire-segment approximation of the frontend preview geometry."
+    ],
+    "relatedTemplates": ["delta-loop", "quad"]
+  },
+  {
+    "id": "yagi",
+    "name": "Yagi-Uda",
+    "nameShort": "Yagi",
+    "description": "High-gain directional beam with 2-6 elements.",
+    "longDescription": "The Yagi-Uda is the most popular directional antenna for amateur radio. It consists of a driven element (fed dipole), a reflector behind it, and one or more directors in front. Parasitic coupling between elements creates a directional pattern with high forward gain and good front-to-back ratio. More elements = more gain and narrower beamwidth, but also a longer boom and more critical tuning. A 3-element Yagi provides about 7-8 dBi gain.",
+    "icon": ">>|",
+    "category": "directional",
+    "difficulty": "intermediate",
+    "bands": ["20m", "15m", "10m", "6m", "2m"],
+    "parameters": [
+      {"key": "frequency", "label": "Design Frequency", "description": "Center frequency for the Yagi design", "unit": "MHz", "min": 1, "max": 2000, "step": 0.1, "defaultValue": 14.15, "decimals": 3},
+      {"key": "num_elements", "label": "Elements", "description": "Number of elements (2=reflector+driven, 3+=with directors)", "unit": "", "min": 2, "max": 6, "step": 1, "defaultValue": 3, "decimals": 0},
+      {"key": "height", "label": "Height", "description": "Height above ground", "unit": "m", "min": 2, "max": 50, "step": 0.5, "defaultValue": 12, "decimals": 1},
+      {"key": "wire_diameter", "label": "Element Diameter", "description": "Element tube/wire diameter", "unit": "mm", "min": 1, "max": 50, "step": 1, "defaultValue": 12, "decimals": 0}
+    ],
+    "defaultGround": {"type": "average"},
+    "tips": [
+      "The reflector is slightly longer than λ/2, directors slightly shorter.",
+      "More elements add gain but with diminishing returns above 5-6 elements.",
+      "Element spacing affects gain vs. bandwidth tradeoff.",
+      "Height above ground should be at least λ/2 for good low-angle radiation.",
+      "Boom length (not element count) is the primary determinant of gain."
+    ],
+    "relatedTemplates": ["quad", "moxon", "hex-beam"]
+  },
+  {
+    "id": "moxon",
+    "name": "Moxon Rectangle",
+    "nameShort": "Moxon",
+    "description": "Compact 2-element beam with excellent front-to-back ratio.",
+    "longDescription": "The Moxon Rectangle is a compact directional antenna invented by Les Moxon (G6XN). It achieves excellent front-to-back ratio (often >30 dB) with only two elements by using closely-spaced folded-back tips that provide additional coupling. The turning radius is about 70% of a 2-element Yagi, making it ideal for space-constrained installations. Gain is typically 5.5-6 dBi — slightly less than a 2-element Yagi, but with far superior F/B performance.",
+    "icon": "[=]",
+    "category": "directional",
+    "difficulty": "intermediate",
+    "bands": ["20m", "17m", "15m", "12m", "10m", "6m", "2m"],
+    "parameters": [
+      {"key": "frequency", "label": "Design Frequency", "description": "Center frequency for the Moxon design", "unit": "MHz", "min": 1, "max": 2000, "step": 0.1, "defaultValue": 14.15, "decimals": 3},
+      {"key": "height", "label": "Height", "description": "Height above ground", "unit": "m", "min": 2, "max": 50, "step": 0.5, "defaultValue": 12, "decimals": 1},
+      {"key": "wire_diameter", "label": "Wire Diameter", "description": "Conductor diameter", "unit": "mm", "min": 0.5, "max": 25, "step": 0.5, "defaultValue": 2.0, "decimals": 1}
+    ],
+    "defaultGround": {"type": "average"},
+    "tips": [
+      "The gap between tail tips is critical — small changes significantly affect F/B ratio.",
+      "Turning radius is ~70% of a 2-element Yagi — great for small lots.",
+      "F/B can exceed 30 dB when properly tuned — far better than a standard Yagi.",
+      "Wire diameter affects dimensions — use the Cebik formulas for best results.",
+      "Can be built with wire for lower bands or tubing for VHF/UHF."
+    ],
+    "relatedTemplates": ["yagi", "quad", "hex-beam"]
+  },
+  {
+    "id": "hex-beam",
+    "name": "Hex Beam",
+    "nameShort": "Hex",
+    "description": "Compact broadband beam on a hex frame — Yagi performance, smaller footprint.",
+    "longDescription": "The Hex Beam (or Hexagonal Beam) is a lightweight directional antenna that uses wire elements bent into a W shape on a hexagonal frame. It provides performance similar to a 2-element Yagi (5-6 dBi gain, 15-20 dB F/B) but with a significantly smaller turning radius — about 60% of a full-size Yagi. The W-shaped elements create broadband performance through capacitive end-loading. Hex beams are very popular for multi-band HF operations, often covering 20m through 6m on a single frame. Wind loading is very low due to the wire construction.",
+    "icon": "W",
+    "category": "directional",
+    "difficulty": "intermediate",
+    "bands": ["20m", "17m", "15m", "12m", "10m", "6m"],
+    "parameters": [
+      {"key": "frequency", "label": "Design Frequency", "description": "Center frequency for the hex beam design", "unit": "MHz", "min": 5, "max": 2000, "step": 0.1, "defaultValue": 14.15, "decimals": 3},
+      {"key": "height", "label": "Height", "description": "Height above ground", "unit": "m", "min": 3, "max": 50, "step": 0.5, "defaultValue": 12, "decimals": 1},
+      {"key": "wire_diameter", "label": "Wire Diameter", "description": "Conductor diameter", "unit": "mm", "min": 0.5, "max": 10, "step": 0.1, "defaultValue": 2.0, "decimals": 1}
+    ],
+    "defaultGround": {"type": "average"},
+    "tips": [
+      "Turning radius is ~60% of an equivalent Yagi — great for small towers.",
+      "Very low wind loading compared to aluminum Yagis.",
+      "The W shape provides natural broadbanding through end loading.",
+      "Can easily be multiband with multiple wire sets on the same frame.",
+      "Element sag affects performance — keep the frame level.",
+      "Typical gain 5-6 dBi with 15-20 dB F/B ratio."
+    ],
+    "relatedTemplates": ["moxon", "yagi", "quad"]
+  },
+  {
+    "id": "log-periodic",
+    "name": "Log-Periodic Dipole Array",
+    "nameShort": "LPDA",
+    "description": "Broadband directional antenna covering a wide frequency range with consistent gain.",
+    "longDescription": "The Log-Periodic Dipole Array (LPDA) is a broadband directional antenna that maintains relatively constant gain and impedance across a wide frequency range. It consists of multiple dipole elements of varying length connected to a common transposed feeder. The element lengths and spacings are related by a constant ratio (tau), and the spacing angle (sigma) determines the bandwidth-to-gain tradeoff. Typical gain is 6-8 dBi with moderate F/B ratio. LPDAs are used extensively for TV reception, EMC testing, and amateur radio where broadband coverage is needed without retuning.",
+    "icon": ">>>",
+    "category": "directional",
+    "difficulty": "advanced",
+    "bands": ["20m", "17m", "15m", "12m", "10m", "6m"],
+    "parameters": [
+      {"key": "freq_low", "label": "Low Frequency", "description": "Lower edge of the operating range", "unit": "MHz", "min": 1, "max": 1000, "step": 0.1, "defaultValue": 14.0, "decimals": 3},
+      {"key": "freq_high", "label": "High Frequency", "description": "Upper edge of the operating range", "unit": "MHz", "min": 2, "max": 2000, "step": 0.1, "defaultValue": 30.0, "decimals": 3},
+      {"key": "tau", "label": "Tau (τ)", "description": "Design ratio — higher = more gain, more elements", "unit": "", "min": 0.8, "max": 0.98, "step": 0.005, "defaultValue": 0.9, "decimals": 3},
+      {"key": "sigma", "label": "Sigma (σ)", "description": "Relative spacing factor", "unit": "", "min": 0.03, "max": 0.12, "step": 0.002, "defaultValue": 0.06, "decimals": 3},
+      {"key": "height", "label": "Height", "description": "Height above ground", "unit": "m", "min": 3, "max": 50, "step": 0.5, "defaultValue": 12, "decimals": 1},
+      {"key": "wire_diameter", "label": "Element Diameter", "description": "Element tube/wire diameter", "unit": "mm", "min": 1, "max": 25, "step": 0.5, "defaultValue": 6, "decimals": 1}
+    ],
+    "defaultGround": {"type": "average"},
+    "tips": [
+      "Tau (τ) controls the bandwidth/gain tradeoff — higher τ = more gain but more elements.",
+      "Sigma (σ) controls the spacing — typical values 0.04 to 0.08.",
+      "Feed at the shortest element (front) for correct phasing.",
+      "The transposed feeder provides 180° phase shift between adjacent elements.",
+      "Add 1-2 extra elements beyond the design range for clean pattern at band edges.",
+      "Typical gain is 6-8 dBi — less than a Yagi but over much wider bandwidth."
+    ],
+    "relatedTemplates": ["yagi", "moxon", "hex-beam"]
+  }
+]

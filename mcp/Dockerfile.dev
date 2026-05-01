@@ -23,7 +23,7 @@ RUN mkdir -p /tmp/nec_workdir /opt/antsim_mcp
 
 ENV ANTENNASIM_BACKEND_DIR=/app/backend
 ENV NEC_WORKDIR=/tmp/nec_workdir
-ENV MCP_TRANSPORT=sse
+ENV MCP_TRANSPORT=streamable-http
 ENV MCP_HOST=0.0.0.0
 ENV MCP_PORT=8080
 ENV PYTHONUNBUFFERED=1
@@ -31,5 +31,6 @@ ENV PYTHONUNBUFFERED=1
 EXPOSE 8080
 
 # In dev mode, copy volume-mounted MCP source to a safe path on each start
-# to avoid shadowing the installed 'mcp' package, then run from there
-CMD ["sh", "-c", "cp /app/mcp/server.py /app/mcp/simulator.py /app/mcp/templates.py /app/mcp/ham_bands.py /opt/antsim_mcp/ && exec python /opt/antsim_mcp/server.py"]
+# to avoid shadowing the installed 'mcp' package, then run from there.
+# Also copy the shared/ data directory.
+CMD ["sh", "-c", "cp /app/mcp/server.py /app/mcp/simulator.py /app/mcp/templates.py /app/mcp/ham_bands.py /app/mcp/utils.py /app/mcp/constants.py /opt/antsim_mcp/ && cp -r /app/shared /opt/antsim_mcp/shared && exec python /opt/antsim_mcp/server.py"]

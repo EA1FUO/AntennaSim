@@ -17,17 +17,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+if __package__:
+    from .utils import is_non_string_sequence
+else:
+    from utils import is_non_string_sequence  # type: ignore[no-redef]
+
+# Fallback values used before the backend is loaded (i.e. when parse_ground_spec
+# is called standalone). After load_backend_api() this is replaced with the
+# actual enum values so any future backend additions are reflected automatically.
 GROUND_TYPE_VALUES: tuple[str, ...] = (
-    "free_space",
-    "perfect",
-    "salt_water",
-    "fresh_water",
-    "pastoral",
-    "average",
-    "rocky",
-    "city",
-    "dry_sandy",
-    "custom",
+    "free_space", "perfect", "salt_water", "fresh_water", "pastoral",
+    "average", "rocky", "city", "dry_sandy", "custom",
 )
 
 
@@ -82,19 +82,14 @@ def _candidate_backend_dirs() -> list[Path]:
     env_dir = os.environ.get("ANTENNASIM_BACKEND_DIR", "").strip()
     here = Path(__file__).resolve()
     candidates: list[Path] = []
-
     if env_dir:
         candidates.append(Path(env_dir))
-
-    candidates.extend(
-        [
-            here.parents[1] / "backend",
-            here.parents[2] / "backend",
-            Path.cwd() / "backend",
-            Path.cwd() / "AntennaSim" / "backend",
-        ]
-    )
-
+    candidates.extend([
+        here.parents[1] / "backend",
+        here.parents[2] / "backend",
+        Path.cwd() / "backend",
+        Path.cwd() / "AntennaSim" / "backend",
+    ])
     unique: list[Path] = []
     seen: set[Path] = set()
     for candidate in candidates:
@@ -114,15 +109,20 @@ def _find_backend_dir() -> Path:
     raise BackendImportError(
         "Could not locate AntennaSim/backend.\n"
         "Expected a backend directory containing src/models.\n"
-        "Searched:\n"
-        f"{searched}\n"
+        f"Searched:\n{searched}\n"
         "Set ANTENNASIM_BACKEND_DIR to the AntennaSim/backend directory if needed."
     )
 
 
 def load_backend_api() -> BackendAPI:
-    """Locate and import the AntennaSim backend lazily."""
-    global _BACKEND_API
+    """Locate and import the AntennaSim backend lazily.
+
+    After the first successful import the module-level GROUND_TYPE_VALUES tuple
+    is updated to reflect the actual GroundType enum members so that any new
+    ground type added to the backend is immediately usable without a code change
+    to the MCP server.
+    """
+    global _BACKEND_API, GROUND_TYPE_VALUES
 
     if _BACKEND_API is not None:
         return _BACKEND_API
@@ -163,6 +163,11 @@ def load_backend_api() -> BackendAPI:
         NecExecutionError=nec_runner_module.NecExecutionError,
         backend_dir=backend_dir,
     )
+
+    # Derive GROUND_TYPE_VALUES from the actual enum so future additions are
+    # automatically available without changes here.
+    GROUND_TYPE_VALUES = tuple(gt.value for gt in _BACKEND_API.GroundType)
+
     return _BACKEND_API
 
 
@@ -196,9 +201,7 @@ def parse_ground_spec(
             epsilon_r = float(parts[0])
             conductivity = float(parts[1])
         except ValueError as exc:
-            raise ValueError(
-                "Custom ground values must be numeric, e.g. 'custom:13,0.005'."
-            ) from exc
+            raise ValueError("Custom ground values must be numeric, e.g. 'custom:13,0.005'.") from exc
         return "custom", epsilon_r, conductivity
 
     normalized = lowered.replace("-", "_").replace(" ", "_")
@@ -209,10 +212,6 @@ def parse_ground_spec(
             "You may also use 'custom:epsilon_r,conductivity'."
         )
     return normalized, None, None
-
-
-def _is_non_string_sequence(value: Any) -> bool:
-    return isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray, Mapping))
 
 
 def _coerce_payload(value: Any) -> dict[str, Any]:
@@ -246,7 +245,6 @@ def _coerce_mapping(value: Any, required_fields: Sequence[str]) -> dict[str, Any
             raise TypeError(
                 f"Object of type {type(value).__name__} is missing fields: {', '.join(missing_fields)}"
             )
-
     missing = [field_name for field_name in required_fields if field_name not in payload]
     if missing:
         raise ValueError(f"Missing required field(s): {', '.join(missing)}")
@@ -256,7 +254,6 @@ def _coerce_mapping(value: Any, required_fields: Sequence[str]) -> dict[str, Any
 def _extract_warnings(output: str) -> list[str]:
     warnings: list[str] = []
     seen: set[str] = set()
-
     for line in output.splitlines():
         text = " ".join(line.split())
         if not text:
@@ -276,27 +273,21 @@ def _build_ground_config(
     conductivity: float | None = None,
 ) -> Any:
     parsed_ground_type, parsed_eps, parsed_sigma = parse_ground_spec(ground_type)
-
     if dielectric_constant is None:
         dielectric_constant = parsed_eps
     if conductivity is None:
         conductivity = parsed_sigma
-
     try:
         ground_enum = api.GroundType(parsed_ground_type)
     except ValueError as exc:
         valid = ", ".join(GROUND_TYPE_VALUES)
-        raise ValueError(
-            f"Unknown ground type {parsed_ground_type!r}. Valid presets: {valid}"
-        ) from exc
-
+        raise ValueError(f"Unknown ground type {parsed_ground_type!r}. Valid presets: {valid}") from exc
     kwargs: dict[str, Any] = {"ground_type": ground_enum}
     if parsed_ground_type == "custom":
         if dielectric_constant is not None:
             kwargs["dielectric_constant"] = dielectric_constant
         if conductivity is not None:
             kwargs["conductivity"] = conductivity
-
     return api.GroundConfig(**kwargs)
 
 
@@ -323,7 +314,7 @@ def simulate(
 
     wire_objects = [api.Wire(**_coerce_mapping(wire, wire_fields)) for wire in wires]
 
-    excitation_items = list(excitation) if _is_non_string_sequence(excitation) else [excitation]
+    excitation_items = list(excitation) if is_non_string_sequence(excitation) else [excitation]
     excitation_objects = [
         api.Excitation(**_coerce_mapping(item, excitation_fields))
         for item in excitation_items
@@ -342,10 +333,8 @@ def simulate(
         wires=wire_objects,
         excitations=excitation_objects,
         ground=_build_ground_config(
-            api,
-            ground_type=ground_type,
-            dielectric_constant=dielectric_constant,
-            conductivity=conductivity,
+            api, ground_type=ground_type,
+            dielectric_constant=dielectric_constant, conductivity=conductivity,
         ),
         frequency=frequency_object,
         pattern=pattern_object,
@@ -371,12 +360,9 @@ def simulate(
 
     frequency_data = api.parse_nec_output(
         raw_output,
-        request.pattern.n_theta,
-        request.pattern.n_phi,
-        request.pattern.theta_start,
-        request.pattern.theta_step,
-        request.pattern.phi_start,
-        request.pattern.phi_step,
+        request.pattern.n_theta, request.pattern.n_phi,
+        request.pattern.theta_start, request.pattern.theta_step,
+        request.pattern.phi_start, request.pattern.phi_step,
         compute_currents=compute_currents,
     )
     if not frequency_data:
