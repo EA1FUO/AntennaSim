@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- Moxon Rectangle template produced grossly oversized elements (~1 wavelength wide instead of ~0.37λ), causing SWR >99 across the band. Replaced the dimension formulas with L.B. Cebik's (W4RNL) MoxGen regression equations and corrected the full-width vs. half-width handling (#63)
+
 ## [1.1.1] - 2026-04-30
 
 ### Fixed

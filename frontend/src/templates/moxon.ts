@@ -26,23 +26,27 @@ import type {
 import { autoSegment, centerSegment } from "../engine/segmentation";
 
 /**
- * Moxon dimension ratios from L.B. Cebik's work.
- * All dimensions as fractions of wavelength.
+ * Moxon rectangle dimensions from L.B. Cebik's (W4RNL) regression equations,
+ * as implemented by the MoxGen program. All dimensions are fractions of a
+ * wavelength.
+ *
+ *   d = log10(wire diameter in wavelengths)
+ *   A = full element width  (driven element length = reflector length, along X)
+ *   B = driven-element tail length
+ *   C = gap between the driven and reflector tail tips
+ *   D = reflector tail length
+ *   E = B + C + D = total front-to-back depth (along Y)
+ *
+ * Source: https://antenna2.github.io/cebik/content/moxon/moxgen.html
  */
 function moxonDimensions(wireDiameterWavelengths: number) {
-  // Empirical formulas from Cebik (QST, ARRL) for Moxon rectangle
   const d = Math.log10(wireDiameterWavelengths);
 
-  // A = driven element half-width
-  const A = 0.4834 - 0.0117 * d - 0.0006 * d * d;
-  // B = tail length (driven side)
-  const B = 0.0502 - 0.0192 * d - 0.0020 * d * d;
-  // C = gap between tail tips
-  const C = 0.0365 + 0.0143 * d + 0.0014 * d * d;
-  // D = tail length (reflector side)
-  const D = 0.0516 + 0.0085 * d + 0.0007 * d * d;
-  // E = reflector half-width
-  const E = A; // Same as driven half-width for standard Moxon
+  const A = -0.0008571428571 * d * d - 0.009571428571 * d + 0.3398571429;
+  const B = -0.002142857143 * d * d - 0.02035714286 * d + 0.008285714286;
+  const C = 0.001809523381 * d * d + 0.01780952381 * d + 0.05164285714;
+  const D = 0.001 * d + 0.07178571429;
+  const E = B + C + D;
 
   return { A, B, C, D, E };
 }
@@ -122,20 +126,20 @@ export const moxonTemplate: AntennaTemplate = {
 
     const dim = moxonDimensions(wireDiamWL);
 
-    const halfA = dim.A * wavelength; // driven half-width
+    // dim.A is the FULL element width — driven and reflector share it.
+    const halfWidth = (dim.A * wavelength) / 2;
     const tailB = dim.B * wavelength; // driven tail length
-    const gapC = dim.C * wavelength; // gap
+    const gapC = dim.C * wavelength; // gap between tail tips
     const tailD = dim.D * wavelength; // reflector tail length
-    const halfE = dim.A * wavelength; // reflector half-width (same as driven)
 
     // Total boom depth = tailB + gapC + tailD
     // Driven element at y=0, reflector behind at y = -(tailB + gapC + tailD)
     const boomDepth = tailB + gapC + tailD;
 
     // Wire 1: Driven element (horizontal, along X)
-    const segsH = autoSegment(halfA * 2, maxFreq, 21);
+    const segsH = autoSegment(halfWidth * 2, maxFreq, 21);
     // Wire 2: Reflector element (horizontal, along X)
-    const segsR = autoSegment(halfE * 2, maxFreq, 21);
+    const segsR = autoSegment(halfWidth * 2, maxFreq, 21);
     // Wire 3: Left tail (driven tip down to gap), vertical along Y
     const segsTailB = autoSegment(tailB, maxFreq, 5);
     // Wire 4: Left tail (reflector tip up to gap), vertical along Y
@@ -153,10 +157,10 @@ export const moxonTemplate: AntennaTemplate = {
       {
         tag: 1,
         segments: segsH,
-        x1: -halfA,
+        x1: -halfWidth,
         y1: yDriven,
         z1: height,
-        x2: halfA,
+        x2: halfWidth,
         y2: yDriven,
         z2: height,
         radius,
@@ -165,10 +169,10 @@ export const moxonTemplate: AntennaTemplate = {
       {
         tag: 2,
         segments: segsR,
-        x1: -halfE,
+        x1: -halfWidth,
         y1: yReflector,
         z1: height,
-        x2: halfE,
+        x2: halfWidth,
         y2: yReflector,
         z2: height,
         radius,
@@ -177,10 +181,10 @@ export const moxonTemplate: AntennaTemplate = {
       {
         tag: 3,
         segments: segsTailB,
-        x1: -halfA,
+        x1: -halfWidth,
         y1: yDriven,
         z1: height,
-        x2: -halfA,
+        x2: -halfWidth,
         y2: yDrivenTail,
         z2: height,
         radius,
@@ -189,10 +193,10 @@ export const moxonTemplate: AntennaTemplate = {
       {
         tag: 4,
         segments: segsTailD,
-        x1: -halfE,
+        x1: -halfWidth,
         y1: yReflector,
         z1: height,
-        x2: -halfE,
+        x2: -halfWidth,
         y2: yReflectorTail,
         z2: height,
         radius,
@@ -201,10 +205,10 @@ export const moxonTemplate: AntennaTemplate = {
       {
         tag: 5,
         segments: segsTailB,
-        x1: halfA,
+        x1: halfWidth,
         y1: yDriven,
         z1: height,
-        x2: halfA,
+        x2: halfWidth,
         y2: yDrivenTail,
         z2: height,
         radius,
@@ -213,10 +217,10 @@ export const moxonTemplate: AntennaTemplate = {
       {
         tag: 6,
         segments: segsTailD,
-        x1: halfE,
+        x1: halfWidth,
         y1: yReflector,
         z1: height,
-        x2: halfE,
+        x2: halfWidth,
         y2: yReflectorTail,
         z2: height,
         radius,
