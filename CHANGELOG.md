@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Antenna templates can now declare lumped loads (`generateLoads`) and multiple/phased excitations (`generateExcitation` may return an array), enabling antennas that need tuning capacitors or phased feeders. The Simulator now runs through the unified advanced engine path; existing single-excitation templates are unaffected (verified identical results)
+
 ### Fixed
 
 - Moxon Rectangle template produced grossly oversized elements (~1 wavelength wide instead of ~0.37λ), causing SWR >99 across the band. Replaced the dimension formulas with L.B. Cebik's (W4RNL) MoxGen regression equations and corrected the full-width vs. half-width handling (#63)

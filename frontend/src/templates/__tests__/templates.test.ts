@@ -50,7 +50,8 @@ describe.each(templates.map((t) => [t.id, t]))(
     const t = template as (typeof templates)[0];
     const params = getDefaultParams(t);
     const wires = t.generateGeometry(params);
-    const ex = t.generateExcitation(params, wires);
+    const rawEx = t.generateExcitation(params, wires);
+    const excitations = Array.isArray(rawEx) ? rawEx : [rawEx];
     const freq = t.defaultFrequencyRange(params);
     const fps = t.generateFeedpoints(params, wires);
     const wireTags = new Set(wires.map((w) => w.tag));
@@ -65,10 +66,13 @@ describe.each(templates.map((t) => [t.id, t]))(
     });
 
     it("excitation references a valid wire and segment", () => {
-      expect(wireTags.has(ex.wire_tag)).toBe(true);
-      const wire = wires.find((w) => w.tag === ex.wire_tag)!;
-      expect(ex.segment).toBeGreaterThanOrEqual(1);
-      expect(ex.segment).toBeLessThanOrEqual(wire.segments);
+      expect(excitations.length).toBeGreaterThan(0);
+      for (const ex of excitations) {
+        expect(wireTags.has(ex.wire_tag)).toBe(true);
+        const wire = wires.find((w) => w.tag === ex.wire_tag)!;
+        expect(ex.segment).toBeGreaterThanOrEqual(1);
+        expect(ex.segment).toBeLessThanOrEqual(wire.segments);
+      }
     });
 
     it("frequency range is valid (start < stop, steps > 0)", () => {

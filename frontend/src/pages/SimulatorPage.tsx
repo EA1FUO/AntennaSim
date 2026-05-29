@@ -55,7 +55,9 @@ export function SimulatorPage() {
   const wireData = useAntennaStore((s) => s.wireData);
   const feedpoints = useAntennaStore((s) => s.feedpoints);
   const wireGeometry = useAntennaStore((s) => s.wireGeometry);
-  const excitation = useAntennaStore((s) => s.excitation);
+  const excitations = useAntennaStore((s) => s.excitations);
+  const loads = useAntennaStore((s) => s.loads);
+  const transmissionLines = useAntennaStore((s) => s.transmissionLines);
   const frequencyRange = useAntennaStore((s) => s.frequencyRange);
   const frequencySegments = useAntennaStore((s) => s.frequencySegments);
   const setTemplate = useAntennaStore((s) => s.setTemplate);
@@ -68,7 +70,7 @@ export function SimulatorPage() {
   const simStatus = useSimulationStore((s) => s.status);
   const simError = useSimulationStore((s) => s.error);
   const result = useSimulationStore((s) => s.result);
-  const simulate = useSimulationStore((s) => s.simulate);
+  const simulateAdvanced = useSimulationStore((s) => s.simulateAdvanced);
   const resetSimulation = useSimulationStore((s) => s.reset);
   const selectedFreqResult = useSimulationStore((s) =>
     s.getSelectedFrequencyResult()
@@ -106,8 +108,17 @@ export function SimulatorPage() {
   const [patternStep, setPatternStep] = useState(5);
 
   const handleRunSimulation = useCallback(() => {
-    simulate(wireGeometry, excitation, ground, frequencyRange, patternStep, frequencySegments);
-  }, [simulate, wireGeometry, excitation, ground, frequencyRange, patternStep, frequencySegments]);
+    simulateAdvanced({
+      wires: wireGeometry,
+      excitations,
+      ground,
+      frequency: frequencyRange,
+      frequencySegments: frequencySegments.length ? frequencySegments : undefined,
+      loads: loads.length ? loads : undefined,
+      transmission_lines: transmissionLines.length ? transmissionLines : undefined,
+      pattern_step: patternStep,
+    });
+  }, [simulateAdvanced, wireGeometry, excitations, loads, transmissionLines, ground, frequencyRange, patternStep, frequencySegments]);
 
   const handleBandSelect = useCallback(
     (range: FrequencyRange, _band: HamBand) => {
@@ -177,8 +188,8 @@ export function SimulatorPage() {
 
   // Pre-simulation validation
   const validation = useMemo(
-    () => validateSimulationRequest(wireGeometry, [excitation], ground, frequencyRange),
-    [wireGeometry, excitation, ground, frequencyRange]
+    () => validateSimulationRequest(wireGeometry, excitations, ground, frequencyRange),
+    [wireGeometry, excitations, ground, frequencyRange]
   );
 
   // Pattern data for 3D viewport
