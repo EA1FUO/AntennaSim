@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Fixed
 
 - Moxon Rectangle template produced grossly oversized elements (~1 wavelength wide instead of ~0.37λ), causing SWR >99 across the band. Replaced the dimension formulas with L.B. Cebik's (W4RNL) MoxGen regression equations and corrected the full-width vs. half-width handling (#63)
+- End-Fed Half-Wave template stretched the radiating wire when the far-end height was changed (horizontal span was fixed at the half-wave length), making the conductor longer than λ/2 and shifting resonance below the band. The wire is now held at a fixed half-wave length and the far end tilts as a sloper, restoring resonance near the design frequency (SWR at design drops from ~3.9 to ~1.5 for the default 40m design)
 
 ## [1.1.1] - 2026-04-30
 

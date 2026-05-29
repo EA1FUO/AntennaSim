@@ -99,10 +99,19 @@ export const efhwTemplate: AntennaTemplate = {
     const wireLength = (wavelength / 2) * 0.97; // slightly less shortening for EFHW
     const radius = (wireDiamMm / 1000) / 2;
 
-    // Wire extends along X axis from feed point to far end
-    // Height slopes from feedHeight to farEndHeight
+    // Wire extends along X axis from feed point to far end.
+    // The conductor stays a fixed half-wave; raising/lowering the far end
+    // tilts the sloper rather than stretching the wire. The horizontal run
+    // is derived from the height drop so the total length is always
+    // wireLength. The clamp keeps the geometry valid (vertical at worst) if
+    // the requested height drop exceeds the wire length.
     const maxFreq = freq * 1.15;
     const segs = autoSegment(wireLength, maxFreq, 21);
+
+    const dz = feedHeight - farEndHeight;
+    const clampedDz = Math.max(-wireLength, Math.min(wireLength, dz));
+    const horizontalRun = Math.sqrt(wireLength * wireLength - clampedDz * clampedDz);
+    const farZ = feedHeight - clampedDz;
 
     // Short counterpoise wire (~0.05λ) hanging down from feed
     const counterpoiseLength = wavelength * 0.05;
@@ -116,9 +125,9 @@ export const efhwTemplate: AntennaTemplate = {
         x1: 0,
         y1: 0,
         z1: feedHeight,
-        x2: wireLength,
+        x2: horizontalRun,
         y2: 0,
-        z2: farEndHeight,
+        z2: farZ,
         radius,
       },
       // Short counterpoise
