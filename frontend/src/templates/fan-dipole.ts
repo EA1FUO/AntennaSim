@@ -121,6 +121,11 @@ export const fanDipoleTemplate: AntennaTemplate = {
     const wireDiamMm = params.wire_diameter ?? 2.0;
 
     const radius = wireDiamMm / 1000 / 2;
+    // Half-width of the central feed gap. All left arms join the left
+    // terminal, all right arms the right terminal, and the source sits on the
+    // short segment between them — so every dipole is driven differentially at
+    // its center, not just the longest one.
+    const feedHalfGap = 0.05;
 
     // Select bands based on numBands (from lowest to highest freq)
     const bandKeys = ["80m", "40m", "20m", "15m", "10m"];
@@ -143,45 +148,69 @@ export const fanDipoleTemplate: AntennaTemplate = {
       const bandKey = selectedBands[i]!;
       const freq = BAND_FREQS[bandKey]!;
       const wavelength = 300.0 / freq;
-      const halfLen = (wavelength / 2) * 0.95 / 2; // half-length with end effect
+      // Elements run slightly longer than a free-space half-wave: mutual
+      // coupling between the closely-spaced fan elements raises each element's
+      // resonant frequency, so the usual ~5% end-effect shortening would place
+      // the bands too high. A factor near 1.0 centers the dips in-band.
+      const halfLen = (wavelength / 2) * 1.01 / 2;
       const maxFreq = freq * 1.15;
       const segs = autoSegment(halfLen, maxFreq, 11);
 
       // Vertical offset: lowest band at center height, higher bands droop slightly
-      // Fan spread distributes elements vertically
+      // Fan spread distributes elements vertically.
       const vertOffset = selectedBands.length > 1
         ? -fanSpread * (i / (selectedBands.length - 1))
         : 0;
       const wireZ = height + vertOffset;
+      // Keep each arm a fixed half-length: the fan spread tilts the element
+      // (the ends drop by vertOffset) rather than stretching it. The
+      // horizontal span shrinks so the conductor stays exactly halfLen, and
+      // arms run from the feed terminal (±feedHalfGap) out to the tip.
+      const horizSpan = Math.sqrt(Math.max(0, halfLen * halfLen - vertOffset * vertOffset));
+      const tipX = feedHalfGap + horizSpan;
 
-      // Left arm
+      // Left arm: tip → left feed terminal
       wires.push({
         tag,
         segments: segs,
-        x1: -halfLen,
+        x1: -tipX,
         y1: 0,
         z1: wireZ,
-        x2: 0,
+        x2: -feedHalfGap,
         y2: 0,
-        z2: height, // all meet at center
+        z2: height,
         radius,
       });
       tag++;
 
-      // Right arm
+      // Right arm: right feed terminal → tip
       wires.push({
         tag,
         segments: segs,
-        x1: 0,
+        x1: feedHalfGap,
         y1: 0,
-        z1: height, // all meet at center
-        x2: halfLen,
+        z1: height,
+        x2: tipX,
         y2: 0,
         z2: wireZ,
         radius,
       });
       tag++;
     }
+
+    // Feed segment bridging the two terminals — the single source drives every
+    // dipole across its center simultaneously.
+    wires.push({
+      tag,
+      segments: 1,
+      x1: -feedHalfGap,
+      y1: 0,
+      z1: height,
+      x2: feedHalfGap,
+      y2: 0,
+      z2: height,
+      radius,
+    });
 
     return wires;
   },
@@ -190,11 +219,12 @@ export const fanDipoleTemplate: AntennaTemplate = {
     _params: Record<string, number>,
     wires: WireGeometry[]
   ): Excitation {
-    // Feed at the junction — last segment of the first left arm wire
-    const firstArm = wires[0]!;
+    // Feed the central bridging segment (last wire) so every dipole is driven
+    // differentially across its center.
+    const feedSegment = wires[wires.length - 1]!;
     return {
-      wire_tag: firstArm.tag,
-      segment: firstArm.segments, // end closest to center
+      wire_tag: feedSegment.tag,
+      segment: 1,
       voltage_real: 1.0,
       voltage_imag: 0.0,
     };
@@ -202,10 +232,11 @@ export const fanDipoleTemplate: AntennaTemplate = {
 
   generateFeedpoints(
     params: Record<string, number>,
-    _wires: WireGeometry[]
+    wires: WireGeometry[]
   ): FeedpointData[] {
     const height = params.height ?? 10;
-    return [{ position: [0, 0, height], wireTag: 1 }];
+    const feedSegment = wires[wires.length - 1]!;
+    return [{ position: [0, 0, height], wireTag: feedSegment.tag }];
   },
 
   defaultFrequencyRange(params: Record<string, number>): FrequencyRange {
