@@ -169,10 +169,19 @@ class TransmissionLine(BaseModel):
     segment1: int = Field(ge=1, le=200, description="Segment on first wire")
     wire_tag2: int = Field(ge=1, le=9999, description="Second wire tag")
     segment2: int = Field(ge=1, le=200, description="Segment on second wire")
-    impedance: float = Field(ge=1.0, le=1000.0, description="Characteristic impedance Z0 (Ohms)")
+    impedance: float = Field(
+        ge=-1000.0, le=1000.0,
+        description="Characteristic impedance Z0 (Ohms). A negative value selects a "
+                    "crossed (transposed) line, e.g. a log-periodic phase line (NEC2 convention).")
     length: float = Field(ge=0.0, le=1000.0, default=0.0,
                           description="Physical length (m). 0 = calculate from wire geometry")
     shunt_admittance_real1: float = Field(default=0.0, description="Shunt admittance at end 1, real part")
     shunt_admittance_imag1: float = Field(default=0.0, description="Shunt admittance at end 1, imag part")
     shunt_admittance_real2: float = Field(default=0.0, description="Shunt admittance at end 2, real part")
     shunt_admittance_imag2: float = Field(default=0.0, description="Shunt admittance at end 2, imag part")
+
+    @model_validator(mode="after")
+    def check_impedance_magnitude(self) -> "TransmissionLine":
+        if abs(self.impedance) < 1.0:
+            raise ValueError("Transmission line |impedance| must be at least 1 ohm")
+        return self

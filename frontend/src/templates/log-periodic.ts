@@ -23,7 +23,69 @@ import type {
   FeedpointData,
   FrequencyRange,
 } from "./types";
+import type { TransmissionLine } from "../api/nec";
 import { autoSegment, centerSegment } from "../engine/segmentation";
+
+/**
+ * Derive the full LPDA design from the parameters: element lengths/positions,
+ * the Carrel feeder characteristic impedance, and the rear termination stub.
+ * Shared by every template method so the geometry, feed, and phase-line agree.
+ */
+function lpdaDesign(params: Record<string, number>) {
+  const freqLow = params.freq_low ?? 14.0;
+  const freqHigh = params.freq_high ?? 30.0;
+  const tau = params.tau ?? 0.9;
+  const sigma = params.sigma ?? 0.06;
+  const height = params.height ?? 12;
+  const wireDiamM = (params.wire_diameter ?? 6) / 1000;
+  const radius = wireDiamM / 2;
+
+  const lambdaMax = 300.0 / freqLow;
+  const lambdaMin = 300.0 / freqHigh;
+
+  // Element half-lengths, longest (rear) to shortest (front). The longest is a
+  // half-wave at freqLow; the series extends ~2 steps past freqHigh so the
+  // active region never runs off the front (feed) element.
+  const halfLengths: number[] = [];
+  let cur = lambdaMax / 4;
+  const minHalf = (lambdaMin / 4) * tau * tau;
+  while (cur >= minHalf && halfLengths.length < 24) {
+    halfLengths.push(cur);
+    cur *= tau;
+  }
+  if (halfLengths.length < 2) halfLengths.push(cur);
+  const n = halfLengths.length;
+
+  // Spacing d_n = 2*sigma*L_n (L_n = full length = 2*halfLen).
+  const spacings: number[] = [];
+  for (let i = 0; i < n - 1; i++) spacings.push(4 * sigma * halfLengths[i]!);
+
+  const positions: number[] = [0];
+  for (let i = 0; i < spacings.length; i++) positions.push(positions[i]! + spacings[i]!);
+  const offset = positions[n - 1]! / 2;
+
+  const maxFreq = freqHigh * 1.1;
+  const segs = halfLengths.map((hl) => autoSegment(hl * 2, maxFreq, 11));
+
+  // Carrel design: the transposed phase-line feeder impedance that yields a
+  // ~50 ohm input. Z_feed = Z_in^2/(8 σ' Z_cN) + Z_in √[(Z_in/(8 σ' Z_cN))^2 + 1].
+  const zIn = 50;
+  const sigmaPrime = sigma / Math.sqrt(tau);
+  const shortestLen = 2 * halfLengths[n - 1]!;
+  const zElement = 120 * (Math.log(shortestLen / wireDiamM) - 2.25);
+  const ratio = zIn / (8 * sigmaPrime * zElement);
+  const feederZ0 = zIn * ratio + zIn * Math.sqrt(ratio * ratio + 1);
+
+  // Rear termination: a shorted stub ~lambdaMax/8 behind the longest element,
+  // which absorbs energy past the active region and tames the SWR.
+  const termLength = lambdaMax / 8;
+  const termTag = n + 1;
+
+  return {
+    freqLow, freqHigh, height, radius, halfLengths, spacings, positions,
+    offset, segs, n, feederZ0, termLength, termTag,
+  };
+}
 
 export const logPeriodicTemplate: AntennaTemplate = {
   id: "log-periodic",
@@ -124,105 +186,100 @@ export const logPeriodicTemplate: AntennaTemplate = {
   ],
 
   generateGeometry(params: Record<string, number>): WireGeometry[] {
-    const freqLow = params.freq_low ?? 14.0;
-    const freqHigh = params.freq_high ?? 30.0;
-    const tau = params.tau ?? 0.9;
-    const sigma = params.sigma ?? 0.06;
-    const height = params.height ?? 12;
-    const wireDiamMm = params.wire_diameter ?? 6;
-
-    const radius = wireDiamMm / 1000 / 2;
-
-    // Calculate element half-lengths
-    // Longest element: λ/2 at freqLow (with some margin)
-    const lambdaMax = 300.0 / freqLow;
-    const lambdaMin = 300.0 / freqHigh;
-
-    // Generate elements from longest (back) to shortest (front)
-    const halfLengths: number[] = [];
-    let currentHalfLen = (lambdaMax / 2) * 0.95 / 2; // half-length with end effect
-    const minHalfLen = (lambdaMin / 2) * 0.95 / 2 * tau; // one step beyond min
-
-    while (currentHalfLen >= minHalfLen && halfLengths.length < 20) {
-      halfLengths.push(currentHalfLen);
-      currentHalfLen *= tau;
-    }
-
-    const numElements = halfLengths.length;
-    if (numElements < 2) {
-      // Fallback: at least 2 elements
-      halfLengths.push(currentHalfLen);
-    }
-
-    // Calculate spacings from sigma and tau
-    // d_n = 2 * sigma * L_n (where L_n is the half-length of element n)
-    const spacings: number[] = [];
-    for (let i = 0; i < halfLengths.length - 1; i++) {
-      const d = 4 * sigma * halfLengths[i]!;
-      spacings.push(d);
-    }
-
-    // Position elements along Y axis (boom direction)
-    // Longest element at back (most negative Y), shortest at front
-    const positions: number[] = [0];
-    for (let i = 0; i < spacings.length; i++) {
-      positions.push(positions[i]! + spacings[i]!);
-    }
-
-    // Center the array so middle is at Y=0
-    const totalBoom = positions[positions.length - 1]!;
-    const offset = totalBoom / 2;
-
+    const d = lpdaDesign(params);
     const wires: WireGeometry[] = [];
-    const maxFreq = freqHigh * 1.1;
 
-    for (let i = 0; i < halfLengths.length; i++) {
-      const halfLen = halfLengths[i]!;
-      const boomPos = positions[i]! - offset;
-      const segs = autoSegment(halfLen * 2, maxFreq, 11);
-
+    // Dipole elements, longest (rear) to shortest (front).
+    for (let i = 0; i < d.n; i++) {
+      const halfLen = d.halfLengths[i]!;
+      const boomPos = d.positions[i]! - d.offset;
       wires.push({
         tag: i + 1,
-        segments: segs,
+        segments: d.segs[i]!,
         x1: -halfLen,
         y1: boomPos,
-        z1: height,
+        z1: d.height,
         x2: halfLen,
         y2: boomPos,
-        z2: height,
-        radius,
+        z2: d.height,
+        radius: d.radius,
       });
     }
+
+    // Short stub behind the longest element — the rear termination point.
+    const stubY = d.positions[0]! - d.offset - d.termLength;
+    wires.push({
+      tag: d.termTag,
+      segments: 1,
+      x1: -0.05,
+      y1: stubY,
+      z1: d.height,
+      x2: 0.05,
+      y2: stubY,
+      z2: d.height,
+      radius: d.radius,
+    });
 
     return wires;
   },
 
   generateExcitation(
-    _params: Record<string, number>,
-    wires: WireGeometry[]
+    params: Record<string, number>,
+    _wires: WireGeometry[]
   ): Excitation {
-    // Feed the shortest element (front, last wire = highest freq)
-    // In practice, LPDA is fed at the front through the transposed line
-    // For NEC2 template mode, we feed the second element (close to 50 ohms)
-    // The first element (shortest) is actually the front
-    const frontElement = wires[wires.length - 1]!;
+    // The transposed phase line is driven at the front (shortest) element.
+    const d = lpdaDesign(params);
     return {
-      wire_tag: frontElement.tag,
-      segment: centerSegment(frontElement.segments),
+      wire_tag: d.n,
+      segment: centerSegment(d.segs[d.n - 1]!),
       voltage_real: 1.0,
       voltage_imag: 0.0,
     };
   },
 
+  generateTransmissionLines(
+    params: Record<string, number>,
+    _wires: WireGeometry[]
+  ): TransmissionLine[] {
+    const d = lpdaDesign(params);
+    const lines: TransmissionLine[] = [];
+
+    // Transposed feeder between consecutive element centers. A negative
+    // characteristic impedance tells NEC the line is crossed over, which gives
+    // the 180-degree phase reversal between adjacent elements.
+    for (let i = 0; i < d.n - 1; i++) {
+      lines.push({
+        wire_tag1: i + 1,
+        segment1: centerSegment(d.segs[i]!),
+        wire_tag2: i + 2,
+        segment2: centerSegment(d.segs[i + 1]!),
+        impedance: -d.feederZ0,
+        length: d.spacings[i]!,
+      });
+    }
+
+    // Shorted termination stub from the longest element to the rear stub wire
+    // (a large shunt admittance at the far end short-circuits it).
+    lines.push({
+      wire_tag1: 1,
+      segment1: centerSegment(d.segs[0]!),
+      wire_tag2: d.termTag,
+      segment2: 1,
+      impedance: d.feederZ0,
+      length: d.termLength,
+      shunt_admittance_real2: 1000,
+    });
+
+    return lines;
+  },
+
   generateFeedpoints(
     params: Record<string, number>,
-    wires: WireGeometry[]
+    _wires: WireGeometry[]
   ): FeedpointData[] {
-    const height = params.height ?? 12;
-    // Feedpoint at center of the front (shortest) element
-    const front = wires[wires.length - 1]!;
-    const yPos = (front.y1 + front.y2) / 2;
-    return [{ position: [0, yPos, height], wireTag: front.tag }];
+    const d = lpdaDesign(params);
+    const frontY = d.positions[d.n - 1]! - d.offset;
+    return [{ position: [0, frontY, d.height], wireTag: d.n }];
   },
 
   defaultFrequencyRange(params: Record<string, number>): FrequencyRange {
