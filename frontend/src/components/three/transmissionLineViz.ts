@@ -15,7 +15,10 @@ export interface NonRadiatingSegment {
 
 /** Center of a given 1-based segment along a wire, in NEC coordinates. */
 function segmentCenter(wire: WireGeometry, segment: number): [number, number, number] {
-  const t = (segment - 0.5) / wire.segments;
+  // Clamp to the wire's segment range so a stale reference (e.g. after the wire
+  // was re-segmented) lands on the wire instead of extrapolating past its end.
+  const seg = Math.max(1, Math.min(segment, wire.segments));
+  const t = (seg - 0.5) / wire.segments;
   return [
     wire.x1 + t * (wire.x2 - wire.x1),
     wire.y1 + t * (wire.y2 - wire.y1),

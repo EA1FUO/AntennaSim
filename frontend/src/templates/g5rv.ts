@@ -32,7 +32,7 @@ import type {
   FrequencyRange,
 } from "./types";
 import type { TransmissionLine } from "../api/nec";
-import { autoSegment } from "../engine/segmentation";
+import { autoSegment, centerSegment } from "../engine/segmentation";
 
 // Characteristic impedance and velocity factor of the open-wire matching
 // section. NEC's TL card is an ideal (VF=1) line, so the modelled length is the
@@ -128,7 +128,7 @@ export const g5rvTemplate: AntennaTemplate = {
     // We use the highest frequency band for segmentation (28 MHz)
     const maxFreq = 30;
 
-    const segsDipoleArm = autoSegment(halfDipole, maxFreq, 21);
+    const dipoleSegs = autoSegment(dipoleLen, maxFreq, 21);
 
     // The 450-ohm matching section is modelled as a transmission line (see
     // generateTransmissionLines), not a radiating wire. The only extra wire is
@@ -137,23 +137,11 @@ export const g5rvTemplate: AntennaTemplate = {
     const stubHalf = 0.1;
 
     return [
-      // Wire 1: Left arm of dipole
+      // Wire 1: the dipole, fed at its center segment through the feeder line.
       {
         tag: 1,
-        segments: segsDipoleArm,
+        segments: dipoleSegs,
         x1: -halfDipole,
-        y1: 0,
-        z1: height,
-        x2: 0,
-        y2: 0,
-        z2: height,
-        radius,
-      },
-      // Wire 2: Right arm of dipole
-      {
-        tag: 2,
-        segments: segsDipoleArm,
-        x1: 0,
         y1: 0,
         z1: height,
         x2: halfDipole,
@@ -161,11 +149,11 @@ export const g5rvTemplate: AntennaTemplate = {
         z2: height,
         radius,
       },
-      // Wire 3: Coax connection stub at the bottom of the feeder. It is
+      // Wire 2: Coax connection stub at the bottom of the feeder. It is
       // isolated from the dipole and joined to its center only through the
       // transmission line, so the feeder itself does not radiate.
       {
-        tag: 3,
+        tag: 2,
         segments: 1,
         x1: -stubHalf,
         y1: 0,
@@ -184,7 +172,7 @@ export const g5rvTemplate: AntennaTemplate = {
   ): Excitation {
     // Feed the coax stub (the bottom of the matching section).
     return {
-      wire_tag: 3,
+      wire_tag: 2,
       segment: 1,
       voltage_real: 1.0,
       voltage_imag: 0.0,
@@ -196,15 +184,15 @@ export const g5rvTemplate: AntennaTemplate = {
     wires: WireGeometry[]
   ): TransmissionLine[] {
     const feederLen = params.feeder_length ?? 10.36;
-    // Connect the dipole center (end of the left arm) to the coax stub through
-    // the 450-ohm open-wire line. NEC's TL is ideal (VF=1), so scale the length
-    // by the velocity factor to match the real line's electrical length.
-    const leftArm = wires[0]!;
+    // Connect the dipole's center segment to the coax stub through the 450-ohm
+    // open-wire line. NEC's TL is ideal (VF=1), so scale the length by the
+    // velocity factor to match the real line's electrical length.
+    const dipole = wires[0]!;
     return [
       {
-        wire_tag1: leftArm.tag,
-        segment1: leftArm.segments,
-        wire_tag2: 3,
+        wire_tag1: dipole.tag,
+        segment1: centerSegment(dipole.segments),
+        wire_tag2: 2,
         segment2: 1,
         impedance: FEEDER_Z0,
         length: feederLen / FEEDER_VELOCITY_FACTOR,
@@ -220,7 +208,7 @@ export const g5rvTemplate: AntennaTemplate = {
     const feederLen = params.feeder_length ?? 10.36;
     const feederBottom = Math.max(height - feederLen, 0.5);
     // NEC coords [necX, necY, necZ]; the viewport applies the NEC->Three swap.
-    return [{ position: [0, 0, feederBottom], wireTag: 3 }];
+    return [{ position: [0, 0, feederBottom], wireTag: 2 }];
   },
 
   defaultFrequencyRange(_params: Record<string, number>): FrequencyRange {
