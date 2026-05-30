@@ -13,6 +13,7 @@ import { useAntennaStore } from "../stores/antennaStore";
 import { useSimulationStore } from "../stores/simulationStore";
 import { useUIStore } from "../stores/uiStore";
 import { SceneRoot } from "../components/three/SceneRoot";
+import { resolveTransmissionLines } from "../components/three/transmissionLineViz";
 import { ErrorBoundary } from "../components/common/ErrorBoundary";
 import { KeyboardShortcutsPanel } from "../components/common/KeyboardShortcutsPanel";
 import { ViewToggleToolbar } from "../components/three/ViewToggleToolbar";
@@ -192,6 +193,12 @@ export function SimulatorPage() {
     [wireGeometry, excitations, ground, frequencyRange]
   );
 
+  // Transmission-line feeders drawn as dashed lines in the 3D viewport.
+  const feederLines = useMemo(
+    () => resolveTransmissionLines(transmissionLines, wireGeometry),
+    [transmissionLines, wireGeometry]
+  );
+
   // Pattern data for 3D viewport
   const patternData = selectedFreqResult?.pattern ?? null;
   const currents = selectedFreqResult?.currents ?? null;
@@ -325,6 +332,7 @@ export function SimulatorPage() {
               wires={wireData}
               feedpoints={feedpoints}
               viewToggles={viewToggles}
+              nonRadiatingLines={feederLines}
               patternData={patternData}
               currents={currents}
               nearField={nearField}

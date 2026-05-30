@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Transmission-line feeders (and other non-radiating structures) now render as dashed lines in the 3D viewport, in both the Simulator and the Wire Editor — so antennas whose feeders are modelled as transmission lines (G5RV, log-periodic) no longer show a feedpoint floating disconnected from the antenna
+
 ### Changed
 
 - Antenna templates can now declare lumped loads (`generateLoads`) and multiple/phased excitations (`generateExcitation` may return an array), enabling antennas that need tuning capacitors or phased feeders. The Simulator now runs through the unified advanced engine path; existing single-excitation templates are unaffected (verified identical results)
