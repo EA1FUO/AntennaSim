@@ -16,9 +16,10 @@
  *                 |
  *                 * feed point    ← at bottom of open-wire section
  *
- * Note: The open-wire feeder uses a TL (transmission line) card in NEC2,
- * but since the V1 template system only generates wires, we model the
- * physical wire layout. The TL card would be used in V2 editor mode.
+ * The open-wire feeder is modelled with a NEC transmission-line (TL) card, not
+ * a radiating wire — a single wire would carry common-mode current and present
+ * the wrong impedance. The dipole center connects through the 450-ohm line to a
+ * short coax stub at the bottom, which is the feed point.
  *
  * NEC2 coordinates: X=east, Y=north, Z=up.
  */
@@ -30,7 +31,15 @@ import type {
   FeedpointData,
   FrequencyRange,
 } from "./types";
+import type { TransmissionLine } from "../api/nec";
 import { autoSegment } from "../engine/segmentation";
+
+// Characteristic impedance and velocity factor of the open-wire matching
+// section. NEC's TL card is an ideal (VF=1) line, so the modelled length is the
+// physical feeder length divided by the velocity factor to match its electrical
+// length. 450-ohm window line has a velocity factor near 0.91.
+const FEEDER_Z0 = 450;
+const FEEDER_VELOCITY_FACTOR = 0.91;
 
 export const g5rvTemplate: AntennaTemplate = {
   id: "g5rv",
@@ -120,10 +129,12 @@ export const g5rvTemplate: AntennaTemplate = {
     const maxFreq = 30;
 
     const segsDipoleArm = autoSegment(halfDipole, maxFreq, 21);
-    const segsFeeder = autoSegment(feederLen, maxFreq, 11);
 
-    // The feeder drops from the center of the dipole
-    const feederBottom = height - feederLen;
+    // The 450-ohm matching section is modelled as a transmission line (see
+    // generateTransmissionLines), not a radiating wire. The only extra wire is
+    // a short stub at the bottom representing the coax connection point.
+    const feederBottom = Math.max(height - feederLen, 0.5);
+    const stubHalf = 0.1;
 
     return [
       // Wire 1: Left arm of dipole
@@ -150,17 +161,18 @@ export const g5rvTemplate: AntennaTemplate = {
         z2: height,
         radius,
       },
-      // Wire 3: Open-wire feeder (modeled as a single wire dropping down)
-      // In reality this is a TL card, but we model the physical wire
+      // Wire 3: Coax connection stub at the bottom of the feeder. It is
+      // isolated from the dipole and joined to its center only through the
+      // transmission line, so the feeder itself does not radiate.
       {
         tag: 3,
-        segments: segsFeeder,
-        x1: 0,
+        segments: 1,
+        x1: -stubHalf,
         y1: 0,
-        z1: height,
-        x2: 0,
+        z1: feederBottom,
+        x2: stubHalf,
         y2: 0,
-        z2: Math.max(feederBottom, 0.5),
+        z2: feederBottom,
         radius,
       },
     ];
@@ -168,16 +180,36 @@ export const g5rvTemplate: AntennaTemplate = {
 
   generateExcitation(
     _params: Record<string, number>,
-    wires: WireGeometry[]
+    _wires: WireGeometry[]
   ): Excitation {
-    // Feed at the bottom of the feeder wire
-    const feeder = wires[2]!;
+    // Feed the coax stub (the bottom of the matching section).
     return {
-      wire_tag: feeder.tag,
-      segment: feeder.segments, // bottom end
+      wire_tag: 3,
+      segment: 1,
       voltage_real: 1.0,
       voltage_imag: 0.0,
     };
+  },
+
+  generateTransmissionLines(
+    params: Record<string, number>,
+    wires: WireGeometry[]
+  ): TransmissionLine[] {
+    const feederLen = params.feeder_length ?? 10.36;
+    // Connect the dipole center (end of the left arm) to the coax stub through
+    // the 450-ohm open-wire line. NEC's TL is ideal (VF=1), so scale the length
+    // by the velocity factor to match the real line's electrical length.
+    const leftArm = wires[0]!;
+    return [
+      {
+        wire_tag1: leftArm.tag,
+        segment1: leftArm.segments,
+        wire_tag2: 3,
+        segment2: 1,
+        impedance: FEEDER_Z0,
+        length: feederLen / FEEDER_VELOCITY_FACTOR,
+      },
+    ];
   },
 
   generateFeedpoints(
@@ -187,6 +219,7 @@ export const g5rvTemplate: AntennaTemplate = {
     const height = params.height ?? 12;
     const feederLen = params.feeder_length ?? 10.36;
     const feederBottom = Math.max(height - feederLen, 0.5);
+    // NEC coords [necX, necY, necZ]; the viewport applies the NEC->Three swap.
     return [{ position: [0, 0, feederBottom], wireTag: 3 }];
   },
 
