@@ -27,11 +27,12 @@ function makeRequest(templateId: string, groundType: string): SimulateAdvancedRe
   const t = templates.find((tmpl) => tmpl.id === templateId)!;
   const params = getDefaultParams(t);
   const wires = t.generateGeometry(params);
-  const ex = t.generateExcitation(params, wires);
+  const rawEx = t.generateExcitation(params, wires);
+  const excitations = Array.isArray(rawEx) ? rawEx : [rawEx];
   const freq = t.defaultFrequencyRange(params);
   return {
     wires,
-    excitations: [ex],
+    excitations,
     ground: { type: groundType as "free_space" | "average" | "perfect" },
     frequency: freq,
   };
@@ -123,12 +124,13 @@ describe("All templates produce valid NEC2 card decks", () => {
       it(`${t.id} + ${ground.type}: valid NEC2 structure`, () => {
         const params = getDefaultParams(t);
         const wires = t.generateGeometry(params);
-        const ex = t.generateExcitation(params, wires);
+        const rawEx = t.generateExcitation(params, wires);
+        const excitations = Array.isArray(rawEx) ? rawEx : [rawEx];
         const freq = t.defaultFrequencyRange(params);
 
         const req: SimulateAdvancedRequest = {
           wires,
-          excitations: [ex],
+          excitations,
           ground,
           frequency: freq,
         };

@@ -800,17 +800,32 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const newWires = state.wires.map((w) =>
       w.segmentsManual ? { ...w } : { ...w, segments: computeSegments(w, mhz) }
     );
-    // Scale excitation segments proportionally to preserve relative position
-    const newExcitations = state.excitations.map((e) => {
-      const oldWire = state.wires.find((w) => w.tag === e.wire_tag);
-      const newWire = newWires.find((w) => w.tag === e.wire_tag);
+    // Scale a segment reference on a wire proportionally to its new segment count,
+    // so excitations, loads, and transmission lines keep their relative position
+    // when a wire is re-segmented.
+    const scaleSeg = (tag: number, seg: number): number => {
+      const oldWire = state.wires.find((w) => w.tag === tag);
+      const newWire = newWires.find((w) => w.tag === tag);
       if (oldWire && newWire && oldWire.segments !== newWire.segments) {
-        const ratio = e.segment / oldWire.segments;
-        const scaled = Math.max(1, Math.min(newWire.segments, Math.round(ratio * newWire.segments)));
-        return { ...e, segment: scaled };
+        const ratio = seg / oldWire.segments;
+        return Math.max(1, Math.min(newWire.segments, Math.round(ratio * newWire.segments)));
       }
-      return e;
-    });
+      return seg;
+    };
+    const newExcitations = state.excitations.map((e) => ({
+      ...e,
+      segment: scaleSeg(e.wire_tag, e.segment),
+    }));
+    const newLoads = state.loads.map((l) => ({
+      ...l,
+      segment_start: scaleSeg(l.wire_tag, l.segment_start),
+      segment_end: scaleSeg(l.wire_tag, l.segment_end),
+    }));
+    const newTransmissionLines = state.transmissionLines.map((tl) => ({
+      ...tl,
+      segment1: scaleSeg(tl.wire_tag1, tl.segment1),
+      segment2: scaleSeg(tl.wire_tag2, tl.segment2),
+    }));
     // Update frequency range to center on the new design frequency (~10% bandwidth)
     const bandwidth = mhz * 0.1;
     const newStart = Math.round(Math.max(0.1, mhz - bandwidth / 2) * 1000) / 1000;
@@ -825,6 +840,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       designFrequencyMhz: mhz,
       wires: newWires,
       excitations: newExcitations,
+      loads: newLoads,
+      transmissionLines: newTransmissionLines,
       frequencyRange: newFreqRange,
     });
   },

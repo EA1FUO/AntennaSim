@@ -28,6 +28,8 @@ import { NearFieldPlane } from "./NearFieldPlane";
 import { CurrentFlowParticles } from "./CurrentFlowParticles";
 import { RadiationSlice } from "./RadiationSlice";
 import { SceneRaycaster } from "./SceneRaycaster";
+import { NonRadiatingLines } from "./NonRadiatingLines";
+import { resolveTransmissionLines } from "./transmissionLineViz";
 import type { ViewToggles } from "./types";
 import type { PatternData, SegmentCurrent, NearFieldResult } from "../../api/nec";
 import { useUIStore } from "../../stores/uiStore";
@@ -138,6 +140,7 @@ function EditorSceneContent({
 
   const wires = useEditorStore((s) => s.wires);
   const excitations = useEditorStore((s) => s.excitations);
+  const transmissionLines = useEditorStore((s) => s.transmissionLines);
   const selectedTags = useEditorStore((s) => s.selectedTags);
   const mode = useEditorStore((s) => s.mode);
   const snapSize = useEditorStore((s) => s.snapSize);
@@ -518,6 +521,12 @@ function EditorSceneContent({
     [excitations]
   );
 
+  // Transmission-line feeders drawn as dashed (non-radiating) lines.
+  const feederSegments = useMemo(
+    () => resolveTransmissionLines(transmissionLines, wireDataList),
+    [transmissionLines, wireDataList]
+  );
+
   // Antenna centroid for pattern
   const antennaCentroid = useMemo((): [number, number, number] => {
     if (wires.length === 0) return [0, 0, 0];
@@ -587,6 +596,11 @@ function EditorSceneContent({
             dimmed={wiresDimmed}
           />
         ))}
+
+      {/* Transmission-line feeders drawn as dashed (non-radiating) lines */}
+      {viewToggles.wires && feederSegments.length > 0 && (
+        <NonRadiatingLines segments={feederSegments} />
+      )}
 
       {/* Ghost wire preview (add mode) */}
       {ghostWire && (

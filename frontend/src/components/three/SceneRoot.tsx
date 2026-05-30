@@ -6,6 +6,8 @@ import { CompassRose } from "./CompassRose";
 import { AxesHelper } from "./AxesHelper";
 import { AntennaModel, JunctionSpheres } from "./AntennaModel";
 import { FeedpointMarker } from "./FeedpointMarker";
+import { NonRadiatingLines } from "./NonRadiatingLines";
+import type { NonRadiatingSegment } from "./transmissionLineViz";
 import { CameraControls } from "./CameraControls";
 import { PostProcessing } from "./PostProcessing";
 import { RadiationPattern3D } from "./RadiationPattern3D";
@@ -24,6 +26,8 @@ interface SceneRootProps {
   wires: WireData[];
   feedpoints: FeedpointData[];
   viewToggles: ViewToggles;
+  /** Non-radiating structures (e.g. transmission-line feeders) drawn dashed */
+  nonRadiatingLines?: NonRadiatingSegment[];
   /** Radiation pattern data to render as 3D mesh */
   patternData?: PatternData | null;
   /** V2: Current distribution data */
@@ -36,6 +40,7 @@ export function SceneRoot({
   wires,
   feedpoints,
   viewToggles,
+  nonRadiatingLines,
   patternData,
   currents,
   nearField,
@@ -123,6 +128,11 @@ export function SceneRoot({
           feedpoints.map((fp, i) => (
             <FeedpointMarker key={i} position={fp.position} />
           ))}
+
+        {/* Non-radiating structures (transmission-line feeders) drawn dashed */}
+        {viewToggles.wires && nonRadiatingLines && nonRadiatingLines.length > 0 && (
+          <NonRadiatingLines segments={nonRadiatingLines} />
+        )}
 
         {/* 3D Radiation Pattern — surface mode */}
         {viewToggles.pattern && !viewToggles.volumetric && patternData && (

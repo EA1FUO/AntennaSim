@@ -7,6 +7,7 @@
 
 import type { WireData, FeedpointData } from "../components/three/types";
 import type { MatchingConfig } from "../utils/units";
+import type { LumpedLoad, TransmissionLine } from "../api/nec";
 export type { FeedpointData } from "../components/three/types";
 
 /** Ground type enum matching backend GroundConfig */
@@ -127,11 +128,31 @@ export interface AntennaTemplate {
   defaultMatching?: MatchingConfig;
   /** Generate NEC2 wire geometry from parameter values */
   generateGeometry: (params: Record<string, number>) => WireGeometry[];
-  /** Generate excitation source(s) from parameter values and wires */
+  /**
+   * Generate excitation source(s) from parameter values and wires.
+   * Return a single source for the common case, or an array for antennas that
+   * need multiple/phased feeds (e.g. a log-periodic transposed feeder).
+   */
   generateExcitation: (
     params: Record<string, number>,
     wires: WireGeometry[]
-  ) => Excitation;
+  ) => Excitation | Excitation[];
+  /**
+   * Optional lumped loads (e.g. a magnetic loop's tuning capacitor, traps).
+   * Omit when the antenna has no loads.
+   */
+  generateLoads?: (
+    params: Record<string, number>,
+    wires: WireGeometry[]
+  ) => LumpedLoad[];
+  /**
+   * Optional transmission lines (e.g. a G5RV open-wire matching section).
+   * Omit when the antenna has no transmission lines.
+   */
+  generateTransmissionLines?: (
+    params: Record<string, number>,
+    wires: WireGeometry[]
+  ) => TransmissionLine[];
   /** Generate feedpoint position(s) for 3D visualization */
   generateFeedpoints: (
     params: Record<string, number>,

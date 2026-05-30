@@ -91,6 +91,8 @@ export function EditorPage() {
   const moveAllWiresZ = useEditorStore((s) => s.moveAllWiresZ);
   const clearAll = useEditorStore((s) => s.clearAll);
   const setWires = useEditorStore((s) => s.setWires);
+  const addLoad = useEditorStore((s) => s.addLoad);
+  const addTransmissionLine = useEditorStore((s) => s.addTransmissionLine);
 
   // Simulation store
   const simStatus = useSimulationStore((s) => s.status);
@@ -237,16 +239,23 @@ export function EditorPage() {
 
   const handleLoadTemplate = useCallback(() => {
     const geom = selectedTemplate.generateGeometry(templateParams);
-    const exc = selectedTemplate.generateExcitation(templateParams, geom);
+    const rawExc = selectedTemplate.generateExcitation(templateParams, geom);
+    const excitations = Array.isArray(rawExc) ? rawExc : [rawExc];
+    const templateLoads = selectedTemplate.generateLoads?.(templateParams, geom) ?? [];
+    const templateTLs = selectedTemplate.generateTransmissionLines?.(templateParams, geom) ?? [];
     const freqRange = selectedTemplate.defaultFrequencyRange(templateParams);
     const freqParam = templateParams.frequency ?? templateParams.freq ?? 14.15;
 
-    // Clear editor and load template wires
+    // Clear editor and load template wires + excitations
     clearAll();
     setWires(
       geom.map((w) => ({ ...w, selected: false })),
-      [exc]
+      excitations
     );
+
+    // Carry over any template loads / transmission lines
+    templateLoads.forEach((load) => addLoad(load));
+    templateTLs.forEach((tl) => addTransmissionLine(tl));
 
     // Update design frequency and sweep range
     setDesignFrequency(freqParam);
@@ -258,7 +267,7 @@ export function EditorPage() {
 
     // Switch to wires section after loading
     setEditorSection("wires");
-  }, [selectedTemplate, templateParams, clearAll, setWires, setDesignFrequency, setFrequencyRange, setGround, setMatching]);
+  }, [selectedTemplate, templateParams, clearAll, setWires, addLoad, addTransmissionLine, setDesignFrequency, setFrequencyRange, setGround, setMatching, setEditorSection]);
 
   const handleBandSelect = useCallback(
     (range: FrequencyRange, _band: HamBand) => {

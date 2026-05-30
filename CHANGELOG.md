@@ -5,13 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.2.0] - 2026-05-30
+
+### Added
+
+- Transmission-line feeders (and other non-radiating structures) now render as dashed lines in the 3D viewport, in both the Simulator and the Wire Editor — so antennas whose feeders are modelled as transmission lines (G5RV, log-periodic) no longer show a feedpoint floating disconnected from the antenna
+
+### Changed
+
+- Antenna templates can now declare lumped loads (`generateLoads`) and multiple/phased excitations (`generateExcitation` may return an array), enabling antennas that need tuning capacitors or phased feeders. The Simulator now runs through the unified advanced engine path; existing single-excitation templates are unaffected (verified identical results)
 
 ### Fixed
 
 - Moxon Rectangle template produced grossly oversized elements (~1 wavelength wide instead of ~0.37λ), causing SWR >99 across the band. Replaced the dimension formulas with L.B. Cebik's (W4RNL) MoxGen regression equations and corrected the full-width vs. half-width handling (#63)
 - End-Fed Half-Wave template stretched the radiating wire when the far-end height was changed (horizontal span was fixed at the half-wave length), making the conductor longer than λ/2 and shifting resonance below the band. The wire is now held at a fixed half-wave length and the far end tilts as a sloper, restoring resonance near the design frequency (SWR at design drops from ~3.9 to ~1.5 for the default 40m design)
 - Fan Dipole template was only usable on its lowest band — 20m and 10m showed very high SWR. Three issues: (1) every element shared a single center node with the source on the longest element, so only that dipole was driven differentially while the others hung off the feed as quasi-parasitic stubs; (2) applying the fan spread stretched each element beyond its resonant length; (3) the end-effect shortening placed the coupled elements above their bands. Now all left/right halves connect to two feed terminals bridged by the driven segment (every dipole is fed across its center), each arm stays a fixed length while the spread only tilts it, and the element length compensates for fan coupling. Verified with nec2c: 20m SWR ~14→2.3 and 10m ~27→1.9 at band center for the default design
+- Small Magnetic Loop template never resonated — it had no tuning capacitor and was fed directly (a directly-fed small loop is <1Ω, so SWR pegged near infinity). It now models a closed main loop with a series tuning capacitor (computed from the loop inductance) plus a fed Faraday coupling loop, with two controls: Coupling Loop Size (sets the feed resistance) and Capacitor Tuning (peaks resonance on frequency). Verified with nec2c: SWR ~500 → ~1.4 at resonance for the default design. Also corrected the feedpoint marker to use NEC coordinates
+- G5RV template modelled the 450Ω open-wire matching section as a single radiating wire, giving the wrong impedance (~99:1 SWR by default). It now models a single dipole wire fed at its center segment through a 450Ω transmission line (with the line's velocity factor applied to the electrical length) to a coax stub. Verified with nec2c: ~1.9:1 on 20m (the G5RV's design band) with realistic per-band behaviour elsewhere
+- Log-Periodic Dipole Array template only fed the front element, leaving the rest as floating parasitics — it was not a working LPDA. It now models the proper transposed phase-line feeder: a Carrel-designed feeder characteristic impedance, crossed (transposed) transmission lines between element centers, a shorted rear termination stub, and an element range extended past both band edges. Verified with nec2c: ~11 dBi forward gain and SWR mostly under 2 across 14–30 MHz. Also relaxed the backend transmission-line impedance constraint to allow a negative characteristic impedance, which is NEC's convention for a crossed/transposed line
+- Wire Editor: transmission-line and lumped-load segment references now scale with the wire when a design-frequency change re-segments it (previously only excitations were scaled), keeping a loaded G5RV/LPDA feeder valid for simulation and fixing the feeder dashed line rendering at the wrong angle. The viewport also defensively clamps a stale segment reference onto the wire
 
 ## [1.1.1] - 2026-04-30
 
@@ -310,6 +322,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 This was the initial public release -- a complete rewrite of the original prototype into a production-quality application with React 19, TypeScript, FastAPI, and Docker.
 
+[1.2.0]: https://github.com/EA1FUO/AntennaSim/compare/v1.1.1...v1.2.0
 [1.0.0]: https://github.com/EA1FUO/AntennaSim/compare/v0.8.0...v1.0.0
 [0.8.0]: https://github.com/EA1FUO/AntennaSim/compare/v0.7.7...v0.8.0
 [0.7.7]: https://github.com/EA1FUO/AntennaSim/compare/v0.7.6...v0.7.7

@@ -20,6 +20,7 @@ import { getDefaultTemplate } from "../templates";
 import { computeSteps } from "../utils/ham-bands";
 import type { WireData, FeedpointData } from "../components/three/types";
 import { wireGeometryToWireData } from "../templates/types";
+import type { LumpedLoad, TransmissionLine } from "../api/nec";
 
 interface AntennaState {
   /** Currently selected template */
@@ -32,8 +33,12 @@ interface AntennaState {
   // Derived geometry (computed from template + params)
   /** NEC2 wire geometry for simulation */
   wireGeometry: WireGeometry[];
-  /** Excitation source */
-  excitation: Excitation;
+  /** Excitation source(s) — one for most antennas, several for phased feeds */
+  excitations: Excitation[];
+  /** Lumped loads (e.g. tuning capacitors); empty for most antennas */
+  loads: LumpedLoad[];
+  /** Transmission lines (e.g. open-wire matching sections); usually empty */
+  transmissionLines: TransmissionLine[];
   /** Wire data for 3D viewport */
   wireData: WireData[];
   /** Feedpoint data for 3D viewport */
@@ -76,7 +81,10 @@ interface AntennaState {
 /** Compute all derived state from template + params */
 function computeDerived(template: AntennaTemplate, params: Record<string, number>) {
   const wireGeometry = template.generateGeometry(params);
-  const excitation = template.generateExcitation(params, wireGeometry);
+  const rawExcitation = template.generateExcitation(params, wireGeometry);
+  const excitations = Array.isArray(rawExcitation) ? rawExcitation : [rawExcitation];
+  const loads = template.generateLoads?.(params, wireGeometry) ?? [];
+  const transmissionLines = template.generateTransmissionLines?.(params, wireGeometry) ?? [];
   const wireData = wireGeometryToWireData(wireGeometry);
   const feedpoints = template.generateFeedpoints(params, wireGeometry);
   const templateRange = template.defaultFrequencyRange(params);
@@ -86,7 +94,7 @@ function computeDerived(template: AntennaTemplate, params: Record<string, number
     steps: computeSteps(templateRange.start_mhz, templateRange.stop_mhz),
   };
 
-  return { wireGeometry, excitation, wireData, feedpoints, frequencyRange };
+  return { wireGeometry, excitations, loads, transmissionLines, wireData, feedpoints, frequencyRange };
 }
 
 export const useAntennaStore = create<AntennaState>((set, get) => {
