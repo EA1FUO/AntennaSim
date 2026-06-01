@@ -146,7 +146,7 @@ The most common contribution. See existing templates in `frontend/src/templates/
 1. Create `frontend/src/templates/your-antenna.ts` implementing the `AntennaTemplate` interface
 2. Register it in `frontend/src/templates/index.ts` (import + add to the `templates` array) -- this automatically makes it available in the Simulator, Editor, and Library
 3. Add your template ID to `relatedTemplates` arrays of related existing templates
-4. Update `README.md` -- increment the template count and add to the templates table
+4. Update `docs/usage.md` -- increment the template count and add to the templates table
 5. Run `npm run type-check && npm run build` and test manually
 
 ### Frontend Features

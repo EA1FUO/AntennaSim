@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - Simulate request models now reject unknown/misspelled fields with a 422 validation error instead of silently ignoring them and using defaults (e.g. `ground: { "type": ... }` now errors clearly instead of defaulting to average ground) (#61)
+- Reorganized documentation: trimmed the README to a quick-start front page and moved the detailed usage, development, deployment, and API guides into a new `docs/` folder with an index
 
 ## [1.2.1] - 2026-06-01
 
