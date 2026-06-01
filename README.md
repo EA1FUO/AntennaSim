@@ -5,16 +5,21 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/EA1FUO/AntennaSim/stargazers"><img src="https://img.shields.io/github/stars/EA1FUO/AntennaSim?style=flat-square" alt="GitHub stars"></a>
+  <a href="https://hub.docker.com/r/ea1fuo/antennasim"><img src="https://img.shields.io/docker/pulls/ea1fuo/antennasim?style=flat-square&logo=docker&logoColor=white" alt="Docker pulls"></a>
+  <a href="https://EA1FUO.github.io/AntennaSim/"><img src="https://img.shields.io/github/actions/workflow/status/EA1FUO/AntennaSim/deploy-pages.yml?style=flat-square&label=pages" alt="Pages deploy"></a>
   <img src="https://img.shields.io/badge/version-1.2.1-blue?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/license-GPL--3.0-green?style=flat-square" alt="License">
   <img src="https://img.shields.io/badge/NEC2-engine-orange?style=flat-square" alt="NEC2">
-  <img src="https://img.shields.io/badge/docker-ready-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker">
   <img src="https://img.shields.io/badge/WebAssembly-supported-654FF0?style=flat-square&logo=webassembly&logoColor=white" alt="WebAssembly">
-  <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs Welcome">
 </p>
 
 <p align="center">
-  <a href="https://EA1FUO.github.io/AntennaSim/"><strong>Try the live demo</strong></a> &middot; <code>docker run -p 80:80 ea1fuo/antennasim</code>
+  <a href="https://EA1FUO.github.io/AntennaSim/"><img src="https://img.shields.io/badge/%E2%96%B6%20Launch%20the%20live%20demo-2ea44f?style=for-the-badge&logo=github&logoColor=white" alt="Launch the live demo"></a>
+</p>
+
+<p align="center">
+  <sub>...or self-host in one line: <code>docker run -p 80:80 ea1fuo/antennasim</code></sub>
 </p>
 
 <br>
@@ -39,6 +44,8 @@
 </p>
 
 <br>
+
+> **Antenna modeling without the install.** No license fee, no Windows-only desktop app, no account -- open a browser (or your phone) and start designing. Powered by the same NEC2 engine the classic tools (EZNEC, 4nec2, MMANA-GAL) are built on.
 
 Design antennas from built-in templates or build your own from scratch in the wire editor. Run NEC2 simulations and instantly visualize SWR, impedance, Smith chart, 3D radiation patterns, current distribution, and near-field heatmaps -- all in your browser.
 
@@ -97,6 +104,7 @@ Full guides live in the [`docs/`](docs/) folder:
 - **Charts & analysis** -- SWR, impedance, Smith chart, polar pattern, balun/unun matching, NanoVNA `.s1p` overlay
 - **Wire editor** -- build arbitrary geometries, import/export `.nec` and `.maa` files
 - **Optimizer** -- Nelder-Mead with 5 objective functions and real-time progress
+- **Runs anywhere** -- desktop, tablet, or phone; touch-friendly controls and a responsive layout, no install or account
 
 See the [Usage guide](docs/usage.md#features) for the complete feature list.
 
