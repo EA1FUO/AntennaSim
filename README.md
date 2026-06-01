@@ -459,9 +459,9 @@ Run a NEC2 simulation.
       "x2": 0, "y2": 5.05, "z2": 10, "radius": 0.001 }
   ],
   "excitations": [
-    { "wire_tag": 1, "segment": 11, "real": 1.0, "imag": 0.0 }
+    { "wire_tag": 1, "segment": 11, "voltage_real": 1.0, "voltage_imag": 0.0 }
   ],
-  "ground": { "type": "average" },
+  "ground": { "ground_type": "average" },
   "frequency": { "start_mhz": 13.5, "stop_mhz": 15.0, "steps": 31 },
   "compute_currents": true,
   "near_field": {

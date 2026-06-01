@@ -1,12 +1,13 @@
 """Simulation request/response Pydantic models."""
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import Field, model_validator
 
 from src.models.antenna import Wire, Excitation, LumpedLoad, TransmissionLine, WireArc, GeometryTransform, CylindricalSymmetry
+from src.models.base import StrictModel
 from src.models.ground import GroundConfig
 
 
-class NearFieldConfig(BaseModel):
+class NearFieldConfig(StrictModel):
     """Near-field calculation configuration."""
 
     enabled: bool = Field(default=False, description="Enable near-field calculation")
@@ -19,7 +20,7 @@ class NearFieldConfig(BaseModel):
                                  description="Grid resolution (m)")
 
 
-class FrequencyConfig(BaseModel):
+class FrequencyConfig(StrictModel):
     """Frequency sweep configuration."""
 
     start_mhz: float = Field(ge=0.1, le=2000.0, description="Start frequency (MHz)")
@@ -39,7 +40,7 @@ class FrequencyConfig(BaseModel):
         return (self.stop_mhz - self.start_mhz) / (self.steps - 1)
 
 
-class FrequencySegmentConfig(BaseModel):
+class FrequencySegmentConfig(StrictModel):
     """A single frequency segment for multi-band sweeps."""
 
     start_mhz: float = Field(ge=0.1, le=2000.0, description="Segment start frequency (MHz)")
@@ -60,7 +61,7 @@ class FrequencySegmentConfig(BaseModel):
         return (self.stop_mhz - self.start_mhz) / (self.steps - 1)
 
 
-class PatternConfig(BaseModel):
+class PatternConfig(StrictModel):
     """Radiation pattern calculation configuration."""
 
     theta_start: float = Field(default=-90.0, ge=-180.0, le=180.0)
@@ -79,7 +80,7 @@ class PatternConfig(BaseModel):
         return int((self.phi_stop - self.phi_start) / self.phi_step) + 1
 
 
-class SimulationRequest(BaseModel):
+class SimulationRequest(StrictModel):
     """Request body for POST /api/v1/simulate.
 
     V1 fields: wires, excitations, ground, frequency, pattern, comment

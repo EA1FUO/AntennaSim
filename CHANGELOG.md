@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- README API reference documented the simulate request body with the wrong keys — `ground.type` (the API expects `ground_type`) and `excitations[].real`/`.imag` (the API expects `voltage_real`/`voltage_imag`). Submitting the documented payload silently fell back to default ground/voltage. Corrected the example to match the API (#61)
+
+### Changed
+
+- Simulate request models now reject unknown/misspelled fields with a 422 validation error instead of silently ignoring them and using defaults (e.g. `ground: { "type": ... }` now errors clearly instead of defaulting to average ground) (#61)
+
 ## [1.2.1] - 2026-06-01
 
 ### Fixed

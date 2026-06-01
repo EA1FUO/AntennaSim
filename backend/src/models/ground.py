@@ -1,7 +1,9 @@
 """Ground model types for NEC2 simulation."""
 
 from enum import Enum
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from src.models.base import StrictModel
 
 
 class GroundType(str, Enum):
@@ -31,7 +33,7 @@ GROUND_PARAMS: dict[str, tuple[float, float]] = {
 }
 
 
-class GroundConfig(BaseModel):
+class GroundConfig(StrictModel):
     """Ground configuration for NEC2 simulation."""
 
     ground_type: GroundType = Field(
