@@ -8,7 +8,7 @@
   <a href="https://github.com/EA1FUO/AntennaSim/stargazers"><img src="https://img.shields.io/github/stars/EA1FUO/AntennaSim?style=flat-square" alt="GitHub stars"></a>
   <a href="https://hub.docker.com/r/ea1fuo/antennasim"><img src="https://img.shields.io/docker/pulls/ea1fuo/antennasim?style=flat-square&logo=docker&logoColor=white" alt="Docker pulls"></a>
   <a href="https://EA1FUO.github.io/AntennaSim/"><img src="https://img.shields.io/github/actions/workflow/status/EA1FUO/AntennaSim/deploy-pages.yml?style=flat-square&label=pages" alt="Pages deploy"></a>
-  <img src="https://img.shields.io/badge/version-1.2.1-blue?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/version-1.2.2-blue?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/license-GPL--3.0-green?style=flat-square" alt="License">
   <img src="https://img.shields.io/badge/NEC2-engine-orange?style=flat-square" alt="NEC2">
   <img src="https://img.shields.io/badge/WebAssembly-supported-654FF0?style=flat-square&logo=webassembly&logoColor=white" alt="WebAssembly">
