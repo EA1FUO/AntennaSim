@@ -49,8 +49,12 @@ function extractCut(
     for (let pi = 0; pi < phi_count; pi++) {
       const phi = phi_start + pi * phi_step;
       const gain = gain_dbi[bestTheta]?.[pi] ?? -999;
-      points.push({ angle: phi, gain });
+      // NEC phi -> compass bearing so the trace lines up with the N/E/S/W
+      // labels and the 3D viewport compass.
+      const bearing = ((-90 - phi) % 360 + 360) % 360;
+      points.push({ angle: bearing, gain });
     }
+    points.sort((a, b) => a.angle - b.angle);
     return points;
   } else {
     // Elevation cut — find the phi of max gain and extract theta cut
@@ -211,8 +215,20 @@ export function PatternPolar({ pattern, mode, size = 200, responsive = false }: 
 
     for (const lobe of lobes) {
       if (lobe.length < 2) continue;
-      const start = Math.min(...lobe);
-      const end = Math.max(...lobe);
+      // Unwrap angles so a lobe straddling 0°/360° stays contiguous
+      // (e.g. [355, 0, 5] -> [355, 360, 365]). Without this, a main lobe
+      // pointing North — which now sits across the 0° wrap after the compass
+      // rotation — would report its span as ~355° instead of the real width.
+      // polarToXY is periodic, so drawing the arc past 360° still renders
+      // in the right place.
+      const unwrapped: number[] = [lobe[0]!];
+      for (let i = 1; i < lobe.length; i++) {
+        let a = lobe[i]!;
+        while (a < unwrapped[i - 1]!) a += 360;
+        unwrapped.push(a);
+      }
+      const start = unwrapped[0]!;
+      const end = unwrapped[unwrapped.length - 1]!;
       const bw = end - start;
       if (bw <= 0 || bw >= 360) continue;
 

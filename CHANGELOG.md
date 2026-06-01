@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.2.1] - 2026-06-01
+
+### Fixed
+
+- Azimuth radiation pattern was rotated relative to the 3D viewport and compass — the polar plot drew NEC phi angles directly under the N/E/S/W labels, so a north-firing antenna appeared to point east. The azimuth cut now maps NEC phi to compass bearing so the trace lines up with the cardinal labels and the 3D viewport
+- -3 dB beamwidth was reported incorrectly (near 360°) for lobes pointing North after the azimuth orientation fix, because the main lobe straddles the 0°/360° seam and its span was measured with a plain min/max. Lobe angles are now unwrapped before the span is measured, restoring the correct beamwidth
+
 ## [1.2.0] - 2026-05-30
 
 ### Added
@@ -322,6 +329,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 This was the initial public release -- a complete rewrite of the original prototype into a production-quality application with React 19, TypeScript, FastAPI, and Docker.
 
+[1.2.1]: https://github.com/EA1FUO/AntennaSim/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/EA1FUO/AntennaSim/compare/v1.1.1...v1.2.0
 [1.0.0]: https://github.com/EA1FUO/AntennaSim/compare/v0.8.0...v1.0.0
 [0.8.0]: https://github.com/EA1FUO/AntennaSim/compare/v0.7.7...v0.8.0
