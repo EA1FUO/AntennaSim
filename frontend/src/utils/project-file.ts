@@ -8,13 +8,14 @@
 
 import type { GroundConfig, FrequencyRange, Excitation, WireGeometry } from "../templates/types";
 import type { LumpedLoad, TransmissionLine, SimulationResult } from "../api/nec";
+import type { EditorJunction } from "./editor-junctions";
 
 // ---------------------------------------------------------------------------
 // Schema
 // ---------------------------------------------------------------------------
 
 /** Current schema version. Increment when the format changes. */
-export const PROJECT_SCHEMA_VERSION = 1;
+export const PROJECT_SCHEMA_VERSION = 2;
 
 /** File extension (without dot) */
 export const PROJECT_FILE_EXTENSION = "antennasim";
@@ -42,6 +43,8 @@ export interface ProjectFile {
     excitations: Excitation[];
     loads: LumpedLoad[];
     transmissionLines: TransmissionLine[];
+    /** Editor-only endpoint groups that move as one connection */
+    junctions: EditorJunction[];
     ground: GroundConfig;
     frequencyRange: FrequencyRange;
     designFrequencyMhz: number;
@@ -92,6 +95,58 @@ export function validateProjectFile(data: unknown): ProjectFile {
     if (ed.wires.length === 0) {
       throw new Error("Invalid project file: editor must have at least one wire");
     }
+
+    // Junctions were introduced in schema v2. Treat their absence in v1 as
+    // an unlocked project so existing user files remain fully compatible.
+    if (obj.version < 2 && ed.junctions === undefined) {
+      ed.junctions = [];
+    }
+    if (!Array.isArray(ed.junctions)) {
+      throw new Error("Invalid project file: editor mode requires 'editor.junctions' array");
+    }
+
+    const wireTags = new Set(
+      ed.wires.flatMap((wire) => {
+        if (typeof wire !== "object" || wire === null) return [];
+        const tag = (wire as Record<string, unknown>).tag;
+        return typeof tag === "number" ? [tag] : [];
+      }),
+    );
+    const junctionIds = new Set<number>();
+    const connectedEndpoints = new Set<string>();
+    for (const rawJunction of ed.junctions) {
+      if (typeof rawJunction !== "object" || rawJunction === null) {
+        throw new Error("Invalid project file: junction must be an object");
+      }
+      const junction = rawJunction as Record<string, unknown>;
+      if (!Number.isInteger(junction.id) || (junction.id as number) < 1) {
+        throw new Error("Invalid project file: junction requires a positive integer 'id'");
+      }
+      if (junctionIds.has(junction.id as number)) {
+        throw new Error("Invalid project file: junction IDs must be unique");
+      }
+      junctionIds.add(junction.id as number);
+      if (!Array.isArray(junction.endpoints) || junction.endpoints.length < 2) {
+        throw new Error("Invalid project file: junction requires at least two endpoints");
+      }
+      for (const rawEndpoint of junction.endpoints) {
+        if (typeof rawEndpoint !== "object" || rawEndpoint === null) {
+          throw new Error("Invalid project file: junction endpoint must be an object");
+        }
+        const endpoint = rawEndpoint as Record<string, unknown>;
+        if (!wireTags.has(endpoint.wireTag as number)) {
+          throw new Error("Invalid project file: junction references a missing wire");
+        }
+        if (endpoint.endpoint !== "start" && endpoint.endpoint !== "end") {
+          throw new Error("Invalid project file: junction endpoint must be 'start' or 'end'");
+        }
+        const key = `${endpoint.wireTag}:${endpoint.endpoint}`;
+        if (connectedEndpoints.has(key)) {
+          throw new Error("Invalid project file: an endpoint cannot belong to multiple junctions");
+        }
+        connectedEndpoints.add(key);
+      }
+    }
   }
 
   return data as ProjectFile;
@@ -131,6 +186,7 @@ export function createEditorProject(
   ground: GroundConfig,
   frequencyRange: FrequencyRange,
   designFrequencyMhz: number,
+  junctions: EditorJunction[] = [],
   result?: SimulationResult | null,
 ): ProjectFile {
   return {
@@ -143,6 +199,10 @@ export function createEditorProject(
       excitations: excitations.map((e) => ({ ...e })),
       loads: loads.map((l) => ({ ...l })),
       transmissionLines: transmissionLines.map((t) => ({ ...t })),
+      junctions: junctions.map((junction) => ({
+        ...junction,
+        endpoints: junction.endpoints.map((endpoint) => ({ ...endpoint })),
+      })),
       ground: { ...ground },
       frequencyRange: { ...frequencyRange },
       designFrequencyMhz,

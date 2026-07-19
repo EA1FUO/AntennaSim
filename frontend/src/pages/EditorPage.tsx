@@ -80,6 +80,7 @@ export function EditorPage() {
   // Editor store
   const wires = useEditorStore((s) => s.wires);
   const excitations = useEditorStore((s) => s.excitations);
+  const junctions = useEditorStore((s) => s.junctions);
   const ground = useEditorStore((s) => s.ground);
   const setGround = useEditorStore((s) => s.setGround);
   const frequencyRange = useEditorStore((s) => s.frequencyRange);
@@ -336,9 +337,10 @@ export function EditorPage() {
       ground,
       frequencyRange,
       designFrequencyMhz,
+      junctions,
       simResult ?? null,
     );
-  }, [getWireGeometry, excitations, loads, transmissionLines, ground, frequencyRange, designFrequencyMhz, simResult]);
+  }, [getWireGeometry, excitations, loads, transmissionLines, ground, frequencyRange, designFrequencyMhz, junctions, simResult]);
 
   const handleProjectLoad = useCallback(
     (project: ProjectFile) => {
@@ -351,6 +353,7 @@ export function EditorPage() {
       setWires(
         ed.wires.map((w) => ({ ...w, selected: false })),
         ed.excitations,
+        ed.junctions,
       );
       setGround(ed.ground);
       setFrequencyRange(ed.frequencyRange);
