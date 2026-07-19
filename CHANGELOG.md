@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - Added tested endpoint and junction geometry primitives for precise editor connection tools
+- Added undo-safe editor state for endpoint snapping and persistent junction locks, including connection-aware coordinate edits, transforms, and wire-shaping tools
 
 ## [1.3.1] - 2026-07-19
 

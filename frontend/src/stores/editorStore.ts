@@ -16,6 +16,20 @@ import type { LumpedLoad, TransmissionLine } from "../api/nec";
 import { autoSegment, centerSegment } from "../engine/segmentation";
 import { computeSteps } from "../utils/ham-bands";
 import { clampFrequencyMhz, MAX_FREQUENCY_MHZ, MIN_FREQUENCY_MHZ } from "../engine/limits";
+import {
+  expandJunctionEndpoints,
+  findCoincidentEndpoints,
+  findEndpointJunction,
+  getEndpointPosition,
+  sameEndpoint,
+  translateEndpoints,
+  withEndpointPosition,
+  wireLength,
+  type EditorJunction,
+  type EndpointRef,
+  type Point3,
+  type WireEndpoint,
+} from "../utils/editor-junctions";
 
 // ---- Types ----
 
@@ -23,6 +37,12 @@ export type EditorMode = "select" | "add" | "move";
 
 // Re-export for convenience
 export type { LumpedLoad, TransmissionLine } from "../api/nec";
+export type { EditorJunction, EndpointRef, WireEndpoint } from "../utils/editor-junctions";
+
+export interface EditorActionResult {
+  ok: boolean;
+  message: string;
+}
 
 export interface EditorWire extends WireGeometry {
   /** Whether this wire is currently selected */
@@ -39,6 +59,8 @@ interface EditorSnapshot {
   excitations: Excitation[];
   loads: LumpedLoad[];
   transmissionLines: TransmissionLine[];
+  junctions: EditorJunction[];
+  nextJunctionId: number;
 }
 
 // ---- Default state ----
@@ -61,10 +83,18 @@ interface EditorState {
   loads: LumpedLoad[];
   /** V2: Transmission lines */
   transmissionLines: TransmissionLine[];
+  /** Persistent groups of endpoints that must remain coincident */
+  junctions: EditorJunction[];
+  /** Next stable junction identifier */
+  nextJunctionId: number;
   /** Whether to compute current distribution */
   computeCurrents: boolean;
   /** Currently selected wire tags */
   selectedTags: Set<number>;
+  /** Ordered endpoint selection: source first, target second */
+  selectedEndpoints: EndpointRef[];
+  /** Last connection action result shown by the editor */
+  lastEditorMessage: string | null;
   /** Current editor mode */
   mode: EditorMode;
   /** Ground configuration */
@@ -87,6 +117,8 @@ interface EditorState {
   redoStack: EditorSnapshot[];
   canUndo: boolean;
   canRedo: boolean;
+  /** Pre-drag state used to make a complete gesture one undo operation */
+  geometryTransaction: EditorSnapshot | null;
 
   // ---- Wire CRUD ----
   /** Add a new wire. Returns the assigned tag. */
@@ -101,6 +133,8 @@ interface EditorState {
   deleteSelected: () => void;
   /** Move an entire wire by a delta in NEC2 coordinates */
   moveWire: (tag: number, dx: number, dy: number, dz: number) => void;
+  /** Move an endpoint and every endpoint locked into its junction */
+  moveEndpoint: (tag: number, endpoint: WireEndpoint, dx: number, dy: number, dz: number) => EditorActionResult;
   /** Move all selected wires by the same delta */
   moveSelected: (dx: number, dy: number, dz: number) => void;
   /** Move ALL wires by a delta in NEC2 Z (height) */
@@ -112,7 +146,7 @@ interface EditorState {
   /** Clear all wires */
   clearAll: () => void;
   /** Set all wires at once (e.g. from import) */
-  setWires: (wires: EditorWire[], excitations?: Excitation[]) => void;
+  setWires: (wires: EditorWire[], excitations?: Excitation[], junctions?: EditorJunction[]) => void;
 
   // ---- Selection ----
   /** Select a single wire (deselects others unless additive) */
@@ -123,6 +157,16 @@ interface EditorState {
   selectAll: () => void;
   /** Toggle selection on a wire */
   toggleSelection: (tag: number) => void;
+  /** Select source then target endpoint; a third selection starts over */
+  selectEndpoint: (ref: EndpointRef) => void;
+  clearEndpointSelection: () => void;
+
+  // ---- Endpoint snapping & junctions ----
+  snapSelectedEndpoints: (preserveLength: boolean) => EditorActionResult;
+  /** Lock coincident endpoints, or unlock the selected endpoint's junction */
+  toggleSelectedJunction: () => EditorActionResult;
+  setJunctions: (junctions: EditorJunction[]) => void;
+  clearEditorMessage: () => void;
 
   // ---- Mode ----
   setMode: (mode: EditorMode) => void;
@@ -180,6 +224,8 @@ interface EditorState {
   // ---- Clipboard / Transform ----
   /** Clipboard for copy/paste */
   clipboard: EditorWire[];
+  /** Junctions fully contained by the copied wire selection */
+  clipboardJunctions: EditorJunction[];
   /** Copy selected wires to clipboard */
   copySelected: () => void;
   /** Paste clipboard wires (offset by 1m in Y) */
@@ -192,6 +238,9 @@ interface EditorState {
   // ---- Undo/Redo ----
   undo: () => void;
   redo: () => void;
+  beginGeometryTransaction: () => void;
+  commitGeometryTransaction: () => void;
+  cancelGeometryTransaction: () => void;
 
   // ---- Derived ----
   /** Get the selected wire(s) */
@@ -209,7 +258,31 @@ function takeSnapshot(state: EditorState): EditorSnapshot {
     excitations: state.excitations.map((e) => ({ ...e })),
     loads: state.loads.map((l) => ({ ...l })),
     transmissionLines: state.transmissionLines.map((t) => ({ ...t })),
+    junctions: state.junctions.map((junction) => ({
+      ...junction,
+      endpoints: junction.endpoints.map((endpoint) => ({ ...endpoint })),
+    })),
+    nextJunctionId: state.nextJunctionId,
   };
+}
+
+function pushSnapshot(
+  state: EditorState,
+  snapshot: EditorSnapshot,
+): Pick<EditorState, "undoStack" | "redoStack" | "canUndo" | "canRedo"> {
+  return {
+    undoStack: [
+      ...state.undoStack.slice(-MAX_UNDO_STACK + 1),
+      snapshot,
+    ],
+    redoStack: [],
+    canUndo: true,
+    canRedo: false,
+  };
+}
+
+function geometryHistory(state: EditorState) {
+  return state.geometryTransaction ? {} : pushUndo(state);
 }
 
 /** Push snapshot to undo stack and clear redo */
@@ -249,6 +322,130 @@ function fixExcitations(excitations: Excitation[], wires: EditorWire[]): Excitat
   return changed ? fixed : excitations;
 }
 
+/** Keep every segment-based reference at the same relative wire position. */
+function reconcileSegmentReferences(state: EditorState, wires: EditorWire[]) {
+  const scaleSegment = (tag: number, segment: number): number => {
+    const before = state.wires.find((wire) => wire.tag === tag);
+    const after = wires.find((wire) => wire.tag === tag);
+    if (!before || !after || before.segments === after.segments) return segment;
+    const ratio = segment / before.segments;
+    return Math.max(1, Math.min(after.segments, Math.round(ratio * after.segments)));
+  };
+
+  return {
+    excitations: state.excitations.map((excitation) => ({
+      ...excitation,
+      segment: scaleSegment(excitation.wire_tag, excitation.segment),
+    })),
+    loads: state.loads.map((load) => ({
+      ...load,
+      segment_start: scaleSegment(load.wire_tag, load.segment_start),
+      segment_end: scaleSegment(load.wire_tag, load.segment_end),
+    })),
+    transmissionLines: state.transmissionLines.map((line) => ({
+      ...line,
+      segment1: scaleSegment(line.wire_tag1, line.segment1),
+      segment2: scaleSegment(line.wire_tag2, line.segment2),
+    })),
+  };
+}
+
+function recomputeMovedWireSegments(
+  before: readonly EditorWire[],
+  after: EditorWire[],
+  designFrequencyMhz: number,
+): EditorWire[] {
+  return after.map((wire) => {
+    const original = before.find((candidate) => candidate.tag === wire.tag);
+    if (!original || wire.segmentsManual) return wire;
+    const geometryChanged =
+      original.x1 !== wire.x1 || original.y1 !== wire.y1 || original.z1 !== wire.z1 ||
+      original.x2 !== wire.x2 || original.y2 !== wire.y2 || original.z2 !== wire.z2;
+    if (!geometryChanged) return wire;
+    return { ...wire, segments: computeSegments(wire, designFrequencyMhz) };
+  });
+}
+
+function lengthLockConflict(before: readonly EditorWire[], after: readonly EditorWire[]): number | null {
+  for (const original of before) {
+    if (!original.lengthLocked) continue;
+    const updated = after.find((wire) => wire.tag === original.tag);
+    if (updated && Math.abs(wireLength(original) - wireLength(updated)) > 1e-7) {
+      return original.tag;
+    }
+  }
+  return null;
+}
+
+function actionResult(ok: boolean, message: string): EditorActionResult {
+  return { ok, message };
+}
+
+function setEndpointPosition(
+  wires: readonly EditorWire[],
+  ref: EndpointRef,
+  position: Point3,
+): EditorWire[] {
+  return wires.map((wire) =>
+    wire.tag === ref.wireTag
+      ? withEndpointPosition(wire, ref.endpoint, position)
+      : wire,
+  );
+}
+
+function replaceWireInJunctions(
+  junctions: readonly EditorJunction[],
+  oldTag: number,
+  firstTag: number,
+  lastTag: number,
+): EditorJunction[] {
+  return junctions.map((junction) => ({
+    ...junction,
+    endpoints: junction.endpoints.map((endpoint) => {
+      if (endpoint.wireTag !== oldTag) return { ...endpoint };
+      return endpoint.endpoint === "start"
+        ? { wireTag: firstTag, endpoint: "start" as const }
+        : { wireTag: lastTag, endpoint: "end" as const };
+    }),
+  }));
+}
+
+function appendChainJunctions(
+  junctions: EditorJunction[],
+  wires: readonly EditorWire[],
+  nextJunctionId: number,
+): { junctions: EditorJunction[]; nextJunctionId: number } {
+  const result = [...junctions];
+  let id = nextJunctionId;
+  for (let index = 0; index < wires.length - 1; index += 1) {
+    result.push({
+      id: id++,
+      endpoints: [
+        { wireTag: wires[index]!.tag, endpoint: "end" },
+        { wireTag: wires[index + 1]!.tag, endpoint: "start" },
+      ],
+    });
+  }
+  return { junctions: result, nextJunctionId: id };
+}
+
+function cloneContainedJunctions(
+  junctions: readonly EditorJunction[],
+  tagMap: ReadonlyMap<number, number>,
+  nextJunctionId: number,
+): { junctions: EditorJunction[]; nextJunctionId: number } {
+  const cloned: EditorJunction[] = [];
+  let id = nextJunctionId;
+  for (const junction of junctions) {
+    const endpoints = junction.endpoints.flatMap((endpoint) => {
+      const wireTag = tagMap.get(endpoint.wireTag);
+      return wireTag === undefined ? [] : [{ wireTag, endpoint: endpoint.endpoint }];
+    });
+    if (endpoints.length >= 2) cloned.push({ id: id++, endpoints });
+  }
+  return { junctions: cloned, nextJunctionId: id };
+}
+
 /** Snap a coordinate to grid */
 function snap(value: number, gridSize: number): number {
   if (gridSize <= 0) return value;
@@ -260,8 +457,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   excitations: [],
   loads: [],
   transmissionLines: [],
+  junctions: [],
+  nextJunctionId: 1,
   computeCurrents: true,
   selectedTags: new Set<number>(),
+  selectedEndpoints: [],
+  lastEditorMessage: null,
   mode: "select",
   verticalDrag: false,
   ground: { ...DEFAULT_GROUND },
@@ -272,11 +473,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   nextTag: 1,
   designFrequencyMhz: DEFAULT_FREQUENCY_MHZ,
   clipboard: [],
+  clipboardJunctions: [],
 
   undoStack: [],
   redoStack: [],
   canUndo: false,
   canRedo: false,
+  geometryTransaction: null,
 
   // ---- Wire CRUD ----
 
@@ -332,46 +535,124 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       updated.segments = computeSegments(updated, state.designFrequencyMhz);
     }
 
-    const newWires = [...state.wires];
+    let newWires = [...state.wires];
     newWires[idx] = updated;
-    // Fix any excitation segment indices that exceed the new segment count
-    const newExcitations = fixExcitations(state.excitations, newWires);
-    set({ ...pushUndo(state), wires: newWires, excitations: newExcitations });
+
+    const startChanged = updated.x1 !== wire.x1 || updated.y1 !== wire.y1 || updated.z1 !== wire.z1;
+    const endChanged = updated.x2 !== wire.x2 || updated.y2 !== wire.y2 || updated.z2 !== wire.z2;
+    const positionByEndpoint: Array<[EndpointRef, Point3]> = [];
+    if (startChanged) {
+      positionByEndpoint.push([
+        { wireTag: tag, endpoint: "start" },
+        { x: updated.x1, y: updated.y1, z: updated.z1 },
+      ]);
+    }
+    if (endChanged) {
+      positionByEndpoint.push([
+        { wireTag: tag, endpoint: "end" },
+        { x: updated.x2, y: updated.y2, z: updated.z2 },
+      ]);
+    }
+    for (const [endpoint, position] of positionByEndpoint) {
+      for (const member of expandJunctionEndpoints([endpoint], state.junctions)) {
+        newWires = setEndpointPosition(newWires, member, position);
+      }
+    }
+
+    const conflict = lengthLockConflict(state.wires, newWires);
+    if (conflict !== null) {
+      set({ lastEditorMessage: `Wire ${conflict} has a locked length. Unlock it before editing connected coordinates.` });
+      return;
+    }
+
+    newWires = recomputeMovedWireSegments(state.wires, newWires, state.designFrequencyMhz);
+    const references = reconcileSegmentReferences(state, newWires);
+    set({
+      ...pushUndo(state),
+      wires: newWires,
+      ...references,
+      lastEditorMessage: null,
+    });
   },
 
   moveWire: (tag, dx, dy, dz) => {
     const state = get();
-    const idx = state.wires.findIndex((w) => w.tag === tag);
-    if (idx === -1) return;
+    const wire = state.wires.find((candidate) => candidate.tag === tag);
+    if (!wire) return;
     if (dx === 0 && dy === 0 && dz === 0) return;
+    const refs = expandJunctionEndpoints(
+      [
+        { wireTag: tag, endpoint: "start" },
+        { wireTag: tag, endpoint: "end" },
+      ],
+      state.junctions,
+    );
+    const translated = translateEndpoints(state.wires, refs, { x: dx, y: dy, z: dz });
+    const conflict = lengthLockConflict(state.wires, translated);
+    if (conflict !== null) {
+      set({ lastEditorMessage: `Wire ${conflict} has a locked length and prevents this connected move.` });
+      return;
+    }
+    const newWires = recomputeMovedWireSegments(state.wires, translated, state.designFrequencyMhz);
+    set({
+      ...geometryHistory(state),
+      wires: newWires,
+      ...reconcileSegmentReferences(state, newWires),
+      lastEditorMessage: null,
+    });
+  },
 
-    const wire = state.wires[idx]!;
-    const updated: EditorWire = {
-      ...wire,
-      x1: wire.x1 + dx,
-      y1: wire.y1 + dy,
-      z1: wire.z1 + dz,
-      x2: wire.x2 + dx,
-      y2: wire.y2 + dy,
-      z2: wire.z2 + dz,
-    };
-    // No need to recompute segments — length is unchanged
-
-    const newWires = [...state.wires];
-    newWires[idx] = updated;
-    set({ ...pushUndo(state), wires: newWires });
+  moveEndpoint: (tag, endpoint, dx, dy, dz) => {
+    const state = get();
+    const source = { wireTag: tag, endpoint };
+    if (!getEndpointPosition(state.wires, source)) {
+      return actionResult(false, "The selected endpoint no longer exists.");
+    }
+    if (dx === 0 && dy === 0 && dz === 0) {
+      return actionResult(true, "Endpoint unchanged.");
+    }
+    const refs = expandJunctionEndpoints([source], state.junctions);
+    const translated = translateEndpoints(state.wires, refs, { x: dx, y: dy, z: dz });
+    const conflict = lengthLockConflict(state.wires, translated);
+    if (conflict !== null) {
+      const message = `Wire ${conflict} has a locked length and prevents this junction move.`;
+      set({ lastEditorMessage: message });
+      return actionResult(false, message);
+    }
+    const newWires = recomputeMovedWireSegments(state.wires, translated, state.designFrequencyMhz);
+    set({
+      ...geometryHistory(state),
+      wires: newWires,
+      ...reconcileSegmentReferences(state, newWires),
+      lastEditorMessage: null,
+    });
+    return actionResult(true, refs.length > 1 ? `Moved ${refs.length} locked endpoints.` : "Moved endpoint.");
   },
 
   moveSelected: (dx, dy, dz) => {
     const state = get();
     if (state.selectedTags.size === 0) return;
     if (dx === 0 && dy === 0 && dz === 0) return;
-    const newWires = state.wires.map((w) =>
-      state.selectedTags.has(w.tag)
-        ? { ...w, x1: w.x1 + dx, y1: w.y1 + dy, z1: w.z1 + dz, x2: w.x2 + dx, y2: w.y2 + dy, z2: w.z2 + dz }
-        : w
+    const refs = expandJunctionEndpoints(
+      [...state.selectedTags].flatMap((wireTag) => [
+        { wireTag, endpoint: "start" as const },
+        { wireTag, endpoint: "end" as const },
+      ]),
+      state.junctions,
     );
-    set({ ...pushUndo(state), wires: newWires });
+    const translated = translateEndpoints(state.wires, refs, { x: dx, y: dy, z: dz });
+    const conflict = lengthLockConflict(state.wires, translated);
+    if (conflict !== null) {
+      set({ lastEditorMessage: `Wire ${conflict} has a locked length and prevents this connected move.` });
+      return;
+    }
+    const newWires = recomputeMovedWireSegments(state.wires, translated, state.designFrequencyMhz);
+    set({
+      ...geometryHistory(state),
+      wires: newWires,
+      ...reconcileSegmentReferences(state, newWires),
+      lastEditorMessage: null,
+    });
   },
 
   moveAllWiresZ: (dz) => {
@@ -392,11 +673,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const newExcitations = state.excitations.filter((e) => !tagSet.has(e.wire_tag));
     const newSelected = new Set(state.selectedTags);
     for (const t of tags) newSelected.delete(t);
+    const newJunctions = state.junctions
+      .map((junction) => ({
+        ...junction,
+        endpoints: junction.endpoints.filter((endpoint) => !tagSet.has(endpoint.wireTag)),
+      }))
+      .filter((junction) => junction.endpoints.length >= 2);
     set({
       ...pushUndo(state),
       wires: newWires,
       excitations: newExcitations,
       selectedTags: newSelected,
+      selectedEndpoints: state.selectedEndpoints.filter((endpoint) => !tagSet.has(endpoint.wireTag)),
+      junctions: newJunctions,
     });
   },
 
@@ -465,11 +754,31 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     newSelected.add(tag1);
     newSelected.add(tag2);
 
+    const transferredJunctions = state.junctions.map((junction) => ({
+      ...junction,
+      endpoints: junction.endpoints.map((endpoint) => {
+        if (endpoint.wireTag !== tag) return endpoint;
+        return endpoint.endpoint === "start"
+          ? { wireTag: tag1, endpoint: "start" as const }
+          : { wireTag: tag2, endpoint: "end" as const };
+      }),
+    }));
+    const midpointJunction: EditorJunction = {
+      id: state.nextJunctionId,
+      endpoints: [
+        { wireTag: tag1, endpoint: "end" },
+        { wireTag: tag2, endpoint: "start" },
+      ],
+    };
+
     set({
       ...pushUndo(state),
       wires: newWires,
       excitations: newExcitations,
       selectedTags: newSelected,
+      selectedEndpoints: [],
+      junctions: [...transferredJunctions, midpointJunction],
+      nextJunctionId: state.nextJunctionId + 1,
       nextTag: tag2 + 1,
     });
   },
@@ -599,12 +908,26 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
 
     const newWires = state.wires.filter((w) => w.tag !== tag).concat(newWiresList);
+    const transferredJunctions = replaceWireInJunctions(
+      state.junctions,
+      tag,
+      newWiresList[0]!.tag,
+      newWiresList[newWiresList.length - 1]!.tag,
+    );
+    const chain = appendChainJunctions(
+      transferredJunctions,
+      newWiresList,
+      state.nextJunctionId,
+    );
 
     set({
       ...pushUndo(state),
       wires: newWires,
       excitations: newExcitations,
       selectedTags: newSelected,
+      selectedEndpoints: [],
+      junctions: chain.junctions,
+      nextJunctionId: chain.nextJunctionId,
       nextTag,
     });
   },
@@ -683,11 +1006,25 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
 
     const newWires = state.wires.filter((w) => w.tag !== tag).concat(newWiresList);
+    const transferredJunctions = replaceWireInJunctions(
+      state.junctions,
+      tag,
+      newWiresList[0]!.tag,
+      newWiresList[newWiresList.length - 1]!.tag,
+    );
+    const chain = appendChainJunctions(
+      transferredJunctions,
+      newWiresList,
+      state.nextJunctionId,
+    );
     set({
       ...pushUndo(state),
       wires: newWires,
       excitations: newExcitations,
       selectedTags: newSelected,
+      selectedEndpoints: [],
+      junctions: chain.junctions,
+      nextJunctionId: chain.nextJunctionId,
       nextTag,
     });
   },
@@ -715,11 +1052,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       loads: [],
       transmissionLines: [],
       selectedTags: new Set(),
+      selectedEndpoints: [],
+      junctions: [],
+      nextJunctionId: 1,
       nextTag: 1,
     });
   },
 
-  setWires: (wires, excitations) => {
+  setWires: (wires, excitations, junctions = []) => {
     const state = get();
     const maxTag = wires.reduce((max, w) => Math.max(max, w.tag), 0);
     const newWires = wires.map((w) => ({ ...w }));
@@ -731,6 +1071,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       wires: newWires,
       excitations: fixedExcitations,
       selectedTags: new Set(),
+      selectedEndpoints: [],
+      junctions: junctions.map((junction) => ({
+        ...junction,
+        endpoints: junction.endpoints.map((endpoint) => ({ ...endpoint })),
+      })),
+      nextJunctionId: junctions.reduce((max, junction) => Math.max(max, junction.id), 0) + 1,
       nextTag: maxTag + 1,
     });
   },
@@ -767,6 +1113,179 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }
     set({ selectedTags: newSelected });
   },
+
+  selectEndpoint: (ref) => {
+    const state = get();
+    if (!getEndpointPosition(state.wires, ref)) return;
+    const existingIndex = state.selectedEndpoints.findIndex((candidate) =>
+      sameEndpoint(candidate, ref),
+    );
+    if (existingIndex >= 0) {
+      set({
+        selectedEndpoints: state.selectedEndpoints.filter((_, index) => index !== existingIndex),
+        lastEditorMessage: null,
+      });
+      return;
+    }
+    const selectedEndpoints = state.selectedEndpoints.length < 2
+      ? [...state.selectedEndpoints, { ...ref }]
+      : [{ ...ref }];
+    set({ selectedEndpoints, lastEditorMessage: null });
+  },
+
+  clearEndpointSelection: () => set({ selectedEndpoints: [], lastEditorMessage: null }),
+
+  snapSelectedEndpoints: (preserveLength) => {
+    const state = get();
+    const [source, target] = state.selectedEndpoints;
+    if (!source || !target) {
+      const message = "Select a source endpoint, then a target endpoint.";
+      set({ lastEditorMessage: message });
+      return actionResult(false, message);
+    }
+    if (source.wireTag === target.wireTag) {
+      const message = "Source and target must belong to different wires.";
+      set({ lastEditorMessage: message });
+      return actionResult(false, message);
+    }
+    const sourcePosition = getEndpointPosition(state.wires, source);
+    const targetPosition = getEndpointPosition(state.wires, target);
+    if (!sourcePosition || !targetPosition) {
+      const message = "One of the selected endpoints no longer exists.";
+      set({ lastEditorMessage: message, selectedEndpoints: [] });
+      return actionResult(false, message);
+    }
+
+    const initialRefs: EndpointRef[] = preserveLength
+      ? [
+          { wireTag: source.wireTag, endpoint: "start" },
+          { wireTag: source.wireTag, endpoint: "end" },
+        ]
+      : [source];
+    const refs = expandJunctionEndpoints(initialRefs, state.junctions);
+    if (refs.some((ref) => sameEndpoint(ref, target))) {
+      const message = "The target is already part of the connection being moved.";
+      set({ lastEditorMessage: message });
+      return actionResult(false, message);
+    }
+
+    const delta: Point3 = {
+      x: targetPosition.x - sourcePosition.x,
+      y: targetPosition.y - sourcePosition.y,
+      z: targetPosition.z - sourcePosition.z,
+    };
+    const translated = translateEndpoints(state.wires, refs, delta);
+    const conflict = lengthLockConflict(state.wires, translated);
+    if (conflict !== null) {
+      const message = `Wire ${conflict} has a locked length. Unlock it before snapping this connection.`;
+      set({ lastEditorMessage: message });
+      return actionResult(false, message);
+    }
+    const newWires = recomputeMovedWireSegments(state.wires, translated, state.designFrequencyMhz);
+    const message = preserveLength
+      ? `Snapped Wire ${source.wireTag} without changing its length.`
+      : `Snapped Wire ${source.wireTag} ${source.endpoint} to Wire ${target.wireTag} ${target.endpoint}.`;
+    set({
+      ...pushUndo(state),
+      wires: newWires,
+      ...reconcileSegmentReferences(state, newWires),
+      selectedEndpoints: [],
+      lastEditorMessage: message,
+    });
+    return actionResult(true, message);
+  },
+
+  toggleSelectedJunction: () => {
+    const state = get();
+    const source = state.selectedEndpoints[0];
+    if (!source) {
+      const message = "Select one endpoint to lock or unlock its junction.";
+      set({ lastEditorMessage: message });
+      return actionResult(false, message);
+    }
+
+    const existing = findEndpointJunction(state.junctions, source);
+    if (existing) {
+      const message = `Unlocked Junction ${existing.id}.`;
+      set({
+        ...pushUndo(state),
+        junctions: state.junctions.filter((junction) => junction.id !== existing.id),
+        selectedEndpoints: [],
+        lastEditorMessage: message,
+      });
+      return actionResult(true, message);
+    }
+
+    const sourcePosition = getEndpointPosition(state.wires, source);
+    if (!sourcePosition) {
+      const message = "The selected endpoint no longer exists.";
+      set({ lastEditorMessage: message, selectedEndpoints: [] });
+      return actionResult(false, message);
+    }
+    const coincident = findCoincidentEndpoints(state.wires, source);
+    if (coincident.length < 2) {
+      const message = "No other endpoints are located at the selected point.";
+      set({ lastEditorMessage: message });
+      return actionResult(false, message);
+    }
+
+    const junctionIdsToMerge = new Set<number>();
+    const endpoints = new Map<string, EndpointRef>();
+    for (const endpoint of coincident) {
+      endpoints.set(`${endpoint.wireTag}:${endpoint.endpoint}`, endpoint);
+      const junction = findEndpointJunction(state.junctions, endpoint);
+      if (junction) {
+        junctionIdsToMerge.add(junction.id);
+        for (const member of junction.endpoints) {
+          endpoints.set(`${member.wireTag}:${member.endpoint}`, member);
+        }
+      }
+    }
+    const junction: EditorJunction = {
+      id: state.nextJunctionId,
+      endpoints: [...endpoints.values()],
+    };
+    let normalizedWires = state.wires;
+    for (const endpoint of junction.endpoints) {
+      normalizedWires = setEndpointPosition(normalizedWires, endpoint, sourcePosition);
+    }
+    normalizedWires = recomputeMovedWireSegments(
+      state.wires,
+      normalizedWires,
+      state.designFrequencyMhz,
+    );
+    const message = `Locked ${junction.endpoints.length} endpoints in Junction ${junction.id}.`;
+    set({
+      ...pushUndo(state),
+      wires: normalizedWires,
+      ...reconcileSegmentReferences(state, normalizedWires),
+      junctions: [
+        ...state.junctions.filter((candidate) => !junctionIdsToMerge.has(candidate.id)),
+        junction,
+      ],
+      nextJunctionId: state.nextJunctionId + 1,
+      selectedEndpoints: [],
+      lastEditorMessage: message,
+    });
+    return actionResult(true, message);
+  },
+
+  setJunctions: (junctions) => {
+    const validTags = new Set(get().wires.map((wire) => wire.tag));
+    const sanitized = junctions
+      .map((junction) => ({
+        ...junction,
+        endpoints: junction.endpoints.filter((endpoint) => validTags.has(endpoint.wireTag)),
+      }))
+      .filter((junction) => junction.endpoints.length >= 2);
+    set({
+      junctions: sanitized,
+      nextJunctionId: sanitized.reduce((max, junction) => Math.max(max, junction.id), 0) + 1,
+      selectedEndpoints: [],
+    });
+  },
+
+  clearEditorMessage: () => set({ lastEditorMessage: null }),
 
   // ---- Mode ----
 
@@ -924,7 +1443,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const state = get();
     const selected = state.wires.filter((w) => state.selectedTags.has(w.tag));
     if (selected.length === 0) return;
-    set({ clipboard: selected.map((w) => ({ ...w })) });
+    const selectedTags = new Set(selected.map((wire) => wire.tag));
+    const clipboardJunctions = state.junctions.flatMap((junction) => {
+      const endpoints = junction.endpoints.filter((endpoint) => selectedTags.has(endpoint.wireTag));
+      return endpoints.length >= 2 ? [{ ...junction, endpoints: endpoints.map((endpoint) => ({ ...endpoint })) }] : [];
+    });
+    set({
+      clipboard: selected.map((w) => ({ ...w })),
+      clipboardJunctions,
+    });
   },
 
   paste: () => {
@@ -932,13 +1459,23 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (state.clipboard.length === 0) return;
 
     let tag = state.nextTag;
-    const newWires: EditorWire[] = state.clipboard.map((w) => ({
-      ...w,
-      tag: tag++,
-      y1: w.y1 + 1, // offset 1m in Y
-      y2: w.y2 + 1,
-      selected: false,
-    }));
+    const tagMap = new Map<number, number>();
+    const newWires: EditorWire[] = state.clipboard.map((w) => {
+      const newTag = tag++;
+      tagMap.set(w.tag, newTag);
+      return {
+        ...w,
+        tag: newTag,
+        y1: w.y1 + 1, // offset 1m in Y
+        y2: w.y2 + 1,
+        selected: false,
+      };
+    });
+    const cloned = cloneContainedJunctions(
+      state.clipboardJunctions,
+      tagMap,
+      state.nextJunctionId,
+    );
 
     const newSelected = new Set(newWires.map((w) => w.tag));
 
@@ -946,6 +1483,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ...pushUndo(state),
       wires: [...state.wires, ...newWires],
       selectedTags: newSelected,
+      selectedEndpoints: [],
+      junctions: [...state.junctions, ...cloned.junctions],
+      nextJunctionId: cloned.nextJunctionId,
       nextTag: tag,
     });
   },
@@ -956,13 +1496,23 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (selected.length === 0) return;
 
     let tag = state.nextTag;
-    const newWires: EditorWire[] = selected.map((w) => ({
-      ...w,
-      tag: tag++,
-      y1: w.y1 + 0.5, // offset 0.5m in Y
-      y2: w.y2 + 0.5,
-      selected: false,
-    }));
+    const tagMap = new Map<number, number>();
+    const newWires: EditorWire[] = selected.map((w) => {
+      const newTag = tag++;
+      tagMap.set(w.tag, newTag);
+      return {
+        ...w,
+        tag: newTag,
+        y1: w.y1 + 0.5, // offset 0.5m in Y
+        y2: w.y2 + 0.5,
+        selected: false,
+      };
+    });
+    const cloned = cloneContainedJunctions(
+      state.junctions,
+      tagMap,
+      state.nextJunctionId,
+    );
 
     // Also duplicate excitations that reference selected wires
     const newExcitations = [...state.excitations];
@@ -989,6 +1539,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       wires: [...state.wires, ...newWires],
       excitations: newExcitations,
       selectedTags: newSelected,
+      selectedEndpoints: [],
+      junctions: [...state.junctions, ...cloned.junctions],
+      nextJunctionId: cloned.nextJunctionId,
       nextTag: tag,
     });
   },
@@ -1015,8 +1568,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const mirror = (val: number, center: number) => 2 * center - val;
 
     let tag = state.nextTag;
+    const tagMap = new Map<number, number>();
     const newWires: EditorWire[] = selected.map((w) => {
-      const mirrored: EditorWire = { ...w, tag: tag++, selected: false };
+      const newTag = tag++;
+      tagMap.set(w.tag, newTag);
+      const mirrored: EditorWire = { ...w, tag: newTag, selected: false };
       if (axis === "x") {
         mirrored.x1 = mirror(w.x1, cx);
         mirrored.x2 = mirror(w.x2, cx);
@@ -1029,6 +1585,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       }
       return mirrored;
     });
+    const cloned = cloneContainedJunctions(
+      state.junctions,
+      tagMap,
+      state.nextJunctionId,
+    );
 
     const newSelected = new Set([
       ...state.selectedTags,
@@ -1039,6 +1600,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ...pushUndo(state),
       wires: [...state.wires, ...newWires],
       selectedTags: newSelected,
+      selectedEndpoints: [],
+      junctions: [...state.junctions, ...cloned.junctions],
+      nextJunctionId: cloned.nextJunctionId,
       nextTag: tag,
     });
   },
@@ -1058,7 +1622,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       excitations: previous.excitations,
       loads: previous.loads,
       transmissionLines: previous.transmissionLines,
+      junctions: previous.junctions,
+      nextJunctionId: previous.nextJunctionId,
       selectedTags: new Set(),
+      selectedEndpoints: [],
       undoStack: newUndoStack,
       redoStack: [...state.redoStack, current],
       canUndo: newUndoStack.length > 0,
@@ -1079,11 +1646,51 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       excitations: next.excitations,
       loads: next.loads,
       transmissionLines: next.transmissionLines,
+      junctions: next.junctions,
+      nextJunctionId: next.nextJunctionId,
       selectedTags: new Set(),
+      selectedEndpoints: [],
       undoStack: [...state.undoStack, current],
       redoStack: newRedoStack,
       canUndo: true,
       canRedo: newRedoStack.length > 0,
+    });
+  },
+
+  beginGeometryTransaction: () => {
+    const state = get();
+    if (!state.geometryTransaction) {
+      set({ geometryTransaction: takeSnapshot(state), lastEditorMessage: null });
+    }
+  },
+
+  commitGeometryTransaction: () => {
+    const state = get();
+    if (!state.geometryTransaction) return;
+    const before = JSON.stringify({
+      wires: state.geometryTransaction.wires,
+      junctions: state.geometryTransaction.junctions,
+    });
+    const after = JSON.stringify({ wires: state.wires, junctions: state.junctions });
+    set({
+      ...(before === after ? {} : pushSnapshot(state, state.geometryTransaction)),
+      geometryTransaction: null,
+    });
+  },
+
+  cancelGeometryTransaction: () => {
+    const state = get();
+    if (!state.geometryTransaction) return;
+    const snapshot = state.geometryTransaction;
+    set({
+      wires: snapshot.wires,
+      excitations: snapshot.excitations,
+      loads: snapshot.loads,
+      transmissionLines: snapshot.transmissionLines,
+      junctions: snapshot.junctions,
+      nextJunctionId: snapshot.nextJunctionId,
+      geometryTransaction: null,
+      lastEditorMessage: "Movement cancelled.",
     });
   },
 
