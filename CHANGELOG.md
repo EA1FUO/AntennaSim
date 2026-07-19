@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added ordered endpoint picking with responsive Snap, Keep Length, Lock, and Unlock controls; matching S, Shift+S, and J shortcuts; connection feedback; and junction-aware drag gestures
 - Added junction persistence to `.antennasim` editor projects with schema validation and automatic compatibility for schema v1 files
 - Added endpoint-origin wire creation in Add mode, including larger touch targets, live wire previews, optional endpoint-to-endpoint creation, and automatic junction locking
+- Added prominent Wire Editor navigation and responsive Simulator invitations so custom-geometry tools are discoverable on desktop and mobile
 
 ### Fixed
 
