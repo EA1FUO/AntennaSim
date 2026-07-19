@@ -266,13 +266,14 @@ export function EditorAntennaModel({
   }, [isPicking, hoveredSegment, start, end, wire.segments, accurateFeedpoint]);
 
   const capRadius = visualScale.capRadius(wire.radius);
-  const endpointRadius = mode === "add" ? capRadius : capRadius * 2.5;
+  const endpointRadius = Math.max(capRadius * 2.5, visualScale.markerRadius * 0.75);
 
   const endpointAppearance = (endpoint: WireEndpoint) => {
     const order = endpointSelection[endpoint];
     if (order === 1) return { color: "#F59E0B", emissive: "#F59E0B", intensity: 0.8 };
     if (order === 2) return { color: "#3B82F6", emissive: "#3B82F6", intensity: 0.8 };
     if (junctionSizes[endpoint]) return { color: "#A855F7", emissive: "#A855F7", intensity: 0.65 };
+    if (mode === "add") return { color: "#06B6D4", emissive: "#06B6D4", intensity: 0.45 };
     if (mode === "move") return { color: "#10B981", emissive: "#10B981", intensity: 0.5 };
     return { color: getWireColor(wire.tag), emissive: "#000000", intensity: 0 };
   };
@@ -299,11 +300,7 @@ export function EditorAntennaModel({
       {/* Endpoint spheres */}
       <mesh
         position={start}
-        onClick={
-          mode !== "add"
-            ? (event: ThreeEvent<MouseEvent>) => onEndpointSelect(wire.tag, "start", event)
-            : handleClick
-        }
+        onClick={(event: ThreeEvent<MouseEvent>) => onEndpointSelect(wire.tag, "start", event)}
         onPointerDown={
           mode === "move" && onEndpointDragStart
             ? (e: ThreeEvent<PointerEvent>) => {
@@ -327,11 +324,7 @@ export function EditorAntennaModel({
       </mesh>
       <mesh
         position={end}
-        onClick={
-          mode !== "add"
-            ? (event: ThreeEvent<MouseEvent>) => onEndpointSelect(wire.tag, "end", event)
-            : handleClick
-        }
+        onClick={(event: ThreeEvent<MouseEvent>) => onEndpointSelect(wire.tag, "end", event)}
         onPointerDown={
           mode === "move" && onEndpointDragStart
             ? (e: ThreeEvent<PointerEvent>) => {

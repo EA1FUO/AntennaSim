@@ -469,7 +469,8 @@ export function EditorPage() {
               <span className="text-accent font-bold uppercase">{mode}</span>
               {mode === "add" && (
                 <span className="text-text-secondary ml-1">
-                  (click to place)
+                  <span className="hidden sm:inline">(click empty space or a wire end to start)</span>
+                  <span className="sm:hidden">(tap space or an end)</span>
                 </span>
               )}
               {mode === "move" && (

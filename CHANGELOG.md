@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added undo-safe editor state for endpoint snapping and persistent junction locks, including connection-aware coordinate edits, transforms, and wire-shaping tools
 - Added ordered endpoint picking with responsive Snap, Keep Length, Lock, and Unlock controls; matching S, Shift+S, and J shortcuts; connection feedback; and junction-aware drag gestures
 - Added junction persistence to `.antennasim` editor projects with schema validation and automatic compatibility for schema v1 files
+- Added endpoint-origin wire creation in Add mode, including larger touch targets, live wire previews, optional endpoint-to-endpoint creation, and automatic junction locking
 
 ### Fixed
 

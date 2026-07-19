@@ -125,6 +125,11 @@ interface EditorState {
   addWire: (wire: Omit<EditorWire, "tag" | "segments">) => number;
   /** Add a wire with explicit tag and segments */
   addWireRaw: (wire: EditorWire) => void;
+  /** Add a wire whose start and/or end is connected to an existing endpoint */
+  addConnectedWire: (
+    wire: Omit<EditorWire, "tag" | "segments">,
+    connections: { start?: EndpointRef; end?: EndpointRef },
+  ) => number | null;
   /** Update a wire by tag */
   updateWire: (tag: number, updates: Partial<Omit<EditorWire, "tag">>) => void;
   /** Delete wires by tag(s) */
@@ -446,6 +451,37 @@ function cloneContainedJunctions(
   return { junctions: cloned, nextJunctionId: id };
 }
 
+function attachCoincidentEndpoint(
+  wires: readonly EditorWire[],
+  junctions: readonly EditorJunction[],
+  anchor: EndpointRef,
+  newEndpoint: EndpointRef,
+  nextJunctionId: number,
+): { junctions: EditorJunction[]; nextJunctionId: number } {
+  const coincident = findCoincidentEndpoints(wires, anchor);
+  const junctionIdsToMerge = new Set<number>();
+  const endpoints = new Map<string, EndpointRef>();
+  for (const endpoint of [...coincident, newEndpoint]) {
+    endpoints.set(`${endpoint.wireTag}:${endpoint.endpoint}`, { ...endpoint });
+    const existing = findEndpointJunction(junctions, endpoint);
+    if (!existing) continue;
+    junctionIdsToMerge.add(existing.id);
+    for (const member of existing.endpoints) {
+      endpoints.set(`${member.wireTag}:${member.endpoint}`, { ...member });
+    }
+  }
+
+  const existingIds = [...junctionIdsToMerge].sort((a, b) => a - b);
+  const junctionId = existingIds[0] ?? nextJunctionId;
+  return {
+    junctions: [
+      ...junctions.filter((junction) => !junctionIdsToMerge.has(junction.id)),
+      { id: junctionId, endpoints: [...endpoints.values()] },
+    ],
+    nextJunctionId: existingIds.length > 0 ? nextJunctionId : nextJunctionId + 1,
+  };
+}
+
 /** Snap a coordinate to grid */
 function snap(value: number, gridSize: number): number {
   if (gridSize <= 0) return value;
@@ -512,6 +548,81 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       wires: [...state.wires, { ...wire }],
       nextTag: Math.max(state.nextTag, wire.tag + 1),
     });
+  },
+
+  addConnectedWire: (wireInput, connections) => {
+    const state = get();
+    const startPosition = connections.start
+      ? getEndpointPosition(state.wires, connections.start)
+      : { x: wireInput.x1, y: wireInput.y1, z: wireInput.z1 };
+    const endPosition = connections.end
+      ? getEndpointPosition(state.wires, connections.end)
+      : { x: wireInput.x2, y: wireInput.y2, z: wireInput.z2 };
+    if (!startPosition || !endPosition) {
+      set({ lastEditorMessage: "The endpoint used to create this wire no longer exists." });
+      return null;
+    }
+    if (Math.hypot(
+      endPosition.x - startPosition.x,
+      endPosition.y - startPosition.y,
+      endPosition.z - startPosition.z,
+    ) < 1e-9) {
+      set({ lastEditorMessage: "A wire needs two different endpoints." });
+      return null;
+    }
+
+    const tag = state.nextTag;
+    const geometry = {
+      ...wireInput,
+      x1: startPosition.x,
+      y1: startPosition.y,
+      z1: startPosition.z,
+      x2: endPosition.x,
+      y2: endPosition.y,
+      z2: endPosition.z,
+    };
+    const wire: EditorWire = {
+      ...geometry,
+      tag,
+      segments: computeSegments(geometry, state.designFrequencyMhz),
+      radius: wireInput.radius || DEFAULT_WIRE_RADIUS,
+    };
+    const wires = [...state.wires, wire];
+    let junctions = state.junctions;
+    let nextJunctionId = state.nextJunctionId;
+    if (connections.start) {
+      ({ junctions, nextJunctionId } = attachCoincidentEndpoint(
+        wires,
+        junctions,
+        connections.start,
+        { wireTag: tag, endpoint: "start" },
+        nextJunctionId,
+      ));
+    }
+    if (connections.end) {
+      ({ junctions, nextJunctionId } = attachCoincidentEndpoint(
+        wires,
+        junctions,
+        connections.end,
+        { wireTag: tag, endpoint: "end" },
+        nextJunctionId,
+      ));
+    }
+
+    set({
+      ...pushUndo(state),
+      wires,
+      junctions,
+      nextJunctionId,
+      nextTag: tag + 1,
+      selectedTags: new Set([tag]),
+      selectedEndpoints: [],
+      lastEditorMessage: null,
+      excitations: state.excitations.length === 0
+        ? [{ wire_tag: tag, segment: centerSegment(wire.segments), voltage_real: 1, voltage_imag: 0 }]
+        : state.excitations,
+    });
+    return tag;
   },
 
   updateWire: (tag, updates) => {

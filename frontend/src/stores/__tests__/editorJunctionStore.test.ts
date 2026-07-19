@@ -274,3 +274,59 @@ describe("editor junction locks", () => {
     ]);
   });
 });
+
+describe("connected wire creation", () => {
+  beforeEach(() => resetEditor());
+
+  it("creates a wire from an existing endpoint and locks the new start", () => {
+    const tag = useEditorStore.getState().addConnectedWire(
+      { x1: 99, y1: 99, z1: 99, x2: 2, y2: 2, z2: 0, radius: 0.001 },
+      { start: { wireTag: 1, endpoint: "end" } },
+    );
+
+    expect(tag).toBe(4);
+    const state = useEditorStore.getState();
+    const created = state.wires.find((wire) => wire.tag === tag)!;
+    expect([created.x1, created.y1, created.z1]).toEqual([1, 0, 0]);
+    expect(state.junctions[0]?.endpoints).toEqual(expect.arrayContaining([
+      { wireTag: 1, endpoint: "end" },
+      { wireTag: 3, endpoint: "start" },
+      { wireTag: 4, endpoint: "start" },
+    ]));
+    expect(state.undoStack).toHaveLength(1);
+  });
+
+  it("can connect both ends of a new wire in one undoable action", () => {
+    useEditorStore.getState().addConnectedWire(
+      { x1: 0, y1: 0, z1: 0, x2: 0, y2: 0, z2: 0, radius: 0.001 },
+      {
+        start: { wireTag: 1, endpoint: "end" },
+        end: { wireTag: 2, endpoint: "start" },
+      },
+    );
+
+    const state = useEditorStore.getState();
+    expect(state.junctions).toHaveLength(2);
+    expect(state.wires.find((wire) => wire.tag === 4)).toMatchObject({
+      x1: 1,
+      x2: 3,
+    });
+    state.undo();
+    expect(useEditorStore.getState().wires).toEqual(baseWires);
+    expect(useEditorStore.getState().junctions).toEqual([]);
+  });
+
+  it("rejects a zero-length connected wire without adding history", () => {
+    const tag = useEditorStore.getState().addConnectedWire(
+      { x1: 0, y1: 0, z1: 0, x2: 0, y2: 0, z2: 0, radius: 0.001 },
+      {
+        start: { wireTag: 1, endpoint: "end" },
+        end: { wireTag: 3, endpoint: "start" },
+      },
+    );
+
+    expect(tag).toBeNull();
+    expect(useEditorStore.getState().wires).toEqual(baseWires);
+    expect(useEditorStore.getState().undoStack).toHaveLength(0);
+  });
+});
