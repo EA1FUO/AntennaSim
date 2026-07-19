@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Added tested endpoint and junction geometry primitives for precise editor connection tools
+
 ## [1.3.1] - 2026-07-19
 
 ### Fixed
