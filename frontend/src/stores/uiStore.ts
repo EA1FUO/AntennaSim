@@ -40,6 +40,8 @@ interface UIState {
   matching: MatchingConfig;
   /** Show feedpoint marker at exact NEC2 segment center (true) or snapped to wire edge (false) */
   accurateFeedpoint: boolean;
+  /** Whether the global changelog dialog is visible */
+  changelogOpen: boolean;
 
   // Actions
   setTheme: (theme: Theme) => void;
@@ -56,6 +58,8 @@ interface UIState {
   setS1PFile: (file: S1PFile | null) => void;
   setMatching: (matching: MatchingConfig) => void;
   setAccurateFeedpoint: (value: boolean) => void;
+  openChangelog: () => void;
+  closeChangelog: () => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -83,6 +87,7 @@ export const useUIStore = create<UIState>((set) => ({
   s1pFile: null,
   matching: { ...DEFAULT_MATCHING },
   accurateFeedpoint: false,
+  changelogOpen: false,
 
   setTheme: (theme) => set({ theme }),
   toggleTheme: () =>
@@ -109,4 +114,6 @@ export const useUIStore = create<UIState>((set) => ({
   setS1PFile: (file) => set({ s1pFile: file }),
   setMatching: (matching) => set({ matching }),
   setAccurateFeedpoint: (value) => set({ accurateFeedpoint: value }),
+  openChangelog: () => set({ changelogOpen: true }),
+  closeChangelog: () => set({ changelogOpen: false }),
 }));

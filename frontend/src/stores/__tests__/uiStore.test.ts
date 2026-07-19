@@ -26,3 +26,17 @@ describe("UI length-unit preferences", () => {
     expect(useUIStore.getState().imperialLengthUnit).toBe("ft");
   });
 });
+
+describe("UI changelog dialog", () => {
+  beforeEach(() => {
+    useUIStore.setState({ changelogOpen: false });
+  });
+
+  it("can be reopened and closed from shared navigation state", () => {
+    useUIStore.getState().openChangelog();
+    expect(useUIStore.getState().changelogOpen).toBe(true);
+
+    useUIStore.getState().closeChangelog();
+    expect(useUIStore.getState().changelogOpen).toBe(false);
+  });
+});

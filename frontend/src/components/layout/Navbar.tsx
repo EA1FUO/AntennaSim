@@ -23,6 +23,7 @@ export function Navbar() {
   const toggleTheme = useUIStore((s) => s.toggleTheme);
   const imperial = useUIStore((s) => s.imperial);
   const toggleUnits = useUIStore((s) => s.toggleUnits);
+  const openChangelog = useUIStore((s) => s.openChangelog);
 
   const handleThemeToggle = useCallback(() => {
     toggleTheme();
@@ -93,6 +94,18 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={openChangelog}
+            className="hidden items-center gap-1.5 rounded-md border border-border px-2 py-1 text-[11px] text-text-secondary transition-colors hover:border-accent/40 hover:bg-surface-hover hover:text-text-primary md:inline-flex"
+            title="Show the latest changelog"
+          >
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M10 2L11.5 7.1L16.5 8.5L11.5 9.9L10 15L8.5 9.9L3.5 8.5L8.5 7.1L10 2Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+            </svg>
+            <span className="hidden lg:inline">What’s new</span>
+          </button>
+
           {/* Unit toggle */}
           <button
             onClick={handleUnitToggle}
@@ -191,6 +204,19 @@ export function Navbar() {
                 {label}
               </Link>
             ))}
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                openChangelog();
+              }}
+              className="flex items-center gap-2 border-t border-border px-6 py-3 text-left text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+            >
+              <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M10 2L11.5 7.1L16.5 8.5L11.5 9.9L10 15L8.5 9.9L3.5 8.5L8.5 7.1L10 2Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+              </svg>
+              What’s new
+            </button>
           </nav>
         </div>
       )}

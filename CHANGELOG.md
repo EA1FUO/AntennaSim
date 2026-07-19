@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Added a responsive “What’s new” dialog with desktop and mobile reopen controls; dismissals are stored locally for 30 days so the same changelog does not repeatedly interrupt returning users
+
 ### Fixed
 
 - Aligned frequency validation, templates, and MMANA/NEC imports across the REST backend and browser/WASM engine at 0.1–2000 MHz, replacing stale 500 MHz converter and sweep limits
