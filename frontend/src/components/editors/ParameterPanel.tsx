@@ -24,6 +24,15 @@ interface ParameterPanelProps {
 }
 
 const LENGTH_PARAMETER_UNITS = new Set(["m"]);
+const HEIGHT_PARAMETER_KEYS = new Set([
+  "height",
+  "base_height",
+  "feed_height",
+  "far_end_height",
+]);
+const HEIGHT_SLIDER_MIN = 1;
+const HEIGHT_SLIDER_MAX = 100;
+const HEIGHT_SLIDER_STEP = 1;
 
 const LENGTH_UNIT_DECIMALS: Record<LengthUnit, number> = {
   m: 3,
@@ -73,19 +82,26 @@ export function ParameterPanel({
       <div className="space-y-3">
         {parameters.map((param) => {
           const isLength = LENGTH_PARAMETER_UNITS.has(param.unit);
+          const isHeight = HEIGHT_PARAMETER_KEYS.has(param.key);
           const lengthUnit = isLength ? selectedLengthUnit : undefined;
           const rawValue = values[param.key] ?? param.defaultValue;
           const displayValue = lengthUnit
             ? metersToLengthUnit(rawValue, lengthUnit)
             : rawValue;
           const min = lengthUnit
-            ? metersToLengthUnit(param.min, lengthUnit)
+            ? isHeight
+              ? HEIGHT_SLIDER_MIN
+              : metersToLengthUnit(param.min, lengthUnit)
             : param.min;
           const max = lengthUnit
-            ? metersToLengthUnit(param.max, lengthUnit)
+            ? isHeight
+              ? HEIGHT_SLIDER_MAX
+              : metersToLengthUnit(param.max, lengthUnit)
             : param.max;
           const step = lengthUnit
-            ? metersToLengthUnit(param.step, lengthUnit)
+            ? isHeight
+              ? HEIGHT_SLIDER_STEP
+              : metersToLengthUnit(param.step, lengthUnit)
             : param.step;
 
           return (

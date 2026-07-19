@@ -67,15 +67,12 @@ const MOBILE_SEGMENTS = [
 
 type MobileEditorTab = "wires" | "properties" | "settings" | "tools" | "results";
 
-const HEIGHT_UNIT_DISPLAY: Record<
-  LengthUnit,
-  { step: number; decimals: number }
-> = {
-  m: { step: 0.001, decimals: 3 },
-  cm: { step: 0.1, decimals: 1 },
-  mm: { step: 1, decimals: 0 },
-  ft: { step: 0.01, decimals: 2 },
-  in: { step: 0.1, decimals: 1 },
+const HEIGHT_UNIT_DECIMALS: Record<LengthUnit, number> = {
+  m: 3,
+  cm: 1,
+  mm: 0,
+  ft: 2,
+  in: 1,
 };
 
 export function EditorPage() {
@@ -393,27 +390,18 @@ export function EditorPage() {
   const activeHeightUnit: LengthUnit = imperial
     ? imperialLengthUnit
     : metricLengthUnit;
-  const heightUnitDisplay = HEIGHT_UNIT_DISPLAY[activeHeightUnit];
+  const heightUnitDecimals = HEIGHT_UNIT_DECIMALS[activeHeightUnit];
   const antennaHeightValue = metersToLengthUnit(
     antennaMinZ,
-    activeHeightUnit,
-  );
-  const antennaHeightMaxMeters = Math.max(
-    100,
-    300 / designFrequencyMhz,
-    antennaMaxZ,
-  );
-  const antennaHeightMax = metersToLengthUnit(
-    antennaHeightMaxMeters,
     activeHeightUnit,
   );
   const antennaHeightDescription = `Lowest point: ${metersToLengthUnit(
     antennaMinZ,
     activeHeightUnit,
-  ).toFixed(heightUnitDisplay.decimals)}${activeHeightUnit}, highest: ${metersToLengthUnit(
+  ).toFixed(heightUnitDecimals)}${activeHeightUnit}, highest: ${metersToLengthUnit(
     antennaMaxZ,
     activeHeightUnit,
-  ).toFixed(heightUnitDisplay.decimals)}${activeHeightUnit}`;
+  ).toFixed(heightUnitDecimals)}${activeHeightUnit}`;
 
   // Height adjustment handler — shifts all wires so that the lowest point is at the target height
   const handleHeightChange = useCallback(
@@ -761,13 +749,13 @@ export function EditorPage() {
               <Slider
                 label="Antenna Height"
                 value={antennaHeightValue}
-                min={0}
-                max={antennaHeightMax}
-                step={heightUnitDisplay.step}
+                min={1}
+                max={100}
+                step={1}
                 unit={activeHeightUnit}
                 unitOptions={heightUnitOptions}
                 onUnitChange={handleHeightUnitChange}
-                decimals={heightUnitDisplay.decimals}
+                decimals={heightUnitDecimals}
                 description={antennaHeightDescription}
                 onChange={handleDisplayedHeightChange}
               />
@@ -849,13 +837,13 @@ export function EditorPage() {
                 <Slider
                   label="Antenna Height"
                   value={antennaHeightValue}
-                  min={0}
-                  max={antennaHeightMax}
-                  step={heightUnitDisplay.step}
+                  min={1}
+                  max={100}
+                  step={1}
                   unit={activeHeightUnit}
                   unitOptions={heightUnitOptions}
                   onUnitChange={handleHeightUnitChange}
-                  decimals={heightUnitDisplay.decimals}
+                  decimals={heightUnitDecimals}
                   description={antennaHeightDescription}
                   onChange={handleDisplayedHeightChange}
                 />

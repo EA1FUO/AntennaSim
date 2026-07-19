@@ -15,8 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- Wire Editor design-frequency controls now reach 2 GHz; numeric fields preserve stored precision, height has a wavelength-aware range, millimeter snap increments are available, and new-wire size follows the design frequency
-- Added explicit length-unit selectors to both Editor height and Simulator template controls, following the global preference with m/cm/mm choices in metric mode and ft/in choices in imperial mode while preserving canonical meter values internally
+- Wire Editor design-frequency controls now reach 2 GHz; numeric fields preserve stored precision, millimeter snap increments are available, and new-wire size follows the design frequency
+- Added explicit, shared length-unit selectors to Editor and Simulator controls, following the global preference with m/cm/mm choices in metric mode and ft/in choices in imperial mode while preserving canonical meter values internally
+- Height sliders now change scale only when the user selects a unit, using a predictable 1–100 range in meters, centimeters, millimeters, feet, or inches
 
 ## [1.2.2] - 2026-06-01
 
