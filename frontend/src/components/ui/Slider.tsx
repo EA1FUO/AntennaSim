@@ -109,14 +109,14 @@ export function Slider({
 
   return (
     <div className="space-y-1">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
         <label
-          className="text-xs text-text-secondary truncate mr-2"
+          className="min-w-0 flex-1 truncate text-xs text-text-secondary"
           title={description}
         >
           {label}
         </label>
-        <div className="flex items-center gap-1">
+        <div className="ml-auto flex max-w-full items-center gap-1">
           {isEditing ? (
             <input
               type="number"
@@ -147,14 +147,14 @@ export function Slider({
             </button>
           )}
           {unitOptions && onUnitChange && (
-            <label className="flex items-center gap-1 text-[10px] text-text-secondary">
-              <span>Unit:</span>
+            <label className="flex min-w-0 items-center gap-1 text-[10px] text-text-secondary">
+              <span className="hidden sm:inline">Unit:</span>
               <select
                 aria-label={`${label} display unit`}
                 title={`Choose the unit used to display and edit ${label.toLowerCase()}`}
                 value={unit}
                 onChange={(event) => onUnitChange(event.target.value)}
-                className="max-w-28 bg-background border border-accent/40 rounded px-1 py-0.5
+                className="w-24 max-w-full sm:w-28 bg-background border border-accent/40 rounded px-1 py-0.5
                   text-[10px] font-mono text-text-primary cursor-pointer focus:outline-none
                   focus:border-accent"
               >
