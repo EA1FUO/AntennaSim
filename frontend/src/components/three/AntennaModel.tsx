@@ -4,9 +4,11 @@ import type { Mesh } from "three";
 import type { WireData } from "./types";
 import { getWireColor } from "./types";
 import { useUIStore } from "../../stores/uiStore";
+import type { VisualScale } from "./visualScale";
 
 interface AntennaModelProps {
   wire: WireData;
+  visualScale: VisualScale;
   /** When true, wire becomes semi-transparent so current overlays show through */
   dimmed?: boolean;
 }
@@ -18,7 +20,7 @@ interface AntennaModelProps {
  *
  * Includes end cap spheres at both endpoints for clean termination.
  */
-export function AntennaModel({ wire, dimmed = false }: AntennaModelProps) {
+export function AntennaModel({ wire, visualScale, dimmed = false }: AntennaModelProps) {
   const theme = useUIStore((s) => s.theme);
   const isDark = theme === "dark";
 
@@ -27,8 +29,7 @@ export function AntennaModel({ wire, dimmed = false }: AntennaModelProps) {
     const start = new Vector3(wire.x1, wire.z1, -wire.y1);
     const end = new Vector3(wire.x2, wire.z2, -wire.y2);
 
-    // Visual radius: enough to see, but proportional
-    const visualRadius = Math.max(wire.radius * 50, 0.03);
+    const visualRadius = visualScale.wireRadius(wire.radius);
 
     const curve = new LineCurve3(start, end);
     const tubeGeo = new TubeGeometry(curve, Math.max(2, wire.segments), visualRadius, 8, false);
@@ -45,9 +46,9 @@ export function AntennaModel({ wire, dimmed = false }: AntennaModelProps) {
 
     const caps: [Vector3, Vector3] = [start, end];
     return { geometry: tubeGeo, material: mat, endCapPositions: caps };
-  }, [wire, dimmed, isDark]);
+  }, [wire, visualScale, dimmed, isDark]);
 
-  const capRadius = Math.max(wire.radius * 60, 0.04);
+  const capRadius = visualScale.capRadius(wire.radius);
 
   // Tag mesh with wire data for hover measurement
   const meshRef = useRef<Mesh>(null);
@@ -94,11 +95,12 @@ export function AntennaModel({ wire, dimmed = false }: AntennaModelProps) {
  */
 interface JunctionSpheresProps {
   wires: WireData[];
+  visualScale: VisualScale;
   /** When true, junctions become semi-transparent so current overlays show through */
   dimmed?: boolean;
 }
 
-export function JunctionSpheres({ wires, dimmed = false }: JunctionSpheresProps) {
+export function JunctionSpheres({ wires, visualScale, dimmed = false }: JunctionSpheresProps) {
   const theme = useUIStore((s) => s.theme);
   const isDark = theme === "dark";
 
@@ -108,13 +110,13 @@ export function JunctionSpheres({ wires, dimmed = false }: JunctionSpheresProps)
     // Collect all endpoints in Three.js coords
     const eps: { pos: Vector3; radius: number }[] = [];
     for (const w of wires) {
-      const r = Math.max(w.radius * 60, 0.04);
+      const r = visualScale.junctionRadius(w.radius);
       eps.push({ pos: new Vector3(w.x1, w.z1, -w.y1), radius: r });
       eps.push({ pos: new Vector3(w.x2, w.z2, -w.y2), radius: r });
     }
 
     // Find endpoints that are within tolerance of each other (from different wires)
-    const tolerance = 0.01;
+    const tolerance = visualScale.junctionTolerance;
     const found: { pos: Vector3; radius: number }[] = [];
     const used = new Set<number>();
 
@@ -133,13 +135,13 @@ export function JunctionSpheres({ wires, dimmed = false }: JunctionSpheresProps)
         }
       }
       if (isJunction) {
-        found.push({ pos: eps[i]!.pos, radius: eps[i]!.radius * 1.5 });
+        found.push({ pos: eps[i]!.pos, radius: eps[i]!.radius });
         used.add(i);
       }
     }
 
     return found;
-  }, [wires]);
+  }, [wires, visualScale]);
 
   if (junctions.length === 0) return null;
 

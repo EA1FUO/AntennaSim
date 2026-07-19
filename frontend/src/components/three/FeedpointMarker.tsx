@@ -4,13 +4,14 @@ import type { Mesh } from "three";
 
 interface FeedpointMarkerProps {
   position: [number, number, number];
+  radius: number;
 }
 
 /**
  * Glowing sphere at the excitation/feedpoint.
  * Pulses subtly: scale = 1 + 0.15 * sin(time * 3)
  */
-export function FeedpointMarker({ position }: FeedpointMarkerProps) {
+export function FeedpointMarker({ position, radius }: FeedpointMarkerProps) {
   const meshRef = useRef<Mesh>(null);
 
   useFrame(({ clock }) => {
@@ -29,7 +30,7 @@ export function FeedpointMarker({ position }: FeedpointMarkerProps) {
 
   return (
     <mesh ref={meshRef} position={threePos}>
-      <sphereGeometry args={[0.12, 16, 16]} />
+      <sphereGeometry args={[radius, 16, 16]} />
       <meshPhysicalMaterial
         color="#F59E0B"
         emissive="#F59E0B"

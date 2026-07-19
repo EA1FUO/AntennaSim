@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Fixed
 
 - Aligned frequency validation, templates, and MMANA/NEC imports across the REST backend and browser/WASM engine at 0.1–2000 MHz, replacing stale 500 MHz converter and sweep limits
+- Made antenna geometry, feedpoints, current overlays, patterns, ground aids, and camera framing scale with antenna dimensions; thick wires no longer hide feedpoints, and large low-frequency antennas are framed after controls initialize
 
 ## [1.2.2] - 2026-06-01
 

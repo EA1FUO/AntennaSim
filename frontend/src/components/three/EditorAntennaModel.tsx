@@ -22,9 +22,11 @@ import type { WireData } from "./types";
 import { getWireColor } from "./types";
 import type { EditorMode } from "../../stores/editorStore";
 import { useUIStore } from "../../stores/uiStore";
+import type { VisualScale } from "./visualScale";
 
 interface EditorAntennaModelProps {
   wire: WireData;
+  visualScale: VisualScale;
   isSelected: boolean;
   hasFeedpoint: boolean;
   /** Actual excitation segment number (1-based), or undefined if no excitation */
@@ -91,6 +93,7 @@ function pointToSegment(
 
 export function EditorAntennaModel({
   wire,
+  visualScale,
   isSelected,
   hasFeedpoint,
   feedSegment,
@@ -116,7 +119,7 @@ export function EditorAntennaModel({
     const s = new Vector3(wire.x1, wire.z1, -wire.y1);
     const e = new Vector3(wire.x2, wire.z2, -wire.y2);
 
-    const visualRadius = Math.max(wire.radius * 50, 0.03);
+    const visualRadius = visualScale.wireRadius(wire.radius);
     const curve = new LineCurve3(s, e);
     const tubeGeo = new TubeGeometry(
       curve,
@@ -139,17 +142,17 @@ export function EditorAntennaModel({
     });
 
     return { geometry: tubeGeo, material: mat, start: s, end: e };
-  }, [wire, isSelected, dimmed, isDark]);
+  }, [wire, visualScale, isSelected, dimmed, isDark]);
 
   // Selection outline
   const outlineGeometry = useMemo(() => {
     if (!isSelected) return null;
     const s = new Vector3(wire.x1, wire.z1, -wire.y1);
     const e = new Vector3(wire.x2, wire.z2, -wire.y2);
-    const visualRadius = Math.max(wire.radius * 50, 0.03) * 1.4;
+    const visualRadius = visualScale.wireRadius(wire.radius) * 1.4;
     const curve = new LineCurve3(s, e);
     return new TubeGeometry(curve, Math.max(2, wire.segments), visualRadius, 8, false);
-  }, [wire, isSelected]);
+  }, [wire, visualScale, isSelected]);
 
   const outlineMaterial = useMemo(() => {
     if (!isSelected) return null;
@@ -251,7 +254,7 @@ export function EditorAntennaModel({
     return [pos.x, pos.y, pos.z];
   }, [isPicking, hoveredSegment, start, end, wire.segments, accurateFeedpoint]);
 
-  const capRadius = Math.max(wire.radius * 60, 0.04);
+  const capRadius = visualScale.capRadius(wire.radius);
   const endpointRadius = mode === "move" ? capRadius * 2.5 : capRadius;
   const endpointColor = mode === "move" ? "#10B981" : getWireColor(wire.tag);
 
@@ -325,14 +328,14 @@ export function EditorAntennaModel({
       {/* Feedpoint glow — positioned at actual excitation segment */}
       {hasFeedpoint && feedpointMat && (
         <mesh position={feedpointPosition} material={feedpointMat}>
-          <sphereGeometry args={[capRadius * 3, 16, 16]} />
+          <sphereGeometry args={[visualScale.markerRadius, 16, 16]} />
         </mesh>
       )}
 
       {/* Pick mode: ghost preview marker at hovered segment */}
       {previewPosition && (
         <mesh position={previewPosition}>
-          <sphereGeometry args={[capRadius * 3, 16, 16]} />
+          <sphereGeometry args={[visualScale.markerRadius, 16, 16]} />
           <meshPhysicalMaterial
             color="#3B82F6"
             emissive="#3B82F6"

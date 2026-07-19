@@ -26,6 +26,8 @@ interface CurrentFlowParticlesProps {
   currents: SegmentCurrent[];
   /** Maximum total particles */
   maxParticles?: number;
+  /** Particle radius in scene units */
+  particleRadius?: number;
 }
 
 /** Per-wire data for particle animation */
@@ -58,6 +60,7 @@ function currentToColor(normalized: number): Color {
 export function CurrentFlowParticles({
   currents,
   maxParticles = 500,
+  particleRadius = 0.025,
 }: CurrentFlowParticlesProps) {
   const meshRef = useRef<InstancedMesh>(null);
 
@@ -135,7 +138,10 @@ export function CurrentFlowParticles({
   }, [currents, maxParticles]);
 
   // Geometry and material (memoized, shared)
-  const geometry = useMemo(() => new SphereGeometry(0.025, 6, 6), []);
+  const geometry = useMemo(
+    () => new SphereGeometry(particleRadius, 6, 6),
+    [particleRadius]
+  );
   const material = useMemo(
     () =>
       new MeshBasicMaterial({

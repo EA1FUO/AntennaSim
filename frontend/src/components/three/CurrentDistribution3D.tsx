@@ -30,6 +30,8 @@ interface CurrentDistribution3DProps {
   showParticles?: boolean;
   /** Tube radius scale */
   tubeRadius?: number;
+  /** Flow-particle radius in scene units */
+  particleRadius?: number;
 }
 
 /** Hot colormap for current magnitude: dark blue -> cyan -> green -> yellow -> red */
@@ -203,9 +205,11 @@ function WireCurrentTube({
 function FlowParticles({
   segments,
   maxMagnitude,
+  particleRadius,
 }: {
   segments: SegmentCurrent[];
   maxMagnitude: number;
+  particleRadius: number;
 }) {
   const particleRef = useRef<Group>(null);
 
@@ -223,10 +227,12 @@ function FlowParticles({
     const normalizedAvg = maxMagnitude > 0 ? avgMag / maxMagnitude : 0;
     const count = Math.max(2, Math.floor(normalizedAvg * 8));
 
-    // Speed per particle (slightly randomized)
-    const sp = Array.from({ length: count }, () =>
-      (0.15 + normalizedAvg * 0.4) * (0.8 + Math.random() * 0.4)
-    );
+    // Slight deterministic variation avoids synchronized motion while keeping
+    // render output stable across React re-renders.
+    const sp = Array.from({ length: count }, (_, i) => {
+      const variation = count > 1 ? i / (count - 1) : 0.5;
+      return (0.15 + normalizedAvg * 0.4) * (0.8 + variation * 0.4);
+    });
 
     return { curve: c, particleCount: count, speeds: sp };
   }, [segments, maxMagnitude]);
@@ -258,7 +264,7 @@ function FlowParticles({
     <group ref={particleRef}>
       {Array.from({ length: particleCount }, (_, i) => (
         <mesh key={i} userData={{ t: i / particleCount }}>
-          <sphereGeometry args={[0.04, 6, 6]} />
+          <sphereGeometry args={[particleRadius, 6, 6]} />
           <meshStandardMaterial
             color="#F59E0B"
             emissive="#F59E0B"
@@ -276,6 +282,7 @@ export function CurrentDistribution3D({
   currents,
   showParticles = true,
   tubeRadius = 0.05,
+  particleRadius = 0.04,
 }: CurrentDistribution3DProps) {
   const theme = useUIStore((s) => s.theme);
   const colormapStops = theme === "dark" ? CURRENT_COLORMAP_DARK : CURRENT_COLORMAP_LIGHT;
@@ -302,7 +309,11 @@ export function CurrentDistribution3D({
             colormapStops={colormapStops}
           />
           {showParticles && (
-            <FlowParticles segments={segs} maxMagnitude={maxMagnitude} />
+            <FlowParticles
+              segments={segs}
+              maxMagnitude={maxMagnitude}
+              particleRadius={particleRadius}
+            />
           )}
         </group>
       ))}
