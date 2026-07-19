@@ -10,6 +10,7 @@ services:
       - ./frontend/public:/app/public
       - ./frontend/index.html:/app/index.html
       - ./VERSION:/VERSION:ro
+      - ./CHANGELOG.md:/CHANGELOG.md:ro
     environment:
       - VITE_API_URL=http://localhost:8000
       - VITE_WS_URL=ws://localhost:8000

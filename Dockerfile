@@ -11,6 +11,7 @@ COPY frontend/package.json frontend/package-lock.json* ./
 RUN npm ci
 
 COPY VERSION /VERSION
+COPY CHANGELOG.md /CHANGELOG.md
 COPY frontend/ .
 RUN npm run build
 
