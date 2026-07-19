@@ -10,6 +10,7 @@ import { useCallback } from "react";
 import { NumberInput } from "./NumberInput";
 import { computeSteps } from "../../utils/ham-bands";
 import type { FrequencyRange, FrequencySegment } from "../../templates/types";
+import { MAX_FREQUENCY_MHZ, MIN_FREQUENCY_MHZ } from "../../engine/limits";
 
 interface FrequencySegmentEditorProps {
   /** The single-range frequency (fallback when no segments) */
@@ -41,8 +42,8 @@ export function FrequencySegmentEditor({
     // Default: add a segment around the current single-range center
     const center = (frequencyRange.start_mhz + frequencyRange.stop_mhz) / 2;
     const bw = Math.max(0.5, (frequencyRange.stop_mhz - frequencyRange.start_mhz) * 0.3);
-    const start = Math.round(Math.max(0.1, center - bw / 2) * 100) / 100;
-    const stop = Math.round(Math.min(2000, center + bw / 2) * 100) / 100;
+    const start = Math.round(Math.max(MIN_FREQUENCY_MHZ, center - bw / 2) * 100) / 100;
+    const stop = Math.round(Math.min(MAX_FREQUENCY_MHZ, center + bw / 2) * 100) / 100;
     onSegmentsChange([
       ...segments,
       { start_mhz: start, stop_mhz: stop, steps: computeSteps(start, stop), label: "Custom" },
@@ -78,6 +79,9 @@ export function FrequencySegmentEditor({
           <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider">
             Frequency Sweep
           </h3>
+          <span className="text-[9px] text-text-secondary font-mono">
+            {MIN_FREQUENCY_MHZ}–{MAX_FREQUENCY_MHZ} MHz
+          </span>
         </div>
         <div className="flex items-center gap-1 px-1 flex-wrap">
           <NumberInput
@@ -89,7 +93,7 @@ export function FrequencySegmentEditor({
                 steps: computeSteps(v, frequencyRange.stop_mhz),
               })
             }
-            min={0.1}
+            min={MIN_FREQUENCY_MHZ}
             max={frequencyRange.stop_mhz - 0.1}
             decimals={1}
             size={size}
@@ -105,7 +109,7 @@ export function FrequencySegmentEditor({
               })
             }
             min={frequencyRange.start_mhz + 0.1}
-            max={500}
+            max={MAX_FREQUENCY_MHZ}
             decimals={1}
             unit="MHz"
             size={size}
@@ -133,6 +137,9 @@ export function FrequencySegmentEditor({
           <span className="ml-1 text-accent font-normal normal-case">
             ({segments.length})
           </span>
+          <span className="ml-1 text-[9px] text-text-secondary font-normal normal-case">
+            up to {MAX_FREQUENCY_MHZ / 1000} GHz
+          </span>
         </h3>
         <button
           onClick={handleClearSegments}
@@ -157,7 +164,7 @@ export function FrequencySegmentEditor({
                   steps: computeSteps(v, seg.stop_mhz),
                 })
               }
-              min={0.1}
+              min={MIN_FREQUENCY_MHZ}
               max={seg.stop_mhz - 0.01}
               decimals={3}
               size={size ?? "xs"}
@@ -172,7 +179,7 @@ export function FrequencySegmentEditor({
                 })
               }
               min={seg.start_mhz + 0.01}
-              max={2000}
+              max={MAX_FREQUENCY_MHZ}
               decimals={3}
               size={size ?? "xs"}
             />

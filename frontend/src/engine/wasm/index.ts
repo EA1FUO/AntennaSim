@@ -32,6 +32,10 @@ import type {
   OptimizerWorkerRequest,
   OptimizerWorkerResponse,
 } from "./worker-optimizer";
+import {
+  assertSupportedFrequencyMhz,
+  assertSupportedFrequencyRange,
+} from "../limits";
 
 // ---------------------------------------------------------------------------
 // Worker pool (single worker per type, lazy-initialized)
@@ -160,6 +164,7 @@ export class WasmEngine implements SimulationEngine {
   async simulateAdvanced(
     request: SimulateAdvancedRequest,
   ): Promise<SimulationResult> {
+    assertSupportedFrequencyRange(request.frequency, request.frequencySegments);
     ensureSimWorkerListener();
 
     const id = generateId();
@@ -238,6 +243,20 @@ export class WasmEngine implements SimulationEngine {
     request: OptimizationRequest,
     onProgress: (progress: OptimizationProgress) => void,
   ): Promise<{ result: Promise<OptimizationResult>; cancel: () => void }> {
+    assertSupportedFrequencyMhz(
+      request.frequency_start_mhz,
+      "Optimizer start frequency",
+    );
+    assertSupportedFrequencyMhz(
+      request.frequency_stop_mhz,
+      "Optimizer stop frequency",
+    );
+    if (request.target_frequency_mhz !== undefined) {
+      assertSupportedFrequencyMhz(
+        request.target_frequency_mhz,
+        "Optimizer target frequency",
+      );
+    }
     // Create a fresh optimizer worker for each run
     // (we terminate the old one if present to free resources)
     if (optWorker) {

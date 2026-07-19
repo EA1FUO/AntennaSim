@@ -19,6 +19,7 @@ import math
 
 from src.models.antenna import Wire, Excitation, LumpedLoad, LoadType
 from src.models.ground import GroundConfig, GroundType
+from src.models.limits import MAX_FREQUENCY_MHZ, MIN_FREQUENCY_MHZ
 
 logger = logging.getLogger("antsim.converters.maa_import")
 
@@ -231,7 +232,7 @@ def parse_maa(content: str) -> MAAData:
         if "mhz" in line or line.replace(".", "").replace("-", "").isdigit():
             try:
                 freq = float(line.split()[0].replace(",", ""))
-                if 0.1 <= freq <= 500:
+                if MIN_FREQUENCY_MHZ <= freq <= MAX_FREQUENCY_MHZ:
                     data.frequency_mhz = freq
             except (ValueError, IndexError):
                 pass

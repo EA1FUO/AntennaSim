@@ -30,6 +30,7 @@ import type {
   FrequencyRange,
 } from "./types";
 import type { LumpedLoad } from "../api/nec";
+import { MAX_FREQUENCY_MHZ, MIN_FREQUENCY_MHZ } from "../engine/limits";
 
 // Free-space permeability (H/m), used for the loop inductance.
 const MU0 = 4 * Math.PI * 1e-7;
@@ -275,8 +276,8 @@ export const magneticLoopTemplate: AntennaTemplate = {
     // resolved. Re-tune Capacitor Tuning to slide the dip into the window.
     const bw = freq * 0.003;
     return {
-      start_mhz: Math.max(0.1, freq - bw),
-      stop_mhz: Math.min(2000, freq + bw),
+      start_mhz: Math.max(MIN_FREQUENCY_MHZ, freq - bw),
+      stop_mhz: Math.min(MAX_FREQUENCY_MHZ, freq + bw),
       steps: 81,
     };
   },

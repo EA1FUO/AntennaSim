@@ -9,6 +9,7 @@
  */
 
 import type { ImportResult } from "../types";
+import { MAX_FREQUENCY_MHZ, MIN_FREQUENCY_MHZ } from "../limits";
 
 // ---- Recursive descent expression parser ----
 
@@ -354,12 +355,12 @@ export function parseNecFile(content: string): ImportResult {
         const start = parseFloatToken(part(parts, 5), sySymbols);
         const step = parts.length > 6 ? parseFloatToken(part(parts, 6), sySymbols) : 0.0;
 
-        frequencyStartMhz = Math.max(0.1, Math.min(2000.0, start));
+        frequencyStartMhz = Math.max(MIN_FREQUENCY_MHZ, Math.min(MAX_FREQUENCY_MHZ, start));
         frequencySteps = Math.max(1, Math.min(201, nFreq));
         if (nFreq > 1 && step > 0) {
           frequencyStopMhz = Math.max(
             frequencyStartMhz,
-            Math.min(2000.0, start + step * (nFreq - 1)),
+            Math.min(MAX_FREQUENCY_MHZ, start + step * (nFreq - 1)),
           );
         } else {
           frequencyStopMhz = frequencyStartMhz;

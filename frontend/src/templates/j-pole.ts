@@ -25,6 +25,7 @@ import type {
   FrequencyRange,
 } from "./types";
 import { autoSegment } from "../engine/segmentation";
+import { MAX_FREQUENCY_MHZ, MIN_FREQUENCY_MHZ } from "../engine/limits";
 
 export const jPoleTemplate: AntennaTemplate = {
   id: "j-pole",
@@ -59,7 +60,7 @@ export const jPoleTemplate: AntennaTemplate = {
       description: "Center frequency",
       unit: "MHz",
       min: 1,
-      max: 2000,
+      max: MAX_FREQUENCY_MHZ,
       step: 0.1,
       defaultValue: 145.0,
       decimals: 3,
@@ -192,8 +193,8 @@ export const jPoleTemplate: AntennaTemplate = {
     const freq = params.frequency ?? 145.0;
     const bw = freq * 0.08;
     return {
-      start_mhz: Math.max(0.1, freq - bw / 2),
-      stop_mhz: Math.min(2000, freq + bw / 2),
+      start_mhz: Math.max(MIN_FREQUENCY_MHZ, freq - bw / 2),
+      stop_mhz: Math.min(MAX_FREQUENCY_MHZ, freq + bw / 2),
       steps: 31,
     };
   },

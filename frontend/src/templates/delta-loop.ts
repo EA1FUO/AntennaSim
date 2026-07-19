@@ -26,6 +26,7 @@ import type {
   FrequencyRange,
 } from "./types";
 import { autoSegment, centerSegment } from "../engine/segmentation";
+import { MAX_FREQUENCY_MHZ, MIN_FREQUENCY_MHZ } from "../engine/limits";
 
 export const deltaLoopTemplate: AntennaTemplate = {
   id: "delta-loop",
@@ -62,7 +63,7 @@ export const deltaLoopTemplate: AntennaTemplate = {
       description: "Resonant frequency of the loop",
       unit: "MHz",
       min: 0.5,
-      max: 2000,
+      max: MAX_FREQUENCY_MHZ,
       step: 0.1,
       defaultValue: 14.15,
       decimals: 3,
@@ -180,8 +181,8 @@ export const deltaLoopTemplate: AntennaTemplate = {
     const freq = params.frequency ?? 14.15;
     const bw = freq * 0.1;
     return {
-      start_mhz: Math.max(0.1, freq - bw / 2),
-      stop_mhz: Math.min(2000, freq + bw / 2),
+      start_mhz: Math.max(MIN_FREQUENCY_MHZ, freq - bw / 2),
+      stop_mhz: Math.min(MAX_FREQUENCY_MHZ, freq + bw / 2),
       steps: 31,
     };
   },

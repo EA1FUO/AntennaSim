@@ -14,6 +14,7 @@
  */
 
 import type { ImportResult } from "../types";
+import { MAX_FREQUENCY_MHZ, MIN_FREQUENCY_MHZ } from "../limits";
 
 function lineAt(lines: string[], i: number): string {
   return i < lines.length ? lines[i]! : "";
@@ -171,7 +172,7 @@ export function parseMaa(content: string): ImportResult {
       try {
         const firstToken = line.split(/\s+/)[0]!.replace(/,/g, "");
         const freq = parseFloat(firstToken);
-        if (freq >= 0.1 && freq <= 500) {
+        if (freq >= MIN_FREQUENCY_MHZ && freq <= MAX_FREQUENCY_MHZ) {
           frequencyMhz = freq;
         }
       } catch {

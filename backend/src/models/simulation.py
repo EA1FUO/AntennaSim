@@ -5,6 +5,7 @@ from pydantic import Field, model_validator
 from src.models.antenna import Wire, Excitation, LumpedLoad, TransmissionLine, WireArc, GeometryTransform, CylindricalSymmetry
 from src.models.base import StrictModel
 from src.models.ground import GroundConfig
+from src.models.limits import MAX_FREQUENCY_MHZ, MIN_FREQUENCY_MHZ
 
 
 class NearFieldConfig(StrictModel):
@@ -23,8 +24,8 @@ class NearFieldConfig(StrictModel):
 class FrequencyConfig(StrictModel):
     """Frequency sweep configuration."""
 
-    start_mhz: float = Field(ge=0.1, le=2000.0, description="Start frequency (MHz)")
-    stop_mhz: float = Field(ge=0.1, le=2000.0, description="Stop frequency (MHz)")
+    start_mhz: float = Field(ge=MIN_FREQUENCY_MHZ, le=MAX_FREQUENCY_MHZ, description="Start frequency (MHz)")
+    stop_mhz: float = Field(ge=MIN_FREQUENCY_MHZ, le=MAX_FREQUENCY_MHZ, description="Stop frequency (MHz)")
     steps: int = Field(ge=1, le=201, description="Number of frequency steps")
 
     @model_validator(mode="after")
@@ -43,8 +44,8 @@ class FrequencyConfig(StrictModel):
 class FrequencySegmentConfig(StrictModel):
     """A single frequency segment for multi-band sweeps."""
 
-    start_mhz: float = Field(ge=0.1, le=2000.0, description="Segment start frequency (MHz)")
-    stop_mhz: float = Field(ge=0.1, le=2000.0, description="Segment stop frequency (MHz)")
+    start_mhz: float = Field(ge=MIN_FREQUENCY_MHZ, le=MAX_FREQUENCY_MHZ, description="Segment start frequency (MHz)")
+    stop_mhz: float = Field(ge=MIN_FREQUENCY_MHZ, le=MAX_FREQUENCY_MHZ, description="Segment stop frequency (MHz)")
     steps: int = Field(ge=1, le=201, description="Number of steps in this segment")
     label: str | None = Field(default=None, max_length=50, description="Optional label (e.g. '20m')")
 

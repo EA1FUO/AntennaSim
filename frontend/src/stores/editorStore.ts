@@ -15,6 +15,7 @@ import type { WireGeometry, Excitation, GroundConfig, FrequencyRange, FrequencyS
 import type { LumpedLoad, TransmissionLine } from "../api/nec";
 import { autoSegment, centerSegment } from "../engine/segmentation";
 import { computeSteps } from "../utils/ham-bands";
+import { clampFrequencyMhz, MAX_FREQUENCY_MHZ, MIN_FREQUENCY_MHZ } from "../engine/limits";
 
 // ---- Types ----
 
@@ -796,9 +797,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setShowGrid: (show) => set({ showGrid: show }),
   setDesignFrequency: (mhz) => {
     const state = get();
+    const designFrequencyMhz = clampFrequencyMhz(mhz);
     // Recompute wire segments with new design frequency (skip manually overridden)
     const newWires = state.wires.map((w) =>
-      w.segmentsManual ? { ...w } : { ...w, segments: computeSegments(w, mhz) }
+      w.segmentsManual ? { ...w } : { ...w, segments: computeSegments(w, designFrequencyMhz) }
     );
     // Scale a segment reference on a wire proportionally to its new segment count,
     // so excitations, loads, and transmission lines keep their relative position
@@ -827,9 +829,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       segment2: scaleSeg(tl.wire_tag2, tl.segment2),
     }));
     // Update frequency range to center on the new design frequency (~10% bandwidth)
-    const bandwidth = mhz * 0.1;
-    const newStart = Math.round(Math.max(0.1, mhz - bandwidth / 2) * 1000) / 1000;
-    const newStop = Math.round(Math.min(2000, mhz + bandwidth / 2) * 1000) / 1000;
+    const bandwidth = designFrequencyMhz * 0.1;
+    const newStart = Math.round(Math.max(MIN_FREQUENCY_MHZ, designFrequencyMhz - bandwidth / 2) * 1000) / 1000;
+    const newStop = Math.round(Math.min(MAX_FREQUENCY_MHZ, designFrequencyMhz + bandwidth / 2) * 1000) / 1000;
     const newFreqRange: FrequencyRange = {
       start_mhz: newStart,
       stop_mhz: newStop,
@@ -837,7 +839,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     };
     set({
       ...pushUndo(state),
-      designFrequencyMhz: mhz,
+      designFrequencyMhz,
       wires: newWires,
       excitations: newExcitations,
       loads: newLoads,
