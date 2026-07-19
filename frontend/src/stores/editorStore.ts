@@ -810,20 +810,44 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const newY = ay + dy * length;
     const newZ = az + dz * length;
 
-    const updates: Partial<EditorWire> = anchor === "start"
-      ? { x2: newX, y2: newY, z2: newZ }
-      : { x1: newX, y1: newY, z1: newZ };
-
-    const newWires = state.wires.map((w) => {
-      if (w.tag !== tag) return w;
-      const updated = { ...w, ...updates };
-      if (!w.segmentsManual) {
-        updated.segments = computeSegments(updated, state.designFrequencyMhz);
-      }
-      return updated;
+    const movingEndpoint: WireEndpoint = anchor === "start" ? "end" : "start";
+    const currentPosition = movingEndpoint === "start"
+      ? { x: wire.x1, y: wire.y1, z: wire.z1 }
+      : { x: wire.x2, y: wire.y2, z: wire.z2 };
+    const refs = expandJunctionEndpoints(
+      [{ wireTag: tag, endpoint: movingEndpoint }],
+      state.junctions,
+    );
+    const translated = translateEndpoints(state.wires, refs, {
+      x: newX - currentPosition.x,
+      y: newY - currentPosition.y,
+      z: newZ - currentPosition.z,
     });
+    // Editing this wire's length is an explicit override, even when its own
+    // length lock is enabled. Other connected length locks still protect
+    // their wires from being stretched by the resize.
+    const conflict = lengthLockConflict(
+      state.wires.map((candidate) => candidate.tag === tag
+        ? { ...candidate, lengthLocked: false }
+        : candidate),
+      translated,
+    );
+    if (conflict !== null) {
+      set({ lastEditorMessage: `Wire ${conflict} has a locked length and prevents resizing this connection.` });
+      return;
+    }
+    const newWires = recomputeMovedWireSegments(
+      state.wires,
+      translated,
+      state.designFrequencyMhz,
+    );
 
-    set({ ...pushUndo(state), wires: newWires });
+    set({
+      ...pushUndo(state),
+      wires: newWires,
+      ...reconcileSegmentReferences(state, newWires),
+      lastEditorMessage: null,
+    });
   },
 
   toggleLengthLock: (tag) => {
@@ -907,7 +931,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return { ...e, wire_tag: firstWire.tag, segment: Math.max(1, Math.min(firstWire.segments, Math.round(ratio * firstWire.segments))) };
     });
 
-    const newWires = state.wires.filter((w) => w.tag !== tag).concat(newWiresList);
+    let newWires = state.wires.filter((w) => w.tag !== tag).concat(newWiresList);
     const transferredJunctions = replaceWireInJunctions(
       state.junctions,
       tag,
@@ -919,6 +943,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       newWiresList,
       state.nextJunctionId,
     );
+    const bentEnd = { wireTag: newWiresList[newWiresList.length - 1]!.tag, endpoint: "end" as const };
+    const bentEndPosition = getEndpointPosition(newWires, bentEnd)!;
+    const externalJunction = findEndpointJunction(chain.junctions, bentEnd);
+    if (externalJunction) {
+      for (const member of externalJunction.endpoints) {
+        newWires = setEndpointPosition(newWires, member, bentEndPosition);
+      }
+      const conflict = lengthLockConflict(state.wires, newWires);
+      if (conflict !== null) {
+        set({ lastEditorMessage: `Wire ${conflict} has a locked length and prevents bending this connection.` });
+        return;
+      }
+      newWires = recomputeMovedWireSegments(state.wires, newWires, state.designFrequencyMhz);
+    }
 
     set({
       ...pushUndo(state),
@@ -929,6 +967,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       junctions: chain.junctions,
       nextJunctionId: chain.nextJunctionId,
       nextTag,
+      lastEditorMessage: null,
     });
   },
 

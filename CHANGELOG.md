@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added ordered endpoint picking with responsive Snap, Keep Length, Lock, and Unlock controls; matching S, Shift+S, and J shortcuts; connection feedback; and junction-aware drag gestures
 - Added junction persistence to `.antennasim` editor projects with schema validation and automatic compatibility for schema v1 files
 
+### Fixed
+
+- Kept locked junction members together when wire lengths are edited numerically, while respecting length locks on adjacent wires
+
 ## [1.3.1] - 2026-07-19
 
 ### Fixed

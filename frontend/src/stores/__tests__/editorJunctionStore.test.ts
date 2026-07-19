@@ -162,6 +162,40 @@ describe("editor junction locks", () => {
     expect(connected?.z1).toBe(2);
   });
 
+  it("moves a locked junction when a connected wire is resized", () => {
+    resetEditor(baseWires, [
+      {
+        id: 1,
+        endpoints: [
+          { wireTag: 1, endpoint: "end" },
+          { wireTag: 3, endpoint: "start" },
+        ],
+      },
+    ]);
+
+    useEditorStore.getState().setWireLength(1, 2, "start");
+    const [resized, , connected] = useEditorStore.getState().wires;
+    expect(resized?.x2).toBe(2);
+    expect(connected?.x1).toBe(2);
+  });
+
+  it("blocks a resize that would stretch another length-locked wire", () => {
+    resetEditor(
+      baseWires.map((wire) => wire.tag === 3 ? { ...wire, lengthLocked: true } : wire),
+      [{
+        id: 1,
+        endpoints: [
+          { wireTag: 1, endpoint: "end" },
+          { wireTag: 3, endpoint: "start" },
+        ],
+      }],
+    );
+
+    useEditorStore.getState().setWireLength(1, 2, "start");
+    expect(useEditorStore.getState().wires[0]?.x2).toBe(1);
+    expect(useEditorStore.getState().lastEditorMessage).toContain("prevents resizing");
+  });
+
   it("transfers external junctions and locks the new midpoint when splitting", () => {
     resetEditor(baseWires, [
       {
@@ -183,6 +217,26 @@ describe("editor junction locks", () => {
       junction.endpoints.some((endpoint) => endpoint.wireTag === 4 && endpoint.endpoint === "end") &&
       junction.endpoints.some((endpoint) => endpoint.wireTag === 5 && endpoint.endpoint === "start"),
     )).toBe(true);
+  });
+
+  it("keeps an external junction attached when bending a connected wire", () => {
+    resetEditor(baseWires, [{
+      id: 1,
+      endpoints: [
+        { wireTag: 1, endpoint: "end" },
+        { wireTag: 3, endpoint: "start" },
+      ],
+    }]);
+
+    useEditorStore.getState().bendWire(1, 0.5, 90, "horizontal", 2);
+    const state = useEditorStore.getState();
+    const lastBent = state.wires.find((wire) => wire.tag === 5)!;
+    const connected = state.wires.find((wire) => wire.tag === 3)!;
+    expect([connected.x1, connected.y1, connected.z1]).toEqual([
+      lastBent.x2,
+      lastBent.y2,
+      lastBent.z2,
+    ]);
   });
 
   it("duplicates internal junctions with the duplicated wire tags", () => {
