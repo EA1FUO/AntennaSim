@@ -218,17 +218,8 @@ export function ChangelogPopup() {
                         strokeLinejoin="round"
                       />
                     </svg>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                        <span className="font-mono text-sm font-semibold text-text-primary">
-                          v{entry.version}
-                        </span>
-                        {entry.date && (
-                          <span className="text-[10px] text-text-secondary sm:text-xs">
-                            {entry.date}
-                          </span>
-                        )}
-                      </span>
+                    <span className="min-w-0 flex-1 font-mono text-sm font-semibold text-text-primary">
+                      v{entry.version}
                     </span>
                     {index === 0 && (
                       <span className="shrink-0 rounded-full bg-accent/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-accent sm:text-[10px]">
