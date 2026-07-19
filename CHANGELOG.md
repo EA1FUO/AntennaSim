@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Added a responsive “What’s new” dialog with desktop and mobile reopen controls; dismissals are stored locally for 30 days so the same changelog does not repeatedly interrupt returning users
+- Added a responsive “What’s new” dialog with desktop and mobile reopen controls, an expandable history of every release back to the initial public version, and 30-day local dismissal storage so the same changelog does not repeatedly interrupt returning users
 
 ### Fixed
 

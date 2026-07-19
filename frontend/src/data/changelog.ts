@@ -1,42 +1,11 @@
-interface ChangelogSection {
-  title: string;
-  items: readonly string[];
-}
+import changelogMarkdown from "../../../CHANGELOG.md?raw";
+import { parseChangelog } from "../utils/changelog-parser";
 
-interface ChangelogEntry {
-  /** Change this value whenever the popup content changes materially. */
-  id: string;
-  title: string;
-  summary: string;
-  sections: readonly ChangelogSection[];
-}
+/** Full release history, generated from the project's canonical changelog. */
+export const CHANGELOG_ENTRIES = parseChangelog(changelogMarkdown);
 
-/** User-facing summary of the current unreleased changelog. */
-export const CURRENT_CHANGELOG: ChangelogEntry = {
-  id: "high-frequency-precision-2026-07",
-  title: "What’s new in AntennaSim",
-  summary: "High-frequency and precision improvements",
-  sections: [
-    {
-      title: "Wider frequency range",
-      items: [
-        "Simulator and Editor frequency controls now support 0.1–2000 MHz in both the server and browser/WASM engines.",
-        "Imports and validation now use the same limits, avoiding different results between workflows.",
-      ],
-    },
-    {
-      title: "Clearer antenna visualization",
-      items: [
-        "Wires, feedpoints, current overlays, patterns, camera framing, and fog now scale with the antenna geometry.",
-        "Very small antennas remain readable without bulky wires, while large low-frequency antennas stay visible in the scene.",
-      ],
-    },
-    {
-      title: "More precise dimensions",
-      items: [
-        "Height controls in both Simulator and Editor offer explicit m, cm, mm, ft, and in choices based on the global unit system.",
-        "Each selected unit uses a predictable 1–100 slider range, and numeric fields preserve precise values.",
-      ],
-    },
-  ],
-};
+/** Changing the app version makes a new release eligible for automatic display. */
+export const CURRENT_CHANGELOG_ID =
+  typeof __APP_VERSION__ !== "undefined"
+    ? __APP_VERSION__
+    : (CHANGELOG_ENTRIES[0]?.version ?? "unknown");
