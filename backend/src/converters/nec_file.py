@@ -9,6 +9,7 @@ import logging
 
 from src.models.antenna import Wire, Excitation, LumpedLoad, LoadType, TransmissionLine
 from src.models.ground import GroundConfig, GroundType
+from src.models.limits import MAX_FREQUENCY_MHZ, MIN_FREQUENCY_MHZ
 
 logger = logging.getLogger("antsim.converters.nec_file")
 
@@ -332,12 +333,12 @@ def parse_nec_file(content: str) -> NECFileData:
                 start = _parse_float_token(parts[5], sy_symbols)
                 step = _parse_float_token(parts[6], sy_symbols) if len(parts) > 6 else 0.0
 
-                data.frequency_start_mhz = max(0.1, min(2000.0, start))
+                data.frequency_start_mhz = max(MIN_FREQUENCY_MHZ, min(MAX_FREQUENCY_MHZ, start))
                 data.frequency_steps = max(1, min(201, n_freq))
                 if n_freq > 1 and step > 0:
                     data.frequency_stop_mhz = max(
                         data.frequency_start_mhz,
-                        min(2000.0, start + step * (n_freq - 1)),
+                        min(MAX_FREQUENCY_MHZ, start + step * (n_freq - 1)),
                     )
                 else:
                     data.frequency_stop_mhz = data.frequency_start_mhz

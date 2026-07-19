@@ -5,11 +5,17 @@ import { useUIStore } from "../../stores/uiStore";
 /**
  * Compass rose on the ground plane showing N/S/E/W with degree markings.
  */
-export function CompassRose() {
+interface CompassRoseProps {
+  radius?: number;
+}
+
+export function CompassRose({ radius = 20 }: CompassRoseProps) {
   const theme = useUIStore((s) => s.theme);
   const isDark = theme === "dark";
 
-  const radius = 20;
+  const labelOffset = radius * 0.075;
+  const fontSize = radius * 0.06;
+  const ringWidth = radius * 0.0025;
   const secondaryColor = isDark ? "#8888A0" : "#505068";
   const labels = useMemo(
     () => [
@@ -32,19 +38,19 @@ export function CompassRose() {
   }, []);
 
   return (
-    <group position={[0, 0.02, 0]}>
+    <group position={[0, radius * 0.001, 0]}>
       {/* Cardinal direction labels */}
       {labels.map(({ text, angle, color }) => {
         const rad = (angle * Math.PI) / 180;
         // NEC2: Y=north, X=east. Three.js: X=east, Z=south(=-north)
-        const x = Math.sin(rad) * (radius + 1.5);
-        const z = -Math.cos(rad) * (radius + 1.5);
+        const x = Math.sin(rad) * (radius + labelOffset);
+        const z = -Math.cos(rad) * (radius + labelOffset);
         return (
           <Text
             key={text}
-            position={[x, 0.05, z]}
+            position={[x, radius * 0.0025, z]}
             rotation={[-Math.PI / 2, 0, 0]}
-            fontSize={1.2}
+            fontSize={fontSize}
             color={color}
             anchorX="center"
             anchorY="middle"
@@ -56,15 +62,15 @@ export function CompassRose() {
       })}
 
       {/* Circle ring */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-        <ringGeometry args={[radius - 0.05, radius + 0.05, 64]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, radius * 0.0005, 0]}>
+        <ringGeometry args={[radius - ringWidth, radius + ringWidth, 64]} />
         <meshBasicMaterial color={isDark ? "#2A2A35" : "#9090A0"} transparent opacity={0.6} />
       </mesh>
 
       {/* 30-degree tick marks */}
       {tickMarks.map(({ angle, length }) => {
         const rad = (angle * Math.PI) / 180;
-        const innerR = radius - length;
+        const innerR = radius - length * radius * 0.04;
         const x1 = Math.sin(rad) * innerR;
         const z1 = -Math.cos(rad) * innerR;
         const x2 = Math.sin(rad) * radius;
@@ -74,7 +80,7 @@ export function CompassRose() {
             <bufferGeometry>
               <bufferAttribute
                 attach="attributes-position"
-                args={[new Float32Array([x1, 0.02, z1, x2, 0.02, z2]), 3]}
+                args={[new Float32Array([x1, radius * 0.001, z1, x2, radius * 0.001, z2]), 3]}
               />
             </bufferGeometry>
             <lineBasicMaterial color={isDark ? "#2A2A35" : "#9090A0"} transparent opacity={0.6} />

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Grid } from "@react-three/drei";
 import type { WireData } from "./types";
 import { useUIStore } from "../../stores/uiStore";
+import { getAntennaSpan } from "./visualScale";
 
 /**
  * Ground plane visualization with auto-sizing grid at Y=0.
@@ -12,6 +13,14 @@ import { useUIStore } from "../../stores/uiStore";
 interface GroundPlaneProps {
   /** Wire data for computing grid extents */
   wires?: WireData[];
+}
+
+function roundUpNice(value: number): number {
+  const exponent = Math.floor(Math.log10(value));
+  const scale = 10 ** exponent;
+  const fraction = value / scale;
+  const niceFraction = fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 5 ? 5 : 10;
+  return niceFraction * scale;
 }
 
 export function GroundPlane({ wires = [] }: GroundPlaneProps) {
@@ -36,26 +45,10 @@ export function GroundPlane({ wires = [] }: GroundPlaneProps) {
       );
     }
 
-    // Grid extends at least 2x the footprint, minimum 20m
-    const extent = Math.max(maxExtent * 4, 20);
-    const size = Math.ceil(extent / 10) * 10; // Round up to nearest 10
-
-    // Adapt cell/section size to scale
-    let cell: number;
-    let section: number;
-    if (size <= 20) {
-      cell = 0.5;
-      section = 2;
-    } else if (size <= 50) {
-      cell = 1;
-      section = 5;
-    } else if (size <= 200) {
-      cell = 2;
-      section = 10;
-    } else {
-      cell = 5;
-      section = 25;
-    }
+    const antennaSpan = getAntennaSpan(wires);
+    const size = roundUpNice(Math.max(maxExtent * 4, antennaSpan * 4));
+    const cell = roundUpNice(size / 40);
+    const section = cell * 5;
 
     return {
       gridSize: size,
@@ -82,7 +75,7 @@ export function GroundPlane({ wires = [] }: GroundPlaneProps) {
         infiniteGrid
       />
       {/* Semi-transparent ground surface — offset below grid to prevent z-fighting */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -gridSize * 0.0025, 0]}>
         <planeGeometry args={[gridSize * 2, gridSize * 2]} />
         <meshStandardMaterial
           color={isDark ? "#1a2a1a" : "#90a890"}

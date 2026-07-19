@@ -37,6 +37,7 @@ export function WireTable() {
   const updateWire = useEditorStore((s) => s.updateWire);
   const deleteWires = useEditorStore((s) => s.deleteWires);
   const addWire = useEditorStore((s) => s.addWire);
+  const designFrequencyMhz = useEditorStore((s) => s.designFrequencyMhz);
 
   const [editCell, setEditCell] = useState<EditCell | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -103,16 +104,18 @@ export function WireTable() {
   );
 
   const handleAddWire = useCallback(() => {
+    const defaultLength = Math.min(5, 150 / designFrequencyMhz);
+    const defaultHeight = Math.min(5, 75 / designFrequencyMhz);
     addWire({
       x1: 0,
       y1: 0,
-      z1: 5,
-      x2: 5,
+      z1: defaultHeight,
+      x2: defaultLength,
       y2: 0,
-      z2: 5,
+      z2: defaultHeight,
       radius: 0.001,
     });
-  }, [addWire]);
+  }, [addWire, designFrequencyMhz]);
 
   const handleDeleteSelected = useCallback(() => {
     const tags = [...selectedTags];
@@ -269,7 +272,7 @@ export function WireTable() {
                           ? String(value)
                           : col.key === "segments"
                             ? <>{String(value)}{wire.segmentsManual && <span className="text-accent ml-0.5" title="Manual override">*</span>}</>
-                            : formatNum(value as number, col.key === "radius" ? 4 : 3)}
+                            : formatNum(value as number, col.key === "radius" ? 6 : 4)}
                       </td>
                     );
                   })}
@@ -277,7 +280,7 @@ export function WireTable() {
                   <td className="w-14 px-1 py-0.5 text-right text-text-secondary">
                     {formatNum(Math.sqrt(
                       (wire.x2 - wire.x1) ** 2 + (wire.y2 - wire.y1) ** 2 + (wire.z2 - wire.z1) ** 2
-                    ))}
+                    ), 4)}
                   </td>
                   <td className="w-6 px-0.5 py-0.5 text-center">
                     {isSelected && (
@@ -318,7 +321,7 @@ export function WireTable() {
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs font-bold text-accent">Wire {wire.tag}</span>
                 <span className="text-[11px] text-text-secondary font-mono">
-                  {wire.segments}{wire.segmentsManual ? <span className="text-accent">*</span> : ""} segs | R={formatNum(wire.radius, 4)}m
+                  {wire.segments}{wire.segmentsManual ? <span className="text-accent">*</span> : ""} segs | R={formatNum(wire.radius, 6)}m
                 </span>
               </div>
               {/* Coordinates grid */}
@@ -331,7 +334,7 @@ export function WireTable() {
                 <span className="text-[10px] text-text-secondary">Z2</span>
                 {(["x1", "y1", "z1", "x2", "y2", "z2"] as const).map((f) => (
                   <div key={f} onClick={(e) => e.stopPropagation()}>
-                    {renderEditableValue(wire, f, 2)}
+                    {renderEditableValue(wire, f, 4)}
                   </div>
                 ))}
               </div>

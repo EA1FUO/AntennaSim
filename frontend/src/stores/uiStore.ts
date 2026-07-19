@@ -6,6 +6,11 @@ import { create } from "zustand";
 import type { ViewToggles } from "../components/three/types";
 import type { S1PFile } from "../utils/s1p-parser";
 import type { MatchingConfig } from "../utils/units";
+import type {
+  ImperialLengthUnit,
+  LengthUnit,
+  MetricLengthUnit,
+} from "../utils/units";
 import { DEFAULT_MATCHING } from "../utils/units";
 
 export type Theme = "dark" | "light";
@@ -19,6 +24,10 @@ interface UIState {
   sidebarCollapsed: boolean;
   /** Unit system */
   imperial: boolean;
+  /** Preferred display unit within the metric system */
+  metricLengthUnit: MetricLengthUnit;
+  /** Preferred display unit within the imperial system */
+  imperialLengthUnit: ImperialLengthUnit;
   /** 3D viewport view toggles */
   viewToggles: ViewToggles;
   /** Active results tab */
@@ -31,6 +40,8 @@ interface UIState {
   matching: MatchingConfig;
   /** Show feedpoint marker at exact NEC2 segment center (true) or snapped to wire edge (false) */
   accurateFeedpoint: boolean;
+  /** Whether the global changelog dialog is visible */
+  changelogOpen: boolean;
 
   // Actions
   setTheme: (theme: Theme) => void;
@@ -39,6 +50,7 @@ interface UIState {
   toggleSidebar: () => void;
   setImperial: (imperial: boolean) => void;
   toggleUnits: () => void;
+  setLengthUnit: (unit: LengthUnit) => void;
   setViewToggle: (key: keyof ViewToggles, value: boolean) => void;
   toggleView: (key: keyof ViewToggles) => void;
   setResultsTab: (tab: ResultsTab) => void;
@@ -46,12 +58,16 @@ interface UIState {
   setS1PFile: (file: S1PFile | null) => void;
   setMatching: (matching: MatchingConfig) => void;
   setAccurateFeedpoint: (value: boolean) => void;
+  openChangelog: () => void;
+  closeChangelog: () => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
   theme: "dark",
   sidebarCollapsed: false,
   imperial: false,
+  metricLengthUnit: "m",
+  imperialLengthUnit: "ft",
   viewToggles: {
     grid: true,
     wires: true,
@@ -71,6 +87,7 @@ export const useUIStore = create<UIState>((set) => ({
   s1pFile: null,
   matching: { ...DEFAULT_MATCHING },
   accurateFeedpoint: false,
+  changelogOpen: false,
 
   setTheme: (theme) => set({ theme }),
   toggleTheme: () =>
@@ -80,6 +97,12 @@ export const useUIStore = create<UIState>((set) => ({
     set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   setImperial: (imperial) => set({ imperial }),
   toggleUnits: () => set((s) => ({ imperial: !s.imperial })),
+  setLengthUnit: (unit) =>
+    set(
+      unit === "m" || unit === "cm" || unit === "mm"
+        ? { metricLengthUnit: unit }
+        : { imperialLengthUnit: unit },
+    ),
   setViewToggle: (key, value) =>
     set((s) => ({ viewToggles: { ...s.viewToggles, [key]: value } })),
   toggleView: (key) =>
@@ -91,4 +114,6 @@ export const useUIStore = create<UIState>((set) => ({
   setS1PFile: (file) => set({ s1pFile: file }),
   setMatching: (matching) => set({ matching }),
   setAccurateFeedpoint: (value) => set({ accurateFeedpoint: value }),
+  openChangelog: () => set({ changelogOpen: true }),
+  closeChangelog: () => set({ changelogOpen: false }),
 }));

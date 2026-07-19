@@ -1,13 +1,20 @@
 /**
  * Parameter sliders panel — renders all template parameters as sliders.
  * Updates the antenna store in real-time as the user drags.
- * Supports imperial unit display (m -> ft) while keeping store values in metric.
+ * Length controls follow the global metric/imperial mode and can use a more
+ * precise unit within that system, while template values stay in meters.
  */
 
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import { Slider } from "../ui/Slider";
 import { useUIStore } from "../../stores/uiStore";
-import { metersToFeet, feetToMeters } from "../../utils/units";
+import {
+  IMPERIAL_LENGTH_UNIT_OPTIONS,
+  lengthUnitToMeters,
+  METRIC_LENGTH_UNIT_OPTIONS,
+  metersToLengthUnit,
+} from "../../utils/units";
+import type { LengthUnit } from "../../utils/units";
 import type { ParameterDef } from "../../templates/types";
 
 interface ParameterPanelProps {
@@ -16,9 +23,24 @@ interface ParameterPanelProps {
   onParamChange: (key: string, value: number) => void;
 }
 
-/** Units that should be converted to imperial */
-const METRIC_LENGTH_UNITS = new Set(["m"]);
-const M_TO_FT = 3.28084;
+const LENGTH_PARAMETER_UNITS = new Set(["m"]);
+const HEIGHT_PARAMETER_KEYS = new Set([
+  "height",
+  "base_height",
+  "feed_height",
+  "far_end_height",
+]);
+const HEIGHT_SLIDER_MIN = 1;
+const HEIGHT_SLIDER_MAX = 100;
+const HEIGHT_SLIDER_STEP = 1;
+
+const LENGTH_UNIT_DECIMALS: Record<LengthUnit, number> = {
+  m: 3,
+  cm: 1,
+  mm: 0,
+  ft: 2,
+  in: 1,
+};
 
 export function ParameterPanel({
   parameters,
@@ -26,31 +48,31 @@ export function ParameterPanel({
   onParamChange,
 }: ParameterPanelProps) {
   const imperial = useUIStore((s) => s.imperial);
+  const metricLengthUnit = useUIStore((s) => s.metricLengthUnit);
+  const imperialLengthUnit = useUIStore((s) => s.imperialLengthUnit);
+  const setLengthUnit = useUIStore((s) => s.setLengthUnit);
+
+  const unitOptions = imperial
+    ? IMPERIAL_LENGTH_UNIT_OPTIONS
+    : METRIC_LENGTH_UNIT_OPTIONS;
+  const selectedLengthUnit: LengthUnit = imperial
+    ? imperialLengthUnit
+    : metricLengthUnit;
 
   const handleChange = useCallback(
-    (key: string, isMetricLength: boolean) => (value: number) => {
-      // Convert back to meters if displaying in feet
-      onParamChange(key, isMetricLength && imperial ? feetToMeters(value) : value);
+    (key: string, lengthUnit?: LengthUnit) => (value: number) => {
+      onParamChange(
+        key,
+        lengthUnit ? lengthUnitToMeters(value, lengthUnit) : value,
+      );
     },
-    [onParamChange, imperial]
+    [onParamChange],
   );
 
-  // Memoize the converted parameters to avoid recalculating on every render
-  const displayParams = useMemo(() => {
-    return parameters.map((param) => {
-      const isMetricLength = METRIC_LENGTH_UNITS.has(param.unit);
-      if (isMetricLength && imperial) {
-        return {
-          ...param,
-          unit: "ft",
-          min: Math.round(metersToFeet(param.min) * 10) / 10,
-          max: Math.round(metersToFeet(param.max) * 10) / 10,
-          step: Math.round(param.step * M_TO_FT * 10) / 10 || 0.1,
-        };
-      }
-      return param;
-    });
-  }, [parameters, imperial]);
+  const handleUnitChange = useCallback(
+    (rawUnit: string) => setLengthUnit(rawUnit as LengthUnit),
+    [setLengthUnit],
+  );
 
   return (
     <div className="space-y-3">
@@ -58,24 +80,48 @@ export function ParameterPanel({
         Parameters
       </h3>
       <div className="space-y-3">
-        {displayParams.map((param, i) => {
-          const original = parameters[i]!;
-          const isMetricLength = METRIC_LENGTH_UNITS.has(original.unit);
-          const rawValue = values[original.key] ?? original.defaultValue;
-          const displayValue = isMetricLength && imperial ? metersToFeet(rawValue) : rawValue;
+        {parameters.map((param) => {
+          const isLength = LENGTH_PARAMETER_UNITS.has(param.unit);
+          const isHeight = HEIGHT_PARAMETER_KEYS.has(param.key);
+          const lengthUnit = isLength ? selectedLengthUnit : undefined;
+          const rawValue = values[param.key] ?? param.defaultValue;
+          const displayValue = lengthUnit
+            ? metersToLengthUnit(rawValue, lengthUnit)
+            : rawValue;
+          const min = lengthUnit
+            ? isHeight
+              ? HEIGHT_SLIDER_MIN
+              : metersToLengthUnit(param.min, lengthUnit)
+            : param.min;
+          const max = lengthUnit
+            ? isHeight
+              ? HEIGHT_SLIDER_MAX
+              : metersToLengthUnit(param.max, lengthUnit)
+            : param.max;
+          const step = lengthUnit
+            ? isHeight
+              ? HEIGHT_SLIDER_STEP
+              : metersToLengthUnit(param.step, lengthUnit)
+            : param.step;
 
           return (
             <Slider
               key={param.key}
               label={param.label}
               value={displayValue}
-              min={param.min}
-              max={param.max}
-              step={param.step}
-              unit={param.unit}
-              decimals={param.decimals ?? 1}
+              min={min}
+              max={max}
+              step={step}
+              unit={lengthUnit ?? param.unit}
+              unitOptions={lengthUnit ? unitOptions : undefined}
+              onUnitChange={lengthUnit ? handleUnitChange : undefined}
+              decimals={
+                lengthUnit
+                  ? LENGTH_UNIT_DECIMALS[lengthUnit]
+                  : (param.decimals ?? 1)
+              }
               description={param.description}
-              onChange={handleChange(original.key, isMetricLength)}
+              onChange={handleChange(param.key, lengthUnit)}
             />
           );
         })}

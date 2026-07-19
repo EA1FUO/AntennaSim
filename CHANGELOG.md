@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+## [1.3.0] - 2026-07-19
+
+### Added
+
+- Added a responsive “What’s new” dialog with desktop and mobile reopen controls, an expandable history of every release back to the initial public version, and 30-day local dismissal storage so the same changelog does not repeatedly interrupt returning users
+
+### Fixed
+
+- Aligned frequency validation, templates, and MMANA/NEC imports across the REST backend and browser/WASM engine at 0.1–2000 MHz, replacing stale 500 MHz converter and sweep limits
+- Made antenna geometry, feedpoints, current overlays, patterns, ground aids, and camera framing scale with antenna dimensions; thick wires no longer hide feedpoints, and large low-frequency antennas are framed after controls initialize
+- Scaled scene fog with antenna dimensions so very large low-frequency antennas no longer fade into the background
+- Allowed shared slider headings and unit selectors to wrap cleanly on narrow mobile screens
+
+### Changed
+
+- Wire Editor design-frequency controls now reach 2 GHz; numeric fields preserve stored precision, millimeter snap increments are available, and new-wire size follows the design frequency
+- Added explicit, shared length-unit selectors to Editor and Simulator controls, following the global preference with m/cm/mm choices in metric mode and ft/in choices in imperial mode while preserving canonical meter values internally
+- Height sliders now change scale only when the user selects a unit, using a predictable 1–100 range in meters, centimeters, millimeters, feet, or inches
+
 ## [1.2.2] - 2026-06-01
 
 ### Fixed
@@ -340,6 +361,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 This was the initial public release -- a complete rewrite of the original prototype into a production-quality application with React 19, TypeScript, FastAPI, and Docker.
 
+[1.3.0]: https://github.com/EA1FUO/AntennaSim/compare/v1.2.2...v1.3.0
 [1.2.2]: https://github.com/EA1FUO/AntennaSim/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/EA1FUO/AntennaSim/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/EA1FUO/AntennaSim/compare/v1.1.1...v1.2.0

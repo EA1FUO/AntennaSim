@@ -2,8 +2,8 @@
  * Camera orbit controls with smooth damping, auto-framing, and follow mode.
  *
  * Auto-framing: computes bounding box of antenna wires and positions camera
- * to show the complete antenna with ground context. Triggers on template
- * change (wire count change), not on slider tweaks.
+ * to show the complete antenna with nearby ground context. Triggers when the
+ * topology changes or dimensions change enough to leave the current framing.
  *
  * Follow mode: when wires move without count changing (e.g., height slider),
  * the camera and orbit target shift by the same delta to track the antenna.
@@ -12,12 +12,18 @@
  * Camera view presets are handled by the GizmoViewport in AxesHelper.tsx.
  */
 
-import { useRef, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { OrbitControls } from "@react-three/drei";
 import { useThree, useFrame } from "@react-three/fiber";
-import { Vector3, Box3 } from "three";
+import { Vector3 } from "three";
+import type { Camera } from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import type { WireData } from "./types";
+import {
+  computeCameraFrame,
+  computeWireBBox,
+  getAntennaSpan,
+} from "./visualScale";
 
 interface CameraControlsProps {
   /** Set to false to temporarily disable orbit (e.g., during drag) */
@@ -28,44 +34,16 @@ interface CameraControlsProps {
   hasGround?: boolean;
 }
 
-/** Compute bounding box of all wires in Three.js coordinates */
-function computeWireBBox(wires: WireData[], hasGround: boolean): Box3 {
-  const bbox = new Box3();
-
-  if (wires.length === 0) {
-    // Default bbox for empty scene
-    bbox.set(new Vector3(-5, 0, -5), new Vector3(5, 10, 5));
-    return bbox;
-  }
-
-  for (const w of wires) {
-    // NEC2 → Three.js: [necX, necZ, -necY]
-    bbox.expandByPoint(new Vector3(w.x1, w.z1, -w.y1));
-    bbox.expandByPoint(new Vector3(w.x2, w.z2, -w.y2));
-  }
-
-  // Include ground plane at Y=0 if antenna has ground
-  if (hasGround) {
-    const min = bbox.min.clone();
-    min.y = Math.min(min.y, 0);
-    bbox.min.copy(min);
-  }
-
-  // Expand by 20% for breathing room
-  const center = new Vector3();
-  const size = new Vector3();
-  bbox.getCenter(center);
-  bbox.getSize(size);
-
-  // Minimum 2m in each dimension
-  size.x = Math.max(size.x, 2);
-  size.y = Math.max(size.y, 2);
-  size.z = Math.max(size.z, 2);
-
-  const padding = size.clone().multiplyScalar(0.2);
-  bbox.expandByVector(padding);
-
-  return bbox;
+function updateCameraClipping(camera: Camera, near: number, far: number): void {
+  if (!("near" in camera) || !("far" in camera)) return;
+  const clippingCamera = camera as Camera & {
+    near: number;
+    far: number;
+    updateProjectionMatrix: () => void;
+  };
+  clippingCamera.near = near;
+  clippingCamera.far = far;
+  clippingCamera.updateProjectionMatrix();
 }
 
 export function CameraControls({ enabled = true, wires = [], hasGround = true }: CameraControlsProps) {
@@ -74,6 +52,7 @@ export function CameraControls({ enabled = true, wires = [], hasGround = true }:
 
   // Compute bounding box
   const bbox = useMemo(() => computeWireBBox(wires, hasGround), [wires, hasGround]);
+  const antennaSpan = useMemo(() => getAntennaSpan(wires), [wires]);
 
   // Animation state for auto-framing
   const animRef = useRef<{
@@ -85,8 +64,12 @@ export function CameraControls({ enabled = true, wires = [], hasGround = true }:
     progress: number;
   } | null>(null);
 
-  // Track previous wire count to detect template changes (init to 0 so first mount triggers auto-frame)
+  // Track topology and last framed scale (init to 0 so first mount auto-frames).
   const prevWireCountRef = useRef(0);
+  const lastFramedSpanRef = useRef(0);
+  // OrbitControls mounts after the first React effect. Keep an explicit pending
+  // flag so the initial antenna is framed on the first available render frame.
+  const pendingAutoFrameRef = useRef(wires.length > 0);
 
   // Track previous wire centroid (ignoring ground/padding) for follow-mode delta
   const prevCentroidRef = useRef<Vector3 | null>(null);
@@ -105,44 +88,61 @@ export function CameraControls({ enabled = true, wires = [], hasGround = true }:
     return sum.divideScalar(count);
   }, [wires]);
 
-  // Auto-frame when wires change significantly (template change) — only when wire count changes.
+  const beginAutoFrame = useCallback(() => {
+    const controls = controlsRef.current;
+    if (wires.length === 0) {
+      pendingAutoFrameRef.current = false;
+      prevWireCountRef.current = 0;
+      lastFramedSpanRef.current = antennaSpan;
+      prevCentroidRef.current = wireCentroid.clone();
+      return;
+    }
+    if (!controls) {
+      pendingAutoFrameRef.current = true;
+      return;
+    }
+
+    const { center, distance } = computeCameraFrame(bbox, antennaSpan);
+    const endPos = new Vector3(
+      center.x + distance * 0.6,
+      center.y + distance * 0.5,
+      center.z + distance * 0.6,
+    );
+
+    pendingAutoFrameRef.current = false;
+    prevWireCountRef.current = wires.length;
+    lastFramedSpanRef.current = antennaSpan;
+    prevCentroidRef.current = wireCentroid.clone();
+    animRef.current = {
+      active: true,
+      startPos: camera.position.clone(),
+      endPos,
+      startTarget: controls.target.clone(),
+      endTarget: center,
+      progress: 0,
+    };
+  }, [antennaSpan, bbox, camera, wireCentroid, wires.length]);
+
+  // Auto-frame when topology or overall antenna size changes significantly.
   // Follow mode: when wires move without count changing (height slider, drag), apply the
   // position delta instantly so the camera keeps pace with the antenna.
   useEffect(() => {
-    if (wires.length !== prevWireCountRef.current) {
-      // Wire count changed — full auto-frame
-      prevWireCountRef.current = wires.length;
-      prevCentroidRef.current = wireCentroid.clone();
+    const previousSpan = lastFramedSpanRef.current;
+    const spanRatio = previousSpan > 0 ? antennaSpan / previousSpan : Infinity;
+    const shouldReframe =
+      wires.length !== prevWireCountRef.current ||
+      spanRatio >= 1.75 ||
+      spanRatio <= 1 / 1.75;
 
-      if (wires.length === 0 || !controlsRef.current) return;
-
-      const center = new Vector3();
-      const size = new Vector3();
-      bbox.getCenter(center);
-      bbox.getSize(size);
-      const diagonal = size.length();
-
-      // Position camera at 1.5x diagonal distance, isometric-ish angle
-      const dist = Math.max(diagonal * 1.5, 5);
-      const endPos = new Vector3(
-        center.x + dist * 0.6,
-        center.y + dist * 0.5,
-        center.z + dist * 0.6
-      );
-
-      animRef.current = {
-        active: true,
-        startPos: camera.position.clone(),
-        endPos,
-        startTarget: controlsRef.current.target.clone(),
-        endTarget: center,
-        progress: 0,
-      };
+    if (shouldReframe) {
+      pendingAutoFrameRef.current = true;
+      beginAutoFrame();
     } else if (wires.length > 0 && prevCentroidRef.current && controlsRef.current) {
       // Wire count unchanged but wires moved (height change, etc.) — instant follow.
       // Use raw wire centroid (not bbox center) so ground plane doesn't dilute the delta.
       const delta = wireCentroid.clone().sub(prevCentroidRef.current);
-      if (delta.lengthSq() > 0.0001) {
+      const followThreshold = Math.max(antennaSpan * 1e-6, 1e-8);
+      if (delta.lengthSq() > followThreshold * followThreshold) {
         camera.position.add(delta);
         controlsRef.current.target.add(delta);
         controlsRef.current.update();
@@ -151,10 +151,20 @@ export function CameraControls({ enabled = true, wires = [], hasGround = true }:
     } else {
       prevCentroidRef.current = wireCentroid.clone();
     }
-  }, [bbox, wires.length, wireCentroid, camera]);
+  }, [
+    antennaSpan,
+    beginAutoFrame,
+    camera,
+    wireCentroid,
+    wires.length,
+  ]);
 
   // Animate camera each frame (auto-framing only)
   useFrame((_, delta) => {
+    if (pendingAutoFrameRef.current && controlsRef.current) {
+      beginAutoFrame();
+    }
+
     const anim = animRef.current;
     if (!anim || !anim.active || !controlsRef.current) return;
 
@@ -171,9 +181,11 @@ export function CameraControls({ enabled = true, wires = [], hasGround = true }:
     const bboxSize = new Vector3();
     bbox.getSize(bboxSize);
     const diag = bboxSize.length();
-    camera.near = Math.max(0.01, diag * 0.001);
-    camera.far = Math.max(500, diag * 10);
-    camera.updateProjectionMatrix();
+    updateCameraClipping(
+      camera,
+      Math.max(1e-5, diag * 0.001),
+      Math.max(1, diag * 100),
+    );
 
     if (anim.progress >= 1) {
       anim.active = false;
@@ -187,8 +199,8 @@ export function CameraControls({ enabled = true, wires = [], hasGround = true }:
       enabled={enabled}
       enableDamping
       dampingFactor={0.08}
-      minDistance={0.5}
-      maxDistance={200}
+      minDistance={Math.max(antennaSpan * 0.05, 1e-4)}
+      maxDistance={Math.max(antennaSpan * 100, 10)}
       maxPolarAngle={Math.PI * 0.95}
       makeDefault
     />

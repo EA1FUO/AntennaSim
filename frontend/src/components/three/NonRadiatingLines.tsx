@@ -15,9 +15,16 @@ function toThree([x, y, z]: [number, number, number]): [number, number, number] 
 interface NonRadiatingLinesProps {
   segments: NonRadiatingSegment[];
   color?: string;
+  dashSize?: number;
+  gapSize?: number;
 }
 
-export function NonRadiatingLines({ segments, color = "#7dd3fc" }: NonRadiatingLinesProps) {
+export function NonRadiatingLines({
+  segments,
+  color = "#7dd3fc",
+  dashSize = 0.4,
+  gapSize = 0.25,
+}: NonRadiatingLinesProps) {
   return (
     <>
       {segments.map((seg, i) => (
@@ -27,8 +34,8 @@ export function NonRadiatingLines({ segments, color = "#7dd3fc" }: NonRadiatingL
           color={color}
           lineWidth={1.5}
           dashed
-          dashSize={0.4}
-          gapSize={0.25}
+          dashSize={dashSize}
+          gapSize={gapSize}
           transparent
           opacity={0.85}
         />

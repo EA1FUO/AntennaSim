@@ -18,9 +18,14 @@ import type {
   OptimizationProgress,
   OptimizationResult,
 } from "../types";
+import {
+  assertSupportedFrequencyMhz,
+  assertSupportedFrequencyRange,
+} from "../limits";
 
 export class BackendEngine implements SimulationEngine {
   async simulate(request: SimulateRequest): Promise<SimulationResult> {
+    assertSupportedFrequencyRange(request.frequency, request.frequencySegments);
     const step = request.patternStep ?? 5;
     const isFreeSpace = request.ground.type === "free_space";
     const body: Record<string, unknown> = {
@@ -82,6 +87,7 @@ export class BackendEngine implements SimulationEngine {
   async simulateAdvanced(
     request: SimulateAdvancedRequest,
   ): Promise<SimulationResult> {
+    assertSupportedFrequencyRange(request.frequency, request.frequencySegments);
     const step = request.pattern_step ?? 5;
     const isFreeSpace = request.ground.type === "free_space";
     const body: Record<string, unknown> = {
@@ -184,6 +190,20 @@ export class BackendEngine implements SimulationEngine {
     request: OptimizationRequest,
     onProgress: (progress: OptimizationProgress) => void,
   ): Promise<{ result: Promise<OptimizationResult>; cancel: () => void }> {
+    assertSupportedFrequencyMhz(
+      request.frequency_start_mhz,
+      "Optimizer start frequency",
+    );
+    assertSupportedFrequencyMhz(
+      request.frequency_stop_mhz,
+      "Optimizer stop frequency",
+    );
+    if (request.target_frequency_mhz !== undefined) {
+      assertSupportedFrequencyMhz(
+        request.target_frequency_mhz,
+        "Optimizer target frequency",
+      );
+    }
     // Derive WebSocket URL from API URL or page origin
     const apiBase = import.meta.env.VITE_API_URL;
     let wsBase: string;

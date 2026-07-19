@@ -59,9 +59,11 @@ export function NumberInput({
   const inputPy = size === "xs" ? "py-0.5" : "py-1";
 
   const handleEditStart = useCallback(() => {
-    setEditText(value.toFixed(decimals));
+    // Preserve the stored precision while editing even when the compact label
+    // intentionally displays fewer decimal places.
+    setEditText(String(value));
     setIsEditing(true);
-  }, [value, decimals]);
+  }, [value]);
 
   const handleEditCommit = useCallback(() => {
     setIsEditing(false);

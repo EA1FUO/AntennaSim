@@ -26,6 +26,8 @@ import { GroundReflection } from "./GroundReflection";
 import { CurrentDistribution3D } from "./CurrentDistribution3D";
 import { NearFieldPlane } from "./NearFieldPlane";
 import { CurrentFlowParticles } from "./CurrentFlowParticles";
+import type { VisualScale } from "./visualScale";
+import { createVisualScale } from "./visualScale";
 import { RadiationSlice } from "./RadiationSlice";
 import { SceneRaycaster } from "./SceneRaycaster";
 import { NonRadiatingLines } from "./NonRadiatingLines";
@@ -47,11 +49,11 @@ interface EditorSceneProps {
 const GROUND_PLANE = new Plane(new Vector3(0, 1, 0), 0);
 
 /** Ghost wire preview component for add mode */
-function GhostWire({ start, end }: { start: Vector3; end: Vector3 }) {
+function GhostWire({ start, end, visualScale }: { start: Vector3; end: Vector3; visualScale: VisualScale }) {
   const geometry = useMemo(() => {
     const curve = new LineCurve3(start, end);
-    return new TubeGeometry(curve, 2, 0.015, 4, false);
-  }, [start, end]);
+    return new TubeGeometry(curve, 2, visualScale.ghostRadius, 4, false);
+  }, [start, end, visualScale]);
 
   const material = useMemo(
     () => new MeshBasicMaterial({ color: "#3B82F6", opacity: 0.4, transparent: true }),
@@ -61,12 +63,12 @@ function GhostWire({ start, end }: { start: Vector3; end: Vector3 }) {
   return (
     <group>
       <mesh position={start}>
-        <sphereGeometry args={[0.08, 8, 8]} />
+        <sphereGeometry args={[visualScale.markerRadius, 8, 8]} />
         <meshBasicMaterial color="#3B82F6" opacity={0.7} transparent />
       </mesh>
       <mesh geometry={geometry} material={material} />
       <mesh position={end}>
-        <sphereGeometry args={[0.06, 8, 8]} />
+        <sphereGeometry args={[visualScale.markerRadius * 0.75, 8, 8]} />
         <meshBasicMaterial color="#3B82F6" opacity={0.5} transparent />
       </mesh>
     </group>
@@ -514,6 +516,7 @@ function EditorSceneContent({
       })),
     [wires]
   );
+  const visualScale = useMemo(() => createVisualScale(wireDataList), [wireDataList]);
 
   // Feedpoint tag set
   const feedpointTags = useMemo(
@@ -556,7 +559,14 @@ function EditorSceneContent({
       <directionalLight position={[20, 30, 10]} intensity={theme === "dark" ? 0.7 : 0.8} />
 
       {/* Fog */}
-      <fog attach="fog" args={[theme === "dark" ? "#0A0A0F" : "#E8E8ED", 60, 200]} />
+      <fog
+        attach="fog"
+        args={[
+          theme === "dark" ? "#0A0A0F" : "#E8E8ED",
+          visualScale.fogNear,
+          visualScale.fogFar,
+        ]}
+      />
 
       {/* Clickable background plane (invisible, for catching clicks on empty space) */}
       <mesh
@@ -573,7 +583,7 @@ function EditorSceneContent({
 
       {/* Ground — auto-sized to antenna footprint */}
       {viewToggles.grid && <GroundPlane wires={wireDataList} />}
-      {viewToggles.compass && <CompassRose />}
+      {viewToggles.compass && <CompassRose radius={visualScale.span * 2} />}
       <AxesHelper />
 
       {/* Antenna Wires */}
@@ -582,6 +592,7 @@ function EditorSceneContent({
           <EditorAntennaModel
             key={wire.tag}
             wire={wire}
+            visualScale={visualScale}
             isSelected={selectedTags.has(wire.tag)}
             hasFeedpoint={feedpointTags.has(wire.tag)}
             feedSegment={excitationSegmentMap.get(wire.tag)}
@@ -599,12 +610,16 @@ function EditorSceneContent({
 
       {/* Transmission-line feeders drawn as dashed (non-radiating) lines */}
       {viewToggles.wires && feederSegments.length > 0 && (
-        <NonRadiatingLines segments={feederSegments} />
+        <NonRadiatingLines
+          segments={feederSegments}
+          dashSize={visualScale.dashSize}
+          gapSize={visualScale.gapSize}
+        />
       )}
 
       {/* Ghost wire preview (add mode) */}
       {ghostWire && (
-        <GhostWire start={ghostWire.start} end={ghostWire.end} />
+        <GhostWire start={ghostWire.start} end={ghostWire.end} visualScale={visualScale} />
       )}
 
       {/* Axis constraint indicator during drag */}
@@ -616,7 +631,7 @@ function EditorSceneContent({
       {viewToggles.pattern && !viewToggles.volumetric && patternData && (
         <RadiationPattern3D
           pattern={patternData}
-          scale={5}
+          scale={visualScale.patternScale}
           opacity={0.65}
           center={antennaCentroid}
         />
@@ -626,24 +641,28 @@ function EditorSceneContent({
       {viewToggles.volumetric && patternData && (
         <VolumetricShells
           pattern={patternData}
-          scale={5}
+          scale={visualScale.patternScale}
           center={antennaCentroid}
         />
       )}
 
       {/* Ground reflection ghost */}
       {viewToggles.reflection && (
-        <GroundReflection wires={wireDataList} />
+        <GroundReflection wires={wireDataList} visualScale={visualScale} />
       )}
 
       {/* Current distribution overlay */}
       {viewToggles.current && currents && currents.length > 0 && (
-        <CurrentDistribution3D currents={currents} />
+        <CurrentDistribution3D
+          currents={currents}
+          tubeRadius={visualScale.currentRadius}
+          particleRadius={visualScale.particleRadius}
+        />
       )}
 
       {/* Animated current flow particles */}
       {viewToggles.currentFlow && currents && currents.length > 0 && (
-        <CurrentFlowParticles currents={currents} />
+        <CurrentFlowParticles currents={currents} particleRadius={visualScale.particleRadius} />
       )}
 
       {/* Near-field heatmap plane */}
@@ -655,7 +674,7 @@ function EditorSceneContent({
       {viewToggles.slice && patternData && (
         <RadiationSlice
           pattern={patternData}
-          scale={5}
+          scale={visualScale.patternScale}
           center={antennaCentroid}
         />
       )}

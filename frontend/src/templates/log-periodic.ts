@@ -25,6 +25,7 @@ import type {
 } from "./types";
 import type { TransmissionLine } from "../api/nec";
 import { autoSegment, centerSegment } from "../engine/segmentation";
+import { MAX_FREQUENCY_MHZ, MIN_FREQUENCY_MHZ } from "../engine/limits";
 
 /**
  * Derive the full LPDA design from the parameters: element lengths/positions,
@@ -134,7 +135,7 @@ export const logPeriodicTemplate: AntennaTemplate = {
       description: "Upper edge of the operating range",
       unit: "MHz",
       min: 2,
-      max: 2000,
+      max: MAX_FREQUENCY_MHZ,
       step: 0.1,
       defaultValue: 30.0,
       decimals: 3,
@@ -287,8 +288,8 @@ export const logPeriodicTemplate: AntennaTemplate = {
     const freqHigh = params.freq_high ?? 30.0;
     // Cover the design range with some margin
     return {
-      start_mhz: Math.max(0.1, freqLow * 0.9),
-      stop_mhz: Math.min(2000, freqHigh * 1.1),
+      start_mhz: Math.max(MIN_FREQUENCY_MHZ, freqLow * 0.9),
+      stop_mhz: Math.min(MAX_FREQUENCY_MHZ, freqHigh * 1.1),
       steps: 51,
     };
   },

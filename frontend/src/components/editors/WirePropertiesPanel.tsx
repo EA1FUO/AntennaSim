@@ -28,7 +28,7 @@ function CoordField({
       label={label}
       value={value}
       onChange={onChange}
-      decimals={3}
+      decimals={6}
       unit="m"
     />
   );
@@ -67,9 +67,9 @@ function WireLengthSection({
           <NumberInput
             value={length}
             onChange={(v) => { if (v > 0) onSetLength(v); }}
-            min={0.01}
+            min={0.000001}
             max={1000}
-            decimals={3}
+            decimals={6}
             unit="m"
           />
         </div>
@@ -377,7 +377,7 @@ export function WirePropertiesPanel() {
           onChange={(v) => handleRadiusChange(wire.tag, v)}
           min={0.0001}
           max={0.1}
-          decimals={4}
+          decimals={6}
           unit="m"
         />
       </div>

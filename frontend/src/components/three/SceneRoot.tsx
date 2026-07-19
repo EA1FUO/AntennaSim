@@ -21,6 +21,7 @@ import { SceneRaycaster } from "./SceneRaycaster";
 import type { WireData, FeedpointData, ViewToggles } from "./types";
 import type { PatternData, SegmentCurrent, NearFieldResult } from "../../api/nec";
 import { useUIStore } from "../../stores/uiStore";
+import { createVisualScale } from "./visualScale";
 
 interface SceneRootProps {
   wires: WireData[];
@@ -51,6 +52,7 @@ export function SceneRoot({
 
   // Dim wires when current/flow overlays are active so the colors show through
   const wiresDimmed = (viewToggles.current || viewToggles.currentFlow) && !!currents && currents.length > 0;
+  const visualScale = useMemo(() => createVisualScale(wires), [wires]);
 
   // Tooltip ref — direct DOM mutation, no React state
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -103,13 +105,16 @@ export function SceneRoot({
         />
 
         {/* Fog for depth perception */}
-        <fog attach="fog" args={[fogColor, 60, 200]} />
+        <fog
+          attach="fog"
+          args={[fogColor, visualScale.fogNear, visualScale.fogFar]}
+        />
 
         {/* Ground — auto-sized to antenna footprint */}
         {viewToggles.grid && <GroundPlane wires={wires} />}
 
         {/* Compass Rose */}
-        {viewToggles.compass && <CompassRose />}
+        {viewToggles.compass && <CompassRose radius={visualScale.span * 2} />}
 
         {/* Axes */}
         <AxesHelper />
@@ -117,28 +122,39 @@ export function SceneRoot({
         {/* Antenna Wires */}
         {viewToggles.wires &&
           wires.map((wire) => (
-            <AntennaModel key={wire.tag} wire={wire} dimmed={wiresDimmed} />
+            <AntennaModel
+              key={wire.tag}
+              wire={wire}
+              visualScale={visualScale}
+              dimmed={wiresDimmed}
+            />
           ))}
 
         {/* Wire junction spheres */}
-        {viewToggles.wires && <JunctionSpheres wires={wires} dimmed={wiresDimmed} />}
+        {viewToggles.wires && (
+          <JunctionSpheres wires={wires} visualScale={visualScale} dimmed={wiresDimmed} />
+        )}
 
         {/* Feedpoints */}
         {viewToggles.wires &&
           feedpoints.map((fp, i) => (
-            <FeedpointMarker key={i} position={fp.position} />
+            <FeedpointMarker key={i} position={fp.position} radius={visualScale.markerRadius} />
           ))}
 
         {/* Non-radiating structures (transmission-line feeders) drawn dashed */}
         {viewToggles.wires && nonRadiatingLines && nonRadiatingLines.length > 0 && (
-          <NonRadiatingLines segments={nonRadiatingLines} />
+          <NonRadiatingLines
+            segments={nonRadiatingLines}
+            dashSize={visualScale.dashSize}
+            gapSize={visualScale.gapSize}
+          />
         )}
 
         {/* 3D Radiation Pattern — surface mode */}
         {viewToggles.pattern && !viewToggles.volumetric && patternData && (
           <RadiationPattern3D
             pattern={patternData}
-            scale={5}
+            scale={visualScale.patternScale}
             opacity={0.65}
             center={antennaCentroid}
           />
@@ -148,22 +164,28 @@ export function SceneRoot({
         {viewToggles.volumetric && patternData && (
           <VolumetricShells
             pattern={patternData}
-            scale={5}
+            scale={visualScale.patternScale}
             center={antennaCentroid}
           />
         )}
 
         {/* Ground Reflection (ghost mirror) */}
-        {viewToggles.reflection && <GroundReflection wires={wires} />}
+        {viewToggles.reflection && (
+          <GroundReflection wires={wires} visualScale={visualScale} />
+        )}
 
         {/* Current Distribution overlay */}
         {viewToggles.current && currents && currents.length > 0 && (
-          <CurrentDistribution3D currents={currents} />
+          <CurrentDistribution3D
+            currents={currents}
+            tubeRadius={visualScale.currentRadius}
+            particleRadius={visualScale.particleRadius}
+          />
         )}
 
         {/* Animated current flow particles */}
         {viewToggles.currentFlow && currents && currents.length > 0 && (
-          <CurrentFlowParticles currents={currents} />
+          <CurrentFlowParticles currents={currents} particleRadius={visualScale.particleRadius} />
         )}
 
         {/* Near-field heatmap plane */}
@@ -175,7 +197,7 @@ export function SceneRoot({
         {viewToggles.slice && patternData && (
           <RadiationSlice
             pattern={patternData}
-            scale={5}
+            scale={visualScale.patternScale}
             center={antennaCentroid}
           />
         )}

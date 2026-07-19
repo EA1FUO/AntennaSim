@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { BrowserRouter } from "react-router-dom";
+import { ChangelogPopup } from "./components/ui/ChangelogPopup";
 import { AppRoutes } from "./routes";
 import { useUIStore } from "./stores/uiStore";
 
@@ -22,6 +23,7 @@ export function App() {
   return (
     <BrowserRouter basename={basename}>
       <AppRoutes />
+      <ChangelogPopup />
     </BrowserRouter>
   );
 }

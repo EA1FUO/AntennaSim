@@ -8,6 +8,7 @@
 
 import type { AntennaTemplate, WireGeometry, Excitation, FeedpointData, FrequencyRange } from "./types";
 import { autoSegment } from "../engine/segmentation";
+import { MAX_FREQUENCY_MHZ, MIN_FREQUENCY_MHZ } from "../engine/limits";
 
 export const verticalTemplate: AntennaTemplate = {
   id: "vertical",
@@ -41,7 +42,7 @@ export const verticalTemplate: AntennaTemplate = {
       description: "Center frequency for quarter-wave resonance",
       unit: "MHz",
       min: 1,
-      max: 2000,
+      max: MAX_FREQUENCY_MHZ,
       step: 0.1,
       defaultValue: 14.2,
       decimals: 3,
@@ -175,8 +176,8 @@ export const verticalTemplate: AntennaTemplate = {
     const freq = params.frequency ?? 14.2;
     const bw = freq * 0.15; // verticals tend to have broader bandwidth response
     return {
-      start_mhz: Math.max(0.1, freq - bw / 2),
-      stop_mhz: Math.min(2000, freq + bw / 2),
+      start_mhz: Math.max(MIN_FREQUENCY_MHZ, freq - bw / 2),
+      stop_mhz: Math.min(MAX_FREQUENCY_MHZ, freq + bw / 2),
       steps: 31,
     };
   },

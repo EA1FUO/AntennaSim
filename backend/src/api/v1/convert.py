@@ -19,6 +19,7 @@ from src.converters.maa_export import export_maa
 from src.converters.nec_file import parse_nec_file, NECParseError
 from src.simulation.nec_input import build_card_deck
 from src.models.simulation import SimulationRequest, FrequencyConfig
+from src.models.limits import MAX_FREQUENCY_MHZ, MIN_FREQUENCY_MHZ
 
 logger = logging.getLogger("antsim.api.convert")
 
@@ -58,8 +59,8 @@ class ExportRequest(BaseModel):
     loads: list[LumpedLoad] = Field(default_factory=list)
     transmission_lines: list[TransmissionLine] = Field(default_factory=list)
     ground: GroundConfig = Field(default_factory=GroundConfig)
-    frequency_start_mhz: float = Field(default=14.0, ge=0.1, le=2000.0)
-    frequency_stop_mhz: float = Field(default=14.5, ge=0.1, le=2000.0)
+    frequency_start_mhz: float = Field(default=14.0, ge=MIN_FREQUENCY_MHZ, le=MAX_FREQUENCY_MHZ)
+    frequency_stop_mhz: float = Field(default=14.5, ge=MIN_FREQUENCY_MHZ, le=MAX_FREQUENCY_MHZ)
     frequency_steps: int = Field(default=11, ge=1, le=201)
 
 
@@ -92,8 +93,8 @@ async def import_file(request: ImportRequest) -> ImportResponse:
             ground_type=data.ground.ground_type.value,
             ground_dielectric=data.ground.dielectric_constant,
             ground_conductivity=data.ground.conductivity,
-            frequency_start_mhz=data.frequency_mhz - 0.5,
-            frequency_stop_mhz=data.frequency_mhz + 0.5,
+            frequency_start_mhz=max(MIN_FREQUENCY_MHZ, data.frequency_mhz - 0.5),
+            frequency_stop_mhz=min(MAX_FREQUENCY_MHZ, data.frequency_mhz + 0.5),
             frequency_steps=21,
             warnings=warnings,
         )

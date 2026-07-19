@@ -2,6 +2,7 @@
 
 from enum import Enum
 from pydantic import BaseModel, Field
+from src.models.limits import MAX_FREQUENCY_MHZ, MIN_FREQUENCY_MHZ
 
 
 class OptimizationObjective(str, Enum):
@@ -51,8 +52,8 @@ class OptimizationRequest(BaseModel):
     wires: list = Field(min_length=1, max_length=500)
     excitations: list = Field(min_length=1)
     ground: dict = Field(default_factory=dict)
-    frequency_start_mhz: float = Field(ge=0.1, le=2000)
-    frequency_stop_mhz: float = Field(ge=0.1, le=2000)
+    frequency_start_mhz: float = Field(ge=MIN_FREQUENCY_MHZ, le=MAX_FREQUENCY_MHZ)
+    frequency_stop_mhz: float = Field(ge=MIN_FREQUENCY_MHZ, le=MAX_FREQUENCY_MHZ)
     frequency_steps: int = Field(default=1, ge=1, le=51)
     loads: list = Field(default_factory=list)
     transmission_lines: list = Field(default_factory=list)
@@ -62,7 +63,7 @@ class OptimizationRequest(BaseModel):
     objective: OptimizationObjective = Field(default=OptimizationObjective.MIN_SWR)
     method: OptimizationMethod = Field(default=OptimizationMethod.NELDER_MEAD)
     max_iterations: int = Field(default=100, ge=1, le=500)
-    target_frequency_mhz: float | None = Field(default=None, ge=0.1, le=2000,
+    target_frequency_mhz: float | None = Field(default=None, ge=MIN_FREQUENCY_MHZ, le=MAX_FREQUENCY_MHZ,
                                                  description="Target freq for single-freq objectives")
     weights: OptimizationWeights = Field(default_factory=OptimizationWeights)
 

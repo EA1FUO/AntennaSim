@@ -12,22 +12,24 @@
 import { useMemo } from "react";
 import { TubeGeometry, LineCurve3, Vector3, MeshStandardMaterial } from "three";
 import type { WireData } from "./types";
+import type { VisualScale } from "./visualScale";
 
 interface GroundReflectionProps {
   wires: WireData[];
+  visualScale: VisualScale;
   /** Opacity of the ghost reflection (default 0.15) */
   opacity?: number;
 }
 
 /** Single reflected wire */
-function ReflectedWire({ wire, opacity }: { wire: WireData; opacity: number }) {
+function ReflectedWire({ wire, visualScale, opacity }: { wire: WireData; visualScale: VisualScale; opacity: number }) {
   const { geometry, material, startPos, endPos } = useMemo(() => {
     // NEC2: X=east, Y=north, Z=up -> Three.js: [x, z, -y]
     // Reflection mirrors Z in NEC2 (which is Y in Three.js): negate Y
     const start = new Vector3(wire.x1, -wire.z1, -wire.y1);
     const end = new Vector3(wire.x2, -wire.z2, -wire.y2);
 
-    const visualRadius = Math.max(wire.radius * 50, 0.03);
+    const visualRadius = visualScale.wireRadius(wire.radius);
     const curve = new LineCurve3(start, end);
     const tubeGeo = new TubeGeometry(curve, Math.max(2, wire.segments), visualRadius, 6, false);
 
@@ -41,9 +43,9 @@ function ReflectedWire({ wire, opacity }: { wire: WireData; opacity: number }) {
     });
 
     return { geometry: tubeGeo, material: mat, startPos: start, endPos: end };
-  }, [wire, opacity]);
+  }, [wire, visualScale, opacity]);
 
-  const capRadius = Math.max(wire.radius * 60, 0.04);
+  const capRadius = visualScale.capRadius(wire.radius);
 
   return (
     <group>
@@ -71,13 +73,13 @@ function ReflectedWire({ wire, opacity }: { wire: WireData; opacity: number }) {
   );
 }
 
-export function GroundReflection({ wires, opacity = 0.15 }: GroundReflectionProps) {
+export function GroundReflection({ wires, visualScale, opacity = 0.15 }: GroundReflectionProps) {
   if (wires.length === 0) return null;
 
   return (
     <group>
       {wires.map((wire) => (
-        <ReflectedWire key={`ref-${wire.tag}`} wire={wire} opacity={opacity} />
+        <ReflectedWire key={`ref-${wire.tag}`} wire={wire} visualScale={visualScale} opacity={opacity} />
       ))}
     </group>
   );

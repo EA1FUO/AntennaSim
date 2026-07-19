@@ -28,6 +28,7 @@ import type {
   FrequencyRange,
 } from "./types";
 import { autoSegment } from "../engine/segmentation";
+import { MAX_FREQUENCY_MHZ, MIN_FREQUENCY_MHZ } from "../engine/limits";
 
 export const hexBeamTemplate: AntennaTemplate = {
   id: "hex-beam",
@@ -65,7 +66,7 @@ export const hexBeamTemplate: AntennaTemplate = {
       description: "Center frequency for the hex beam design",
       unit: "MHz",
       min: 5,
-      max: 2000,
+      max: MAX_FREQUENCY_MHZ,
       step: 0.1,
       defaultValue: 14.15,
       decimals: 3,
@@ -234,8 +235,8 @@ export const hexBeamTemplate: AntennaTemplate = {
     const freq = params.frequency ?? 14.15;
     const bw = freq * 0.1;
     return {
-      start_mhz: Math.max(0.1, freq - bw / 2),
-      stop_mhz: Math.min(2000, freq + bw / 2),
+      start_mhz: Math.max(MIN_FREQUENCY_MHZ, freq - bw / 2),
+      stop_mhz: Math.min(MAX_FREQUENCY_MHZ, freq + bw / 2),
       steps: 31,
     };
   },

@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useEditorStore } from "../stores/editorStore";
 import { useSimulationStore } from "../stores/simulationStore";
 import { useUIStore } from "../stores/uiStore";
+import { MAX_FREQUENCY_MHZ, MIN_FREQUENCY_MHZ } from "../engine/limits";
 import { EditorScene } from "../components/three/EditorScene";
 import { ErrorBoundary } from "../components/common/ErrorBoundary";
 import { ViewToggleToolbar } from "../components/three/ViewToggleToolbar";
@@ -39,6 +40,13 @@ import { Slider } from "../components/ui/Slider";
 import { NumberInput } from "../components/ui/NumberInput";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { createEditorProject } from "../utils/project-file";
+import {
+  IMPERIAL_LENGTH_UNIT_OPTIONS,
+  lengthUnitToMeters,
+  METRIC_LENGTH_UNIT_OPTIONS,
+  metersToLengthUnit,
+} from "../utils/units";
+import type { LengthUnit } from "../utils/units";
 import { validateSimulationRequest } from "../engine/validation";
 import { templates } from "../templates";
 import { getDefaultParams } from "../templates/types";
@@ -58,6 +66,14 @@ const MOBILE_SEGMENTS = [
 ];
 
 type MobileEditorTab = "wires" | "properties" | "settings" | "tools" | "results";
+
+const HEIGHT_UNIT_DECIMALS: Record<LengthUnit, number> = {
+  m: 3,
+  cm: 1,
+  mm: 0,
+  ft: 2,
+  in: 1,
+};
 
 export function EditorPage() {
   // Editor store
@@ -114,6 +130,10 @@ export function EditorPage() {
   const toggleView = useUIStore((s) => s.toggleView);
   const matching = useUIStore((s) => s.matching);
   const setMatching = useUIStore((s) => s.setMatching);
+  const imperial = useUIStore((s) => s.imperial);
+  const metricLengthUnit = useUIStore((s) => s.metricLengthUnit);
+  const imperialLengthUnit = useUIStore((s) => s.imperialLengthUnit);
+  const setLengthUnit = useUIStore((s) => s.setLengthUnit);
 
   // Right panel tab state: editor tools vs simulation results
   const [rightPanelTab, setRightPanelTab] = useState<"editor" | "results">("editor");
@@ -135,7 +155,6 @@ export function EditorPage() {
 
   // Pattern resolution
   const [patternStep, setPatternStep] = useState(5);
-
   // Mobile tab state (local to editor)
   const [mobileTab, setMobileTab] = useState<MobileEditorTab>("wires");
 
@@ -353,7 +372,7 @@ export function EditorPage() {
     for (const w of wires) {
       minZ = Math.min(minZ, w.z1, w.z2);
     }
-    return Math.round(minZ * 100) / 100;
+    return minZ;
   }, [wires]);
 
   const antennaMaxZ = useMemo(() => {
@@ -362,19 +381,48 @@ export function EditorPage() {
     for (const w of wires) {
       maxZ = Math.max(maxZ, w.z1, w.z2);
     }
-    return Math.round(maxZ * 100) / 100;
+    return maxZ;
   }, [wires]);
+
+  const heightUnitOptions = imperial
+    ? IMPERIAL_LENGTH_UNIT_OPTIONS
+    : METRIC_LENGTH_UNIT_OPTIONS;
+  const activeHeightUnit: LengthUnit = imperial
+    ? imperialLengthUnit
+    : metricLengthUnit;
+  const heightUnitDecimals = HEIGHT_UNIT_DECIMALS[activeHeightUnit];
+  const antennaHeightValue = metersToLengthUnit(
+    antennaMinZ,
+    activeHeightUnit,
+  );
+  const antennaHeightDescription = `Lowest point: ${metersToLengthUnit(
+    antennaMinZ,
+    activeHeightUnit,
+  ).toFixed(heightUnitDecimals)}${activeHeightUnit}, highest: ${metersToLengthUnit(
+    antennaMaxZ,
+    activeHeightUnit,
+  ).toFixed(heightUnitDecimals)}${activeHeightUnit}`;
 
   // Height adjustment handler — shifts all wires so that the lowest point is at the target height
   const handleHeightChange = useCallback(
     (targetMinZ: number) => {
       const dz = targetMinZ - antennaMinZ;
-      if (Math.abs(dz) > 0.001) {
+      if (Math.abs(dz) > 1e-9) {
         moveAllWiresZ(dz);
       }
     },
     [antennaMinZ, moveAllWiresZ]
   );
+
+  const handleDisplayedHeightChange = useCallback(
+    (value: number) =>
+      handleHeightChange(lengthUnitToMeters(value, activeHeightUnit)),
+    [activeHeightUnit, handleHeightChange],
+  );
+
+  const handleHeightUnitChange = useCallback((unit: string) => {
+    setLengthUnit(unit as LengthUnit);
+  }, [setLengthUnit]);
 
   return (
     <div className="flex flex-col h-dvh bg-background">
@@ -620,6 +668,8 @@ export function EditorPage() {
                         className="w-full bg-background text-text-primary text-[10px] font-mono px-1.5 py-1 rounded border border-border outline-none"
                       >
                         <option value="0">Off</option>
+                        <option value="0.001">0.001 m (1 mm)</option>
+                        <option value="0.005">0.005 m (5 mm)</option>
                         <option value="0.01">0.01 m</option>
                         <option value="0.05">0.05 m</option>
                         <option value="0.1">0.1 m</option>
@@ -668,9 +718,9 @@ export function EditorPage() {
               label="Design freq:"
               value={designFrequencyMhz}
               onChange={setDesignFrequency}
-              min={0.1}
-              max={500}
-              decimals={1}
+              min={MIN_FREQUENCY_MHZ}
+              max={MAX_FREQUENCY_MHZ}
+              decimals={3}
               unit="MHz"
             />
 
@@ -698,14 +748,16 @@ export function EditorPage() {
             {wires.length > 0 && (
               <Slider
                 label="Antenna Height"
-                value={antennaMinZ}
-                min={0}
+                value={antennaHeightValue}
+                min={1}
                 max={100}
-                step={0.5}
-                unit="m"
-                decimals={1}
-                description={`Lowest point: ${antennaMinZ}m, Highest: ${antennaMaxZ}m`}
-                onChange={handleHeightChange}
+                step={1}
+                unit={activeHeightUnit}
+                unitOptions={heightUnitOptions}
+                onUnitChange={handleHeightUnitChange}
+                decimals={heightUnitDecimals}
+                description={antennaHeightDescription}
+                onChange={handleDisplayedHeightChange}
               />
             )}
 
@@ -784,14 +836,16 @@ export function EditorPage() {
               {wires.length > 0 && (
                 <Slider
                   label="Antenna Height"
-                  value={antennaMinZ}
-                  min={0}
+                  value={antennaHeightValue}
+                  min={1}
                   max={100}
-                  step={0.5}
-                  unit="m"
-                  decimals={1}
-                  description={`Lowest point: ${antennaMinZ}m, Highest: ${antennaMaxZ}m`}
-                  onChange={handleHeightChange}
+                  step={1}
+                  unit={activeHeightUnit}
+                  unitOptions={heightUnitOptions}
+                  onUnitChange={handleHeightUnitChange}
+                  decimals={heightUnitDecimals}
+                  description={antennaHeightDescription}
+                  onChange={handleDisplayedHeightChange}
                 />
               )}
               {/* Design frequency */}
@@ -799,9 +853,9 @@ export function EditorPage() {
                 label="Design freq:"
                 value={designFrequencyMhz}
                 onChange={setDesignFrequency}
-                min={0.1}
-                max={500}
-                decimals={1}
+                min={MIN_FREQUENCY_MHZ}
+                max={MAX_FREQUENCY_MHZ}
+                decimals={3}
                 unit="MHz"
                 size="sm"
               />
@@ -829,6 +883,8 @@ export function EditorPage() {
                 <select value={snapSize} onChange={(e) => setSnapSize(parseFloat(e.target.value))}
                   className="w-full bg-background text-text-primary text-xs font-mono px-1.5 py-1.5 rounded border border-border outline-none">
                   <option value="0">Off</option>
+                  <option value="0.001">0.001 m (1 mm)</option>
+                  <option value="0.005">0.005 m (5 mm)</option>
                   <option value="0.01">0.01 m</option>
                   <option value="0.05">0.05 m</option>
                   <option value="0.1">0.1 m</option>
@@ -897,7 +953,11 @@ export function EditorPage() {
           </span>
           <span>Wires: {wires.length}</span>
           <span>Segments: {totalSegments}</span>
-          {wires.length > 0 && <span>Height: {antennaMinZ}–{antennaMaxZ}m</span>}
+          {wires.length > 0 && (
+            <span>
+              Height: {antennaMinZ.toFixed(3)}–{antennaMaxZ.toFixed(3)}m
+            </span>
+          )}
           <span>
             Snap: {snapSize > 0 ? `${snapSize}m` : "Off"}
           </span>
