@@ -84,6 +84,40 @@ export function feetToMeters(ft: number): number {
   return ft / 3.28084;
 }
 
+/** Metric display units supported by precise editor length controls. */
+export type MetricLengthUnit = "m" | "cm" | "mm";
+
+export const METRIC_LENGTH_UNIT_OPTIONS: ReadonlyArray<{
+  value: MetricLengthUnit;
+  label: string;
+}> = [
+  { value: "m", label: "m" },
+  { value: "cm", label: "cm" },
+  { value: "mm", label: "mm" },
+];
+
+const METRIC_LENGTH_FACTORS: Record<MetricLengthUnit, number> = {
+  m: 1,
+  cm: 100,
+  mm: 1000,
+};
+
+/** Convert the simulation's canonical meters to a selected display unit. */
+export function metersToMetricUnit(
+  meters: number,
+  unit: MetricLengthUnit,
+): number {
+  return meters * METRIC_LENGTH_FACTORS[unit];
+}
+
+/** Convert a user-entered metric length back to canonical meters. */
+export function metricUnitToMeters(
+  value: number,
+  unit: MetricLengthUnit,
+): number {
+  return value / METRIC_LENGTH_FACTORS[unit];
+}
+
 /** Convert dBi to dBd (dBi = dBd + 2.15) */
 export function dbiToDbD(dbi: number): number {
   return dbi - 2.15;

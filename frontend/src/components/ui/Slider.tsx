@@ -13,6 +13,10 @@ interface SliderProps {
   max: number;
   step: number;
   unit: string;
+  /** Optional choices for controls that support switching display units. */
+  unitOptions?: ReadonlyArray<{ value: string; label: string }>;
+  /** Called when a display unit is selected. */
+  onUnitChange?: (unit: string) => void;
   decimals?: number;
   description?: string;
   onChange: (value: number) => void;
@@ -41,6 +45,8 @@ export function Slider({
   max,
   step,
   unit,
+  unitOptions,
+  onUnitChange,
   decimals = 1,
   description,
   onChange,
@@ -110,33 +116,53 @@ export function Slider({
         >
           {label}
         </label>
-        {isEditing ? (
-          <input
-            type="number"
-            value={editText}
-            min={min}
-            max={max}
-            step={step}
-            onChange={(e) => setEditText(e.target.value)}
-            onBlur={handleEditCommit}
-            onKeyDown={handleEditKeyDown}
-            autoFocus
-            className="w-20 text-xs font-mono text-text-primary text-right
-              bg-background border border-border rounded px-1 py-0.5
-              focus:outline-none focus:border-accent/50"
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={handleEditStart}
-            className="text-xs font-mono text-text-primary whitespace-nowrap
-              hover:text-accent cursor-text transition-colors"
-            title="Click to type a value"
-          >
-            {displayValue}
-            {unit && <span className="text-text-secondary ml-0.5">{unit}</span>}
-          </button>
-        )}
+        <div className="flex items-center gap-1">
+          {isEditing ? (
+            <input
+              type="number"
+              value={editText}
+              min={min}
+              max={max}
+              step={step}
+              onChange={(e) => setEditText(e.target.value)}
+              onBlur={handleEditCommit}
+              onKeyDown={handleEditKeyDown}
+              autoFocus
+              className="w-20 text-xs font-mono text-text-primary text-right
+                bg-background border border-border rounded px-1 py-0.5
+                focus:outline-none focus:border-accent/50"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={handleEditStart}
+              className="text-xs font-mono text-text-primary whitespace-nowrap
+                hover:text-accent cursor-text transition-colors"
+              title="Click to type a value"
+            >
+              {displayValue}
+              {!unitOptions && unit && (
+                <span className="text-text-secondary ml-0.5">{unit}</span>
+              )}
+            </button>
+          )}
+          {unitOptions && onUnitChange && (
+            <select
+              aria-label={`${label} display unit`}
+              value={unit}
+              onChange={(event) => onUnitChange(event.target.value)}
+              className="bg-background border border-border rounded px-1 py-0.5
+                text-[10px] font-mono text-text-secondary focus:outline-none
+                focus:border-accent/50"
+            >
+              {unitOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
       </div>
       <input
         type="range"
