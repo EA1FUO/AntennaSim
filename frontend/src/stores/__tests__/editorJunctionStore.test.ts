@@ -92,6 +92,21 @@ describe("editor endpoint snapping", () => {
     useEditorStore.getState().undo();
     expect(useEditorStore.getState().wires[0]).toEqual(baseWires[0]);
   });
+
+  it("records an entire endpoint drag as one undo step", () => {
+    const store = useEditorStore.getState();
+    store.beginGeometryTransaction();
+    store.moveEndpoint(1, "end", 0.1, 0, 0);
+    store.moveEndpoint(1, "end", 0.2, 0, 0);
+    store.moveEndpoint(1, "end", 0.3, 0, 0);
+
+    expect(useEditorStore.getState().undoStack).toHaveLength(0);
+    useEditorStore.getState().commitGeometryTransaction();
+    expect(useEditorStore.getState().undoStack).toHaveLength(1);
+
+    useEditorStore.getState().undo();
+    expect(useEditorStore.getState().wires[0]).toEqual(baseWires[0]);
+  });
 });
 
 describe("editor junction locks", () => {

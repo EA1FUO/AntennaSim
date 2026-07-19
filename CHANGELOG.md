@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Fixed
 
 - Kept locked junction members together when wire lengths are edited numerically, while respecting length locks on adjacent wires
+- Ensured a complete endpoint or wire drag is stored as one undoable gesture instead of one history entry per pointer movement
 
 ## [1.3.1] - 2026-07-19
 
