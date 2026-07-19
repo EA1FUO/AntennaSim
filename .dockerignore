@@ -24,6 +24,7 @@ backend/.ruff_cache
 .github
 screenshots
 *.md
+!CHANGELOG.md
 LICENSE
 
 # Editor & OS

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Included the canonical changelog in frontend Docker build contexts so the in-app version history builds in standalone, all-in-one, and development images, while keeping unreleased development notes out of the released-version list
+
 ## [1.3.0] - 2026-07-19
 
 ### Added

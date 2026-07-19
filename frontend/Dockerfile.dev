@@ -6,6 +6,7 @@ COPY frontend/package.json frontend/package-lock.json* ./
 RUN npm install
 
 COPY VERSION /VERSION
+COPY CHANGELOG.md /CHANGELOG.md
 COPY frontend/ .
 
 EXPOSE 5173
