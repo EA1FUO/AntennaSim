@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-07-19
+
 ### Fixed
 
 - Included the canonical changelog in frontend Docker build contexts so the in-app version history builds in standalone, all-in-one, and development images, while keeping unreleased development notes out of the released-version list
@@ -365,6 +367,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 This was the initial public release -- a complete rewrite of the original prototype into a production-quality application with React 19, TypeScript, FastAPI, and Docker.
 
+[1.3.1]: https://github.com/EA1FUO/AntennaSim/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/EA1FUO/AntennaSim/compare/v1.2.2...v1.3.0
 [1.2.2]: https://github.com/EA1FUO/AntennaSim/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/EA1FUO/AntennaSim/compare/v1.2.0...v1.2.1
