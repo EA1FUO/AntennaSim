@@ -18,6 +18,7 @@ import { ErrorBoundary } from "../components/common/ErrorBoundary";
 import { ViewToggleToolbar } from "../components/three/ViewToggleToolbar";
 import { Navbar } from "../components/layout/Navbar";
 import { EditorToolbar } from "../components/editors/EditorToolbar";
+import { EndpointConnectionControls } from "../components/editors/EndpointConnectionControls";
 import { WireTable } from "../components/editors/WireTable";
 import { WirePropertiesPanel } from "../components/editors/WirePropertiesPanel";
 import { GroundEditor } from "../components/editors/GroundEditor";
@@ -79,6 +80,7 @@ export function EditorPage() {
   // Editor store
   const wires = useEditorStore((s) => s.wires);
   const excitations = useEditorStore((s) => s.excitations);
+  const junctions = useEditorStore((s) => s.junctions);
   const ground = useEditorStore((s) => s.ground);
   const setGround = useEditorStore((s) => s.setGround);
   const frequencyRange = useEditorStore((s) => s.frequencyRange);
@@ -94,6 +96,9 @@ export function EditorPage() {
   const snapSize = useEditorStore((s) => s.snapSize);
   const setSnapSize = useEditorStore((s) => s.setSnapSize);
   const selectedTags = useEditorStore((s) => s.selectedTags);
+  const clearEndpointSelection = useEditorStore((s) => s.clearEndpointSelection);
+  const snapSelectedEndpoints = useEditorStore((s) => s.snapSelectedEndpoints);
+  const toggleSelectedJunction = useEditorStore((s) => s.toggleSelectedJunction);
   const undo = useEditorStore((s) => s.undo);
   const redo = useEditorStore((s) => s.redo);
   const deselectAll = useEditorStore((s) => s.deselectAll);
@@ -172,15 +177,24 @@ export function EditorPage() {
       // Don't capture if user is typing in an input
       if (
         e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement ||
+        (e.target instanceof HTMLElement && e.target.isContentEditable)
       )
         return;
 
-      if ((e.key === "v" || e.key === "V") && !e.ctrlKey && !e.metaKey) setMode("select");
+      if ((e.key === "s" || e.key === "S") && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        snapSelectedEndpoints(e.shiftKey);
+      } else if ((e.key === "j" || e.key === "J") && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        toggleSelectedJunction();
+      } else if ((e.key === "v" || e.key === "V") && !e.ctrlKey && !e.metaKey) setMode("select");
       else if (e.key === "a" && !e.ctrlKey && !e.metaKey) setMode("add");
       else if ((e.key === "m" || e.key === "M") && !e.ctrlKey && !e.metaKey) setMode("move");
       else if (e.key === "Escape") {
         deselectAll();
+        clearEndpointSelection();
         setMode("select");
       } else if (e.key === "Delete" || e.key === "Backspace") deleteSelected();
       else if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
@@ -210,7 +224,7 @@ export function EditorPage() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [setMode, deselectAll, deleteSelected, undo, redo, selectAll, copySelected, paste, duplicateSelected]);
+  }, [setMode, deselectAll, clearEndpointSelection, snapSelectedEndpoints, toggleSelectedJunction, deleteSelected, undo, redo, selectAll, copySelected, paste, duplicateSelected]);
 
   // Clear stale results on page entry (prevents cross-page state leaks)
   // and whenever antenna geometry or config changes.
@@ -323,9 +337,10 @@ export function EditorPage() {
       ground,
       frequencyRange,
       designFrequencyMhz,
+      junctions,
       simResult ?? null,
     );
-  }, [getWireGeometry, excitations, loads, transmissionLines, ground, frequencyRange, designFrequencyMhz, simResult]);
+  }, [getWireGeometry, excitations, loads, transmissionLines, ground, frequencyRange, designFrequencyMhz, junctions, simResult]);
 
   const handleProjectLoad = useCallback(
     (project: ProjectFile) => {
@@ -338,6 +353,7 @@ export function EditorPage() {
       setWires(
         ed.wires.map((w) => ({ ...w, selected: false })),
         ed.excitations,
+        ed.junctions,
       );
       setGround(ed.ground);
       setFrequencyRange(ed.frequencyRange);
@@ -441,6 +457,8 @@ export function EditorPage() {
             <EditorScene viewToggles={viewToggles} patternData={patternData} currents={currentData} nearField={nearFieldData} />
           </ErrorBoundary>
 
+          <EndpointConnectionControls />
+
           {/* Overlays */}
           <ViewToggleToolbar toggles={viewToggles} onToggle={handleToggle} />
 
@@ -451,7 +469,8 @@ export function EditorPage() {
               <span className="text-accent font-bold uppercase">{mode}</span>
               {mode === "add" && (
                 <span className="text-text-secondary ml-1">
-                  (click to place)
+                  <span className="hidden sm:inline">(click empty space or a wire end to start)</span>
+                  <span className="sm:hidden">(tap space or an end)</span>
                 </span>
               )}
               {mode === "move" && (

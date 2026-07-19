@@ -11,11 +11,11 @@ import { useUIStore } from "../../stores/uiStore";
 
 /** Shared nav link definitions */
 const NAV_LINKS = [
-  { to: "/", label: "Simulator" },
-  { to: "/editor", label: "Editor" },
-  { to: "/library", label: "Library" },
-  { to: "/learn", label: "Learn" },
-  { to: "/about", label: "About" },
+  { to: "/", label: "Simulator", featured: false },
+  { to: "/editor", label: "Wire Editor", featured: true },
+  { to: "/library", label: "Library", featured: false },
+  { to: "/learn", label: "Learn", featured: false },
+  { to: "/about", label: "About", featured: false },
 ] as const;
 
 export function Navbar() {
@@ -62,8 +62,15 @@ export function Navbar() {
     return () => document.removeEventListener("pointerdown", handleOutside);
   }, [menuOpen]);
 
-  function linkClass(path: string): string {
+  function linkClass(path: string, featured: boolean): string {
     const active = location.pathname === path;
+    if (featured) {
+      return `inline-flex items-center gap-1.5 rounded-md border px-2 py-1 font-medium transition-colors ${
+        active
+          ? "border-accent/60 bg-accent/20 text-accent"
+          : "border-accent/30 bg-accent/5 text-accent hover:border-accent/50 hover:bg-accent/10"
+      }`;
+    }
     return `hover:text-accent transition-colors ${
       active ? "text-accent font-medium" : "text-text-secondary"
     }`;
@@ -85,9 +92,22 @@ export function Navbar() {
 
           {/* Desktop nav links */}
           <nav className="hidden md:flex items-center gap-4 text-sm">
-            {NAV_LINKS.map(({ to, label }) => (
-              <Link key={to} to={to} className={linkClass(to)}>
+            {NAV_LINKS.map(({ to, label, featured }) => (
+              <Link key={to} to={to} className={linkClass(to, featured)}>
+                {featured && (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                    <circle cx="5" cy="18" r="2" />
+                    <circle cx="12" cy="7" r="2" />
+                    <circle cx="19" cy="16" r="2" />
+                    <path d="M6.2 16.4l4.6-7.8M13.6 8.2l4.1 6.6" />
+                  </svg>
+                )}
                 {label}
+                {featured && (
+                  <span className="hidden rounded bg-accent/15 px-1 py-0.5 text-[8px] font-semibold uppercase tracking-wide xl:inline">
+                    Advanced
+                  </span>
+                )}
               </Link>
             ))}
           </nav>
@@ -191,17 +211,32 @@ export function Navbar() {
           className="md:hidden absolute top-full left-0 right-0 z-50 border-b border-border bg-surface shadow-lg"
         >
           <nav className="flex flex-col py-2">
-            {NAV_LINKS.map(({ to, label }) => (
+            {NAV_LINKS.map(({ to, label, featured }) => (
               <Link
                 key={to}
                 to={to}
-                className={`px-6 py-3 text-sm transition-colors ${
+                className={`flex items-center gap-2 px-6 py-3 text-sm transition-colors ${
                   location.pathname === to
                     ? "text-accent font-medium bg-accent/5"
-                    : "text-text-secondary hover:text-text-primary hover:bg-surface-hover"
+                    : featured
+                      ? "text-accent bg-accent/5 hover:bg-accent/10"
+                      : "text-text-secondary hover:text-text-primary hover:bg-surface-hover"
                 }`}
               >
+                {featured && (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                    <circle cx="5" cy="18" r="2" />
+                    <circle cx="12" cy="7" r="2" />
+                    <circle cx="19" cy="16" r="2" />
+                    <path d="M6.2 16.4l4.6-7.8M13.6 8.2l4.1 6.6" />
+                  </svg>
+                )}
                 {label}
+                {featured && (
+                  <span className="ml-auto rounded bg-accent/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide">
+                    Advanced
+                  </span>
+                )}
               </Link>
             ))}
             <button

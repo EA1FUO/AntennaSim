@@ -85,6 +85,27 @@ describe("createEditorProject", () => {
     wires[0]!.x1 = 999; // Mutate original
     expect(project.editor!.wires[0]!.x1).toBe(-5); // Project unchanged
   });
+
+  it("deep-copies persistent editor junctions", () => {
+    const junctions = [{
+      id: 1,
+      endpoints: [
+        { wireTag: 1, endpoint: "end" as const },
+        { wireTag: 2, endpoint: "start" as const },
+      ],
+    }];
+    const project = createEditorProject(
+      [
+        { tag: 1, segments: 3, x1: 0, y1: 0, z1: 0, x2: 1, y2: 0, z2: 0, radius: 0.001 },
+        { tag: 2, segments: 3, x1: 1, y1: 0, z1: 0, x2: 2, y2: 0, z2: 0, radius: 0.001 },
+      ],
+      [], [], [], { type: "free_space" },
+      { start_mhz: 14, stop_mhz: 14.35, steps: 15 }, 14.1, junctions,
+    );
+
+    junctions[0]!.endpoints[0]!.wireTag = 99;
+    expect(project.editor!.junctions[0]!.endpoints[0]!.wireTag).toBe(1);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -121,6 +142,15 @@ describe("Round-trip serialization", () => {
 // ---------------------------------------------------------------------------
 
 describe("validateProjectFile — error cases", () => {
+  it("migrates schema v1 editor projects to unlocked junctions", () => {
+    const project = makeEditorProject();
+    project.version = 1;
+    delete (project.editor as { junctions?: unknown }).junctions;
+
+    const migrated = validateProjectFile(project);
+    expect(migrated.editor!.junctions).toEqual([]);
+  });
+
   it("rejects null", () => {
     expect(() => validateProjectFile(null)).toThrow("not an object");
   });
@@ -167,6 +197,18 @@ describe("validateProjectFile — error cases", () => {
       mode: "editor",
       editor: { wires: [] },
     })).toThrow("at least one wire");
+  });
+
+  it("rejects junctions that reference missing wires", () => {
+    const project = makeEditorProject();
+    project.editor!.junctions = [{
+      id: 1,
+      endpoints: [
+        { wireTag: 1, endpoint: "start" },
+        { wireTag: 99, endpoint: "end" },
+      ],
+    }];
+    expect(() => validateProjectFile(project)).toThrow("missing wire");
   });
 });
 

@@ -36,6 +36,7 @@ import type { ViewToggles } from "./types";
 import type { PatternData, SegmentCurrent, NearFieldResult } from "../../api/nec";
 import { useUIStore } from "../../stores/uiStore";
 import { useEditorStore, snap } from "../../stores/editorStore";
+import { findEndpointJunction, sameEndpoint, type EndpointRef } from "../../utils/editor-junctions";
 
 interface EditorSceneProps {
   viewToggles: ViewToggles;
@@ -144,14 +145,23 @@ function EditorSceneContent({
   const excitations = useEditorStore((s) => s.excitations);
   const transmissionLines = useEditorStore((s) => s.transmissionLines);
   const selectedTags = useEditorStore((s) => s.selectedTags);
+  const selectedEndpoints = useEditorStore((s) => s.selectedEndpoints);
+  const junctions = useEditorStore((s) => s.junctions);
   const mode = useEditorStore((s) => s.mode);
   const snapSize = useEditorStore((s) => s.snapSize);
+  const verticalDrag = useEditorStore((s) => s.verticalDrag);
   const selectWire = useEditorStore((s) => s.selectWire);
   const deselectAll = useEditorStore((s) => s.deselectAll);
   const addWire = useEditorStore((s) => s.addWire);
-  const updateWire = useEditorStore((s) => s.updateWire);
+  const addConnectedWire = useEditorStore((s) => s.addConnectedWire);
+  const moveEndpoint = useEditorStore((s) => s.moveEndpoint);
   const moveWire = useEditorStore((s) => s.moveWire);
   const moveSelected = useEditorStore((s) => s.moveSelected);
+  const selectEndpoint = useEditorStore((s) => s.selectEndpoint);
+  const clearEndpointSelection = useEditorStore((s) => s.clearEndpointSelection);
+  const beginGeometryTransaction = useEditorStore((s) => s.beginGeometryTransaction);
+  const commitGeometryTransaction = useEditorStore((s) => s.commitGeometryTransaction);
+  const cancelGeometryTransaction = useEditorStore((s) => s.cancelGeometryTransaction);
   const toggleSelection = useEditorStore((s) => s.toggleSelection);
   const pickingExcitationForTag = useEditorStore((s) => s.pickingExcitationForTag);
   const setExcitation = useEditorStore((s) => s.setExcitation);
@@ -177,6 +187,7 @@ function EditorSceneContent({
 
   // Add mode state: first click sets start point, second click sets end
   const [addStart, setAddStart] = useState<[number, number, number] | null>(null);
+  const [addStartConnection, setAddStartConnection] = useState<EndpointRef | null>(null);
   // Ghost wire preview position
   const [ghostEnd, setGhostEnd] = useState<[number, number, number] | null>(null);
 
@@ -225,13 +236,22 @@ function EditorSceneContent({
         }
       }
       if (key === "escape") {
-        dragRef.current.axisConstraint = null;
+        cancelGeometryTransaction();
+        dragRef.current = null;
+        setIsDragging(false);
+        if (controls) (controls as unknown as { enabled: boolean }).enabled = true;
         setAxisIndicator(null);
       }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [isDragging, wires]);
+  }, [isDragging, wires, cancelGeometryTransaction, controls]);
+
+  useEffect(() => {
+    setAddStart(null);
+    setAddStartConnection(null);
+    setGhostEnd(null);
+  }, [mode]);
 
   /** Raycast to ground plane to get NEC2 coordinates (horizontal movement: X/Y) */
   const raycastToGround = useCallback(
@@ -267,11 +287,39 @@ function EditorSceneContent({
     [raycaster, camera]
   );
 
+  const completeWire = useCallback(
+    (end: [number, number, number], endConnection?: EndpointRef) => {
+      if (!addStart) return;
+      const wire = {
+        x1: addStart[0],
+        y1: addStart[1],
+        z1: addStart[2],
+        x2: end[0],
+        y2: end[1],
+        z2: end[2],
+        radius: 0.001,
+      };
+      const hasConnection = Boolean(addStartConnection || endConnection);
+      const tag = hasConnection
+        ? addConnectedWire(wire, {
+            start: addStartConnection ?? undefined,
+            end: endConnection,
+          })
+        : addWire(wire);
+      if (tag === null) return;
+      setAddStart(null);
+      setAddStartConnection(null);
+      setGhostEnd(null);
+    },
+    [addStart, addStartConnection, addConnectedWire, addWire],
+  );
+
   /** Handle clicking on empty space */
   const handleBackgroundClick = useCallback(
     (event: ThreeEvent<MouseEvent>) => {
       if (mode === "select") {
         deselectAll();
+        clearEndpointSelection();
         return;
       }
 
@@ -281,22 +329,13 @@ function EditorSceneContent({
 
         if (!addStart) {
           setAddStart(pos);
+          setAddStartConnection(null);
         } else {
-          addWire({
-            x1: addStart[0],
-            y1: addStart[1],
-            z1: addStart[2],
-            x2: pos[0],
-            y2: pos[1],
-            z2: pos[2],
-            radius: 0.001,
-          });
-          setAddStart(null);
-          setGhostEnd(null);
+          completeWire(pos);
         }
       }
     },
-    [mode, addStart, deselectAll, addWire, raycastToGround]
+    [mode, addStart, deselectAll, clearEndpointSelection, completeWire, raycastToGround]
   );
 
   /** Handle mouse move for ghost wire preview and drag operations */
@@ -332,7 +371,7 @@ function EditorSceneContent({
         let necDz = dty;
 
         // Apply axis constraint in NEC2 space
-        const ac = target.axisConstraint;
+        const ac = verticalDrag ? "z" : target.axisConstraint;
         if (ac === "x") { necDy = 0; necDz = 0; }
         else if (ac === "y") { necDx = 0; necDz = 0; }
         else if (ac === "z") { necDx = 0; necDy = 0; }
@@ -419,11 +458,10 @@ function EditorSceneContent({
             }
           }
 
-          if (endpoint === "start") {
-            updateWire(tag, { x1: newX, y1: newY, z1: newZ });
-          } else {
-            updateWire(tag, { x2: newX, y2: newY, z2: newZ });
-          }
+          const currentX = endpoint === "start" ? wire.x1 : wire.x2;
+          const currentY = endpoint === "start" ? wire.y1 : wire.y2;
+          const currentZ = endpoint === "start" ? wire.z1 : wire.z2;
+          moveEndpoint(tag, endpoint, newX - currentX, newY - currentY, newZ - currentZ);
 
           // Re-sync lastHit to actual endpoint after length-lock projection
           if (wire.lengthLocked && target.lastHit) {
@@ -438,7 +476,7 @@ function EditorSceneContent({
         }
       }
     },
-    [mode, addStart, isDragging, wires, selectedTags, raycastToGround, raycastCameraPlane, updateWire, moveWire, moveSelected]
+    [mode, addStart, isDragging, wires, selectedTags, verticalDrag, raycastToGround, raycastCameraPlane, moveEndpoint, moveWire, moveSelected]
   );
 
   const handlePointerUp = useCallback(() => {
@@ -447,8 +485,20 @@ function EditorSceneContent({
       if (controls) (controls as unknown as { enabled: boolean }).enabled = true;
       setIsDragging(false);
       dragRef.current = null;
+      commitGeometryTransaction();
     }
-  }, [isDragging, controls]);
+  }, [isDragging, controls, commitGeometryTransaction]);
+
+  useEffect(() => {
+    if (!isDragging) return;
+    const finishDrag = () => handlePointerUp();
+    window.addEventListener("pointerup", finishDrag);
+    window.addEventListener("pointercancel", finishDrag);
+    return () => {
+      window.removeEventListener("pointerup", finishDrag);
+      window.removeEventListener("pointercancel", finishDrag);
+    };
+  }, [isDragging, handlePointerUp]);
 
   /** Handle wire click — works in both select and move mode */
   const handleWireClick = useCallback(
@@ -464,6 +514,32 @@ function EditorSceneContent({
     [mode, selectWire, toggleSelection]
   );
 
+  const handleEndpointSelect = useCallback(
+    (tag: number, endpoint: "start" | "end", event: ThreeEvent<MouseEvent>) => {
+      event.stopPropagation();
+      const wire = wires.find((candidate) => candidate.tag === tag);
+      if (!wire) return;
+      const position: [number, number, number] = endpoint === "start"
+        ? [wire.x1, wire.y1, wire.z1]
+        : [wire.x2, wire.y2, wire.z2];
+      const ref = { wireTag: tag, endpoint };
+      if (mode === "add") {
+        if (!addStart) {
+          setAddStart(position);
+          setAddStartConnection(ref);
+          setGhostEnd(position);
+        } else {
+          completeWire(position, ref);
+        }
+        return;
+      }
+      if (mode === "select" || mode === "move") {
+        selectEndpoint(ref);
+      }
+    },
+    [mode, wires, addStart, completeWire, selectEndpoint],
+  );
+
   /** Handle endpoint drag start (move mode — endpoint only) */
   const handleEndpointDragStart = useCallback(
     (tag: number, endpoint: "start" | "end", event: ThreeEvent<PointerEvent>) => {
@@ -474,11 +550,13 @@ function EditorSceneContent({
           : new Vector3());
         const hit = raycastCameraPlane(event, ep);
         if (controls) (controls as unknown as { enabled: boolean }).enabled = false;
+        beginGeometryTransaction();
         setIsDragging(true);
-        dragRef.current = { type: "endpoint", tag, endpoint, axisConstraint: null, lastHit: hit ? { x: hit.x, y: hit.y, z: hit.z } : undefined };
+        const axisConstraint = verticalDrag ? "z" : null;
+        dragRef.current = { type: "endpoint", tag, endpoint, axisConstraint, lastHit: hit ? { x: hit.x, y: hit.y, z: hit.z } : undefined };
       }
     },
-    [mode, wires, controls, raycastCameraPlane]
+    [mode, wires, controls, verticalDrag, raycastCameraPlane, beginGeometryTransaction]
   );
 
   /** Handle wire body drag start (move mode — whole wire) */
@@ -492,12 +570,13 @@ function EditorSceneContent({
         const clickPoint = event.point ?? new Vector3();
         const hit = raycastCameraPlane(event, clickPoint);
         if (controls) (controls as unknown as { enabled: boolean }).enabled = false;
+        beginGeometryTransaction();
         setIsDragging(true);
         const hitObj = hit ? { x: hit.x, y: hit.y, z: hit.z } : undefined;
         dragRef.current = { type: "wire", tag, axisConstraint: null, lastHit: hitObj, planeAnchor: hitObj ? { ...hitObj } : undefined };
       }
     },
-    [mode, controls, raycastCameraPlane]
+    [mode, controls, raycastCameraPlane, beginGeometryTransaction]
   );
 
   // Convert wires to WireData format
@@ -599,7 +678,32 @@ function EditorSceneContent({
             isPicking={pickingExcitationForTag === wire.tag}
             accurateFeedpoint={accurateFeedpoint}
             mode={mode}
+            endpointSelection={{
+              start: (() => {
+                if (addStartConnection && sameEndpoint(addStartConnection, { wireTag: wire.tag, endpoint: "start" })) {
+                  return 1;
+                }
+                const index = selectedEndpoints.findIndex((endpoint) =>
+                  sameEndpoint(endpoint, { wireTag: wire.tag, endpoint: "start" }),
+                );
+                return index >= 0 ? (index + 1) as 1 | 2 : undefined;
+              })(),
+              end: (() => {
+                if (addStartConnection && sameEndpoint(addStartConnection, { wireTag: wire.tag, endpoint: "end" })) {
+                  return 1;
+                }
+                const index = selectedEndpoints.findIndex((endpoint) =>
+                  sameEndpoint(endpoint, { wireTag: wire.tag, endpoint: "end" }),
+                );
+                return index >= 0 ? (index + 1) as 1 | 2 : undefined;
+              })(),
+            }}
+            junctionSizes={{
+              start: findEndpointJunction(junctions, { wireTag: wire.tag, endpoint: "start" })?.endpoints.length,
+              end: findEndpointJunction(junctions, { wireTag: wire.tag, endpoint: "end" })?.endpoints.length,
+            }}
             onWireClick={handleWireClick}
+            onEndpointSelect={handleEndpointSelect}
             onEndpointDragStart={handleEndpointDragStart}
             onWireDragStart={handleWireDragStart}
             onSegmentPick={handleSegmentPick}

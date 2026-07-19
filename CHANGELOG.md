@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-07-19
+
+### Added
+
+- Added tested endpoint and junction geometry primitives for precise editor connection tools
+- Added undo-safe editor state for endpoint snapping and persistent junction locks, including connection-aware coordinate edits, transforms, and wire-shaping tools
+- Added ordered endpoint picking with responsive Snap, Keep Length, Lock, and Unlock controls; matching S, Shift+S, and J shortcuts; connection feedback; and junction-aware drag gestures
+- Added junction persistence to `.antennasim` editor projects with schema validation and automatic compatibility for schema v1 files
+- Added endpoint-origin wire creation in Add mode, including larger touch targets, live wire previews, optional endpoint-to-endpoint creation, and automatic junction locking
+- Added prominent Wire Editor navigation and responsive Simulator invitations so custom-geometry tools are discoverable on desktop and mobile
+
+### Fixed
+
+- Kept locked junction members together when wire lengths are edited numerically, while respecting length locks on adjacent wires
+- Ensured a complete endpoint or wire drag is stored as one undoable gesture instead of one history entry per pointer movement
+
 ## [1.3.1] - 2026-07-19
 
 ### Fixed

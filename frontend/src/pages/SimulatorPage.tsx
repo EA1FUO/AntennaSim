@@ -23,6 +23,7 @@ import { TemplatePicker } from "../components/editors/TemplatePicker";
 import { ParameterPanel } from "../components/editors/ParameterPanel";
 import { GroundEditor } from "../components/editors/GroundEditor";
 import { BalunEditor } from "../components/editors/BalunEditor";
+import { WireEditorPromo } from "../components/editors/WireEditorPromo";
 import { Button } from "../components/ui/Button";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { ColorScale } from "../components/ui/ColorScale";
@@ -218,6 +219,8 @@ export function SimulatorPage() {
               onLoad={handleProjectLoad}
             />
 
+            <WireEditorPromo />
+
             <TemplatePicker
               selectedId={template.id}
               onSelect={handleTemplateSelect}
@@ -401,6 +404,7 @@ export function SimulatorPage() {
                 onSave={handleProjectSave}
                 onLoad={handleProjectLoad}
               />
+              <WireEditorPromo />
               <TemplatePicker
                 selectedId={template.id}
                 onSelect={handleTemplateSelect}

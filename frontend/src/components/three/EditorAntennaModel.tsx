@@ -21,6 +21,7 @@ import type { ThreeEvent } from "@react-three/fiber";
 import type { WireData } from "./types";
 import { getWireColor } from "./types";
 import type { EditorMode } from "../../stores/editorStore";
+import type { WireEndpoint } from "../../utils/editor-junctions";
 import { useUIStore } from "../../stores/uiStore";
 import type { VisualScale } from "./visualScale";
 
@@ -36,7 +37,14 @@ interface EditorAntennaModelProps {
   /** Show feedpoint marker at exact NEC2 segment center */
   accurateFeedpoint?: boolean;
   mode: EditorMode;
+  endpointSelection: Partial<Record<WireEndpoint, 1 | 2>>;
+  junctionSizes: Partial<Record<WireEndpoint, number>>;
   onWireClick: (tag: number, event: ThreeEvent<MouseEvent>) => void;
+  onEndpointSelect: (
+    tag: number,
+    endpoint: WireEndpoint,
+    event: ThreeEvent<MouseEvent>,
+  ) => void;
   onEndpointDragStart?: (
     tag: number,
     endpoint: "start" | "end",
@@ -100,7 +108,10 @@ export function EditorAntennaModel({
   isPicking,
   accurateFeedpoint,
   mode,
+  endpointSelection,
+  junctionSizes,
   onWireClick,
+  onEndpointSelect,
   onEndpointDragStart,
   onWireDragStart,
   onSegmentPick,
@@ -255,8 +266,19 @@ export function EditorAntennaModel({
   }, [isPicking, hoveredSegment, start, end, wire.segments, accurateFeedpoint]);
 
   const capRadius = visualScale.capRadius(wire.radius);
-  const endpointRadius = mode === "move" ? capRadius * 2.5 : capRadius;
-  const endpointColor = mode === "move" ? "#10B981" : getWireColor(wire.tag);
+  const endpointRadius = Math.max(capRadius * 2.5, visualScale.markerRadius * 0.75);
+
+  const endpointAppearance = (endpoint: WireEndpoint) => {
+    const order = endpointSelection[endpoint];
+    if (order === 1) return { color: "#F59E0B", emissive: "#F59E0B", intensity: 0.8 };
+    if (order === 2) return { color: "#3B82F6", emissive: "#3B82F6", intensity: 0.8 };
+    if (junctionSizes[endpoint]) return { color: "#A855F7", emissive: "#A855F7", intensity: 0.65 };
+    if (mode === "add") return { color: "#06B6D4", emissive: "#06B6D4", intensity: 0.45 };
+    if (mode === "move") return { color: "#10B981", emissive: "#10B981", intensity: 0.5 };
+    return { color: getWireColor(wire.tag), emissive: "#000000", intensity: 0 };
+  };
+  const startAppearance = endpointAppearance("start");
+  const endAppearance = endpointAppearance("end");
 
   return (
     <group>
@@ -278,7 +300,7 @@ export function EditorAntennaModel({
       {/* Endpoint spheres */}
       <mesh
         position={start}
-        onClick={handleClick}
+        onClick={(event: ThreeEvent<MouseEvent>) => onEndpointSelect(wire.tag, "start", event)}
         onPointerDown={
           mode === "move" && onEndpointDragStart
             ? (e: ThreeEvent<PointerEvent>) => {
@@ -290,11 +312,11 @@ export function EditorAntennaModel({
       >
         <sphereGeometry args={[endpointRadius, 12, 12]} />
         <meshStandardMaterial
-          color={endpointColor}
+          color={startAppearance.color}
           metalness={0.5}
           roughness={0.4}
-          emissive={mode === "move" ? "#10B981" : "#000000"}
-          emissiveIntensity={mode === "move" ? 0.5 : 0}
+          emissive={startAppearance.emissive}
+          emissiveIntensity={startAppearance.intensity}
           transparent={dimmed}
           opacity={dimmed ? 0.15 : 1}
           depthWrite={!dimmed}
@@ -302,7 +324,7 @@ export function EditorAntennaModel({
       </mesh>
       <mesh
         position={end}
-        onClick={handleClick}
+        onClick={(event: ThreeEvent<MouseEvent>) => onEndpointSelect(wire.tag, "end", event)}
         onPointerDown={
           mode === "move" && onEndpointDragStart
             ? (e: ThreeEvent<PointerEvent>) => {
@@ -314,11 +336,11 @@ export function EditorAntennaModel({
       >
         <sphereGeometry args={[endpointRadius, 12, 12]} />
         <meshStandardMaterial
-          color={endpointColor}
+          color={endAppearance.color}
           metalness={0.5}
           roughness={0.4}
-          emissive={mode === "move" ? "#10B981" : "#000000"}
-          emissiveIntensity={mode === "move" ? 0.5 : 0}
+          emissive={endAppearance.emissive}
+          emissiveIntensity={endAppearance.intensity}
           transparent={dimmed}
           opacity={dimmed ? 0.15 : 1}
           depthWrite={!dimmed}
