@@ -100,7 +100,7 @@ export function Navbar() {
               hover:text-text-primary hover:bg-surface-hover transition-colors border border-border"
             title={`Switch to ${imperial ? "metric" : "imperial"} units`}
           >
-            {imperial ? "ft" : "m"}
+            {imperial ? "Imperial" : "Metric"}
           </button>
 
           {/* Theme toggle */}

@@ -142,5 +142,7 @@ describe("visual scale", () => {
     expect(span).toBeCloseTo(285, 6);
     expect(frame.distance).toBeGreaterThan(span * 2);
     expect(frame.center.x).toBeCloseTo(0, 10);
+    expect(createVisualScale(wires).fogNear).toBeGreaterThan(span * 2.5);
+    expect(createVisualScale(wires).fogFar).toBeGreaterThan(span * 9);
   });
 });

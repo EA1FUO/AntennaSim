@@ -147,20 +147,24 @@ export function Slider({
             </button>
           )}
           {unitOptions && onUnitChange && (
-            <select
-              aria-label={`${label} display unit`}
-              value={unit}
-              onChange={(event) => onUnitChange(event.target.value)}
-              className="bg-background border border-border rounded px-1 py-0.5
-                text-[10px] font-mono text-text-secondary focus:outline-none
-                focus:border-accent/50"
-            >
-              {unitOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            <label className="flex items-center gap-1 text-[10px] text-text-secondary">
+              <span>Unit:</span>
+              <select
+                aria-label={`${label} display unit`}
+                title={`Choose the unit used to display and edit ${label.toLowerCase()}`}
+                value={unit}
+                onChange={(event) => onUnitChange(event.target.value)}
+                className="max-w-28 bg-background border border-accent/40 rounded px-1 py-0.5
+                  text-[10px] font-mono text-text-primary cursor-pointer focus:outline-none
+                  focus:border-accent"
+              >
+                {unitOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
           )}
         </div>
       </div>

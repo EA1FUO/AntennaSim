@@ -6,6 +6,11 @@ import { create } from "zustand";
 import type { ViewToggles } from "../components/three/types";
 import type { S1PFile } from "../utils/s1p-parser";
 import type { MatchingConfig } from "../utils/units";
+import type {
+  ImperialLengthUnit,
+  LengthUnit,
+  MetricLengthUnit,
+} from "../utils/units";
 import { DEFAULT_MATCHING } from "../utils/units";
 
 export type Theme = "dark" | "light";
@@ -19,6 +24,10 @@ interface UIState {
   sidebarCollapsed: boolean;
   /** Unit system */
   imperial: boolean;
+  /** Preferred display unit within the metric system */
+  metricLengthUnit: MetricLengthUnit;
+  /** Preferred display unit within the imperial system */
+  imperialLengthUnit: ImperialLengthUnit;
   /** 3D viewport view toggles */
   viewToggles: ViewToggles;
   /** Active results tab */
@@ -39,6 +48,7 @@ interface UIState {
   toggleSidebar: () => void;
   setImperial: (imperial: boolean) => void;
   toggleUnits: () => void;
+  setLengthUnit: (unit: LengthUnit) => void;
   setViewToggle: (key: keyof ViewToggles, value: boolean) => void;
   toggleView: (key: keyof ViewToggles) => void;
   setResultsTab: (tab: ResultsTab) => void;
@@ -52,6 +62,8 @@ export const useUIStore = create<UIState>((set) => ({
   theme: "dark",
   sidebarCollapsed: false,
   imperial: false,
+  metricLengthUnit: "m",
+  imperialLengthUnit: "ft",
   viewToggles: {
     grid: true,
     wires: true,
@@ -80,6 +92,12 @@ export const useUIStore = create<UIState>((set) => ({
     set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   setImperial: (imperial) => set({ imperial }),
   toggleUnits: () => set((s) => ({ imperial: !s.imperial })),
+  setLengthUnit: (unit) =>
+    set(
+      unit === "m" || unit === "cm" || unit === "mm"
+        ? { metricLengthUnit: unit }
+        : { imperialLengthUnit: unit },
+    ),
   setViewToggle: (key, value) =>
     set((s) => ({ viewToggles: { ...s.viewToggles, [key]: value } })),
   toggleView: (key) =>

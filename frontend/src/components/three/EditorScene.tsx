@@ -559,7 +559,14 @@ function EditorSceneContent({
       <directionalLight position={[20, 30, 10]} intensity={theme === "dark" ? 0.7 : 0.8} />
 
       {/* Fog */}
-      <fog attach="fog" args={[theme === "dark" ? "#0A0A0F" : "#E8E8ED", 60, 200]} />
+      <fog
+        attach="fog"
+        args={[
+          theme === "dark" ? "#0A0A0F" : "#E8E8ED",
+          visualScale.fogNear,
+          visualScale.fogFar,
+        ]}
+      />
 
       {/* Clickable background plane (invisible, for catching clicks on empty space) */}
       <mesh

@@ -103,6 +103,8 @@ export interface VisualScale {
   patternScale: number;
   dashSize: number;
   gapSize: number;
+  fogNear: number;
+  fogFar: number;
 }
 
 /**
@@ -137,5 +139,9 @@ export function createVisualScale(wires: WireData[]): VisualScale {
     patternScale: span * 0.5,
     dashSize: span * 0.04,
     gapSize: span * 0.025,
+    // Preserve the usual depth cue while keeping antennas that exceed the
+    // original fixed fog range fully visible.
+    fogNear: Math.max(60, span * 3),
+    fogFar: Math.max(200, span * 10),
   };
 }

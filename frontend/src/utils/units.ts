@@ -84,30 +84,52 @@ export function feetToMeters(ft: number): number {
   return ft / 3.28084;
 }
 
-/** Metric display units supported by precise editor length controls. */
+/** Length display units supported by precise Editor and Simulator controls. */
 export type MetricLengthUnit = "m" | "cm" | "mm";
+export type ImperialLengthUnit = "ft" | "in";
+export type LengthUnit = MetricLengthUnit | ImperialLengthUnit;
 
 export const METRIC_LENGTH_UNIT_OPTIONS: ReadonlyArray<{
-  value: MetricLengthUnit;
+  value: LengthUnit;
   label: string;
 }> = [
-  { value: "m", label: "m" },
-  { value: "cm", label: "cm" },
-  { value: "mm", label: "mm" },
+  { value: "m", label: "Meters (m)" },
+  { value: "cm", label: "Centimeters (cm)" },
+  { value: "mm", label: "Millimeters (mm)" },
 ];
 
-const METRIC_LENGTH_FACTORS: Record<MetricLengthUnit, number> = {
+export const IMPERIAL_LENGTH_UNIT_OPTIONS: ReadonlyArray<{
+  value: LengthUnit;
+  label: string;
+}> = [
+  { value: "ft", label: "Feet (ft)" },
+  { value: "in", label: "Inches (in)" },
+];
+
+const LENGTH_FACTORS_FROM_METERS: Record<LengthUnit, number> = {
   m: 1,
   cm: 100,
   mm: 1000,
+  ft: 3.28084,
+  in: 39.37008,
 };
+
+/** Convert canonical meters to any supported display unit. */
+export function metersToLengthUnit(meters: number, unit: LengthUnit): number {
+  return meters * LENGTH_FACTORS_FROM_METERS[unit];
+}
+
+/** Convert a supported display unit back to canonical meters. */
+export function lengthUnitToMeters(value: number, unit: LengthUnit): number {
+  return value / LENGTH_FACTORS_FROM_METERS[unit];
+}
 
 /** Convert the simulation's canonical meters to a selected display unit. */
 export function metersToMetricUnit(
   meters: number,
   unit: MetricLengthUnit,
 ): number {
-  return meters * METRIC_LENGTH_FACTORS[unit];
+  return metersToLengthUnit(meters, unit);
 }
 
 /** Convert a user-entered metric length back to canonical meters. */
@@ -115,7 +137,7 @@ export function metricUnitToMeters(
   value: number,
   unit: MetricLengthUnit,
 ): number {
-  return value / METRIC_LENGTH_FACTORS[unit];
+  return lengthUnitToMeters(value, unit);
 }
 
 /** Convert dBi to dBd (dBi = dBd + 2.15) */

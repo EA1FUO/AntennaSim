@@ -41,11 +41,12 @@ import { NumberInput } from "../components/ui/NumberInput";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { createEditorProject } from "../utils/project-file";
 import {
+  IMPERIAL_LENGTH_UNIT_OPTIONS,
+  lengthUnitToMeters,
   METRIC_LENGTH_UNIT_OPTIONS,
-  metersToMetricUnit,
-  metricUnitToMeters,
+  metersToLengthUnit,
 } from "../utils/units";
-import type { MetricLengthUnit } from "../utils/units";
+import type { LengthUnit } from "../utils/units";
 import { validateSimulationRequest } from "../engine/validation";
 import { templates } from "../templates";
 import { getDefaultParams } from "../templates/types";
@@ -67,12 +68,14 @@ const MOBILE_SEGMENTS = [
 type MobileEditorTab = "wires" | "properties" | "settings" | "tools" | "results";
 
 const HEIGHT_UNIT_DISPLAY: Record<
-  MetricLengthUnit,
+  LengthUnit,
   { step: number; decimals: number }
 > = {
   m: { step: 0.001, decimals: 3 },
   cm: { step: 0.1, decimals: 1 },
   mm: { step: 1, decimals: 0 },
+  ft: { step: 0.01, decimals: 2 },
+  in: { step: 0.1, decimals: 1 },
 };
 
 export function EditorPage() {
@@ -130,6 +133,10 @@ export function EditorPage() {
   const toggleView = useUIStore((s) => s.toggleView);
   const matching = useUIStore((s) => s.matching);
   const setMatching = useUIStore((s) => s.setMatching);
+  const imperial = useUIStore((s) => s.imperial);
+  const metricLengthUnit = useUIStore((s) => s.metricLengthUnit);
+  const imperialLengthUnit = useUIStore((s) => s.imperialLengthUnit);
+  const setLengthUnit = useUIStore((s) => s.setLengthUnit);
 
   // Right panel tab state: editor tools vs simulation results
   const [rightPanelTab, setRightPanelTab] = useState<"editor" | "results">("editor");
@@ -151,8 +158,6 @@ export function EditorPage() {
 
   // Pattern resolution
   const [patternStep, setPatternStep] = useState(5);
-  const [heightUnit, setHeightUnit] = useState<MetricLengthUnit>("m");
-
   // Mobile tab state (local to editor)
   const [mobileTab, setMobileTab] = useState<MobileEditorTab>("wires");
 
@@ -382,24 +387,33 @@ export function EditorPage() {
     return maxZ;
   }, [wires]);
 
-  const heightUnitDisplay = HEIGHT_UNIT_DISPLAY[heightUnit];
-  const antennaHeightValue = metersToMetricUnit(antennaMinZ, heightUnit);
+  const heightUnitOptions = imperial
+    ? IMPERIAL_LENGTH_UNIT_OPTIONS
+    : METRIC_LENGTH_UNIT_OPTIONS;
+  const activeHeightUnit: LengthUnit = imperial
+    ? imperialLengthUnit
+    : metricLengthUnit;
+  const heightUnitDisplay = HEIGHT_UNIT_DISPLAY[activeHeightUnit];
+  const antennaHeightValue = metersToLengthUnit(
+    antennaMinZ,
+    activeHeightUnit,
+  );
   const antennaHeightMaxMeters = Math.max(
     100,
     300 / designFrequencyMhz,
     antennaMaxZ,
   );
-  const antennaHeightMax = metersToMetricUnit(
+  const antennaHeightMax = metersToLengthUnit(
     antennaHeightMaxMeters,
-    heightUnit,
+    activeHeightUnit,
   );
-  const antennaHeightDescription = `Lowest point: ${metersToMetricUnit(
+  const antennaHeightDescription = `Lowest point: ${metersToLengthUnit(
     antennaMinZ,
-    heightUnit,
-  ).toFixed(heightUnitDisplay.decimals)}${heightUnit}, highest: ${metersToMetricUnit(
+    activeHeightUnit,
+  ).toFixed(heightUnitDisplay.decimals)}${activeHeightUnit}, highest: ${metersToLengthUnit(
     antennaMaxZ,
-    heightUnit,
-  ).toFixed(heightUnitDisplay.decimals)}${heightUnit}`;
+    activeHeightUnit,
+  ).toFixed(heightUnitDisplay.decimals)}${activeHeightUnit}`;
 
   // Height adjustment handler — shifts all wires so that the lowest point is at the target height
   const handleHeightChange = useCallback(
@@ -413,13 +427,14 @@ export function EditorPage() {
   );
 
   const handleDisplayedHeightChange = useCallback(
-    (value: number) => handleHeightChange(metricUnitToMeters(value, heightUnit)),
-    [handleHeightChange, heightUnit],
+    (value: number) =>
+      handleHeightChange(lengthUnitToMeters(value, activeHeightUnit)),
+    [activeHeightUnit, handleHeightChange],
   );
 
   const handleHeightUnitChange = useCallback((unit: string) => {
-    setHeightUnit(unit as MetricLengthUnit);
-  }, []);
+    setLengthUnit(unit as LengthUnit);
+  }, [setLengthUnit]);
 
   return (
     <div className="flex flex-col h-dvh bg-background">
@@ -749,8 +764,8 @@ export function EditorPage() {
                 min={0}
                 max={antennaHeightMax}
                 step={heightUnitDisplay.step}
-                unit={heightUnit}
-                unitOptions={METRIC_LENGTH_UNIT_OPTIONS}
+                unit={activeHeightUnit}
+                unitOptions={heightUnitOptions}
                 onUnitChange={handleHeightUnitChange}
                 decimals={heightUnitDisplay.decimals}
                 description={antennaHeightDescription}
@@ -837,8 +852,8 @@ export function EditorPage() {
                   min={0}
                   max={antennaHeightMax}
                   step={heightUnitDisplay.step}
-                  unit={heightUnit}
-                  unitOptions={METRIC_LENGTH_UNIT_OPTIONS}
+                  unit={activeHeightUnit}
+                  unitOptions={heightUnitOptions}
                   onUnitChange={handleHeightUnitChange}
                   decimals={heightUnitDisplay.decimals}
                   description={antennaHeightDescription}

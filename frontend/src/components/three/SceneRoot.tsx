@@ -105,7 +105,10 @@ export function SceneRoot({
         />
 
         {/* Fog for depth perception */}
-        <fog attach="fog" args={[fogColor, 60, 200]} />
+        <fog
+          attach="fog"
+          args={[fogColor, visualScale.fogNear, visualScale.fogFar]}
+        />
 
         {/* Ground — auto-sized to antenna footprint */}
         {viewToggles.grid && <GroundPlane wires={wires} />}
