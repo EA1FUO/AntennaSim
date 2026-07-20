@@ -17,6 +17,7 @@ import { useSimulationStore } from "../../stores/simulationStore";
 import { useUIStore, type ResultsTab } from "../../stores/uiStore";
 import { formatSwr, formatImpedance, formatGain, swrColorClass, applyMatching } from "../../utils/units";
 import { parseS1P } from "../../utils/s1p-parser";
+import { downloadResultsS1P } from "../../utils/s1p-export";
 
 const TABS = [
   { key: "swr", label: "SWR" },
@@ -83,6 +84,11 @@ export function ResultsPanel() {
   const handleS1PClear = useCallback(() => {
     setS1PFile(null);
   }, [setS1PFile]);
+
+  const handleS1PExport = useCallback(() => {
+    if (!result) return;
+    downloadResultsS1P(result.frequency_data, matching);
+  }, [result, matching]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -171,6 +177,13 @@ export function ResultsPanel() {
                       {formatImpedance(m.real, m.imag)}
                     </div>
                   </div>
+                  <button
+                    onClick={handleS1PExport}
+                    className="col-span-2 text-[10px] px-1.5 py-1 rounded border border-border text-text-secondary hover:text-text-primary hover:border-accent/50 transition-colors"
+                    title="Export sweep as Touchstone .s1p"
+                  >
+                    Export .s1p
+                  </button>
                 </div>
               );
             })()}
