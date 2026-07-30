@@ -330,16 +330,16 @@ export function EditorPage() {
   const handleProjectSave = useCallback((): ProjectFile => {
     const wireGeometry = getWireGeometry();
     return createEditorProject(
-      wireGeometry,
-      excitations,
-      loads,
-      transmissionLines,
-      ground,
-      frequencyRange,
-      designFrequencyMhz,
-      junctions,
-      simResult ?? null,
-    );
+	wireGeometry,
+	excitations,
+	loads,
+	transmissionLines,
+	ground,
+	frequencyRange,
+	designFrequencyMhz,
+	junctions,
+	simResult ?? null,
+	);
   }, [getWireGeometry, excitations, loads, transmissionLines, ground, frequencyRange, designFrequencyMhz, junctions, simResult]);
 
   const handleProjectLoad = useCallback(
@@ -351,10 +351,12 @@ export function EditorPage() {
       const ed = project.editor;
       clearAll();
       setWires(
-        ed.wires.map((w) => ({ ...w, selected: false })),
-        ed.excitations,
-        ed.junctions,
-      );
+	  ed.wires.map((w) => ({ ...w, selected: false })),
+	  ed.excitations,
+	  ed.junctions,
+	  ed.loads ?? [],
+	  ed.transmissionLines ?? [],
+	);
       setGround(ed.ground);
       setFrequencyRange(ed.frequencyRange);
       setDesignFrequency(ed.designFrequencyMhz);

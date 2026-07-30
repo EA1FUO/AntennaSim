@@ -151,7 +151,13 @@ interface EditorState {
   /** Clear all wires */
   clearAll: () => void;
   /** Set all wires at once (e.g. from import) */
-  setWires: (wires: EditorWire[], excitations?: Excitation[], junctions?: EditorJunction[]) => void;
+  setWires: (
+  wires: EditorWire[],
+  excitations?: Excitation[],
+  junctions?: EditorJunction[],
+  loads?: LumpedLoad[],
+  transmissionLines?: TransmissionLine[],
+) => void;
 
   // ---- Selection ----
   /** Select a single wire (deselects others unless additive) */
@@ -1209,7 +1215,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
 
-  setWires: (wires, excitations, junctions = []) => {
+  setWires: (
+  wires,
+  excitations,
+  junctions = [],
+  loads = [],
+  transmissionLines = [],
+) => {
     const state = get();
     const maxTag = wires.reduce((max, w) => Math.max(max, w.tag), 0);
     const newWires = wires.map((w) => ({ ...w }));
@@ -1218,9 +1230,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const fixedExcitations = fixExcitations(rawExcitations, newWires);
     set({
       ...pushUndo(state),
-      wires: newWires,
-      excitations: fixedExcitations,
-      selectedTags: new Set(),
+		wires: newWires,
+		excitations: fixedExcitations,
+		loads: loads.map((l) => ({ ...l })),
+		transmissionLines: transmissionLines.map((tl) => ({ ...tl })),
+		selectedTags: new Set(),
       selectedEndpoints: [],
       junctions: junctions.map((junction) => ({
         ...junction,
