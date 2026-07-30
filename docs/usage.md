@@ -149,9 +149,11 @@ show its X, Y, and Z components. The dashed amber and blue lines extend the two
 wire axes through their closest approach, and the white arc marks the smaller
 angle reported by the panel. This angle guide stays at the shared feed point of
 a fan antenna even when a different endpoint pair is being measured. An angle
-of 0° means the axes are parallel and 90° means they are perpendicular. Select
-another wire to begin a new measurement, use **Clear** to keep measuring from
-scratch, or select **Measure** again to close the tool.
+of 0° means the axes are parallel and 90° means they are perpendicular. The
+viewport omits the angle guide when the displayed angle is 0.0° to keep
+parallel-wire measurements uncluttered. Select another wire to begin a new
+measurement, use **Clear** to keep measuring from scratch, or select **Measure**
+again to close the tool.
 
 ---
 

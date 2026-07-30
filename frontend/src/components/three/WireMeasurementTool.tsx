@@ -153,7 +153,7 @@ export function WireMeasurementTool({
               wire 1 to wire 2 in NEC2 X (east), Y (north), and Z (up). The
               white arc stays at the wires&apos; closest approach and shows the
               smaller angle between their axes: 0° is parallel and 90° is
-              perpendicular.
+              perpendicular. The viewport omits the arc for a 0° angle.
             </div>
           )}
 

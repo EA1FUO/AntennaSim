@@ -301,6 +301,11 @@ export function WireMeasurementOverlay3D({
     visualScale.markerRadius * 0.7,
     visualScale.span * 0.008,
   );
+  const visibleAngleDegrees =
+    measurement.angleDegrees !== null &&
+    Math.round(measurement.angleDegrees * 10) > 0
+      ? measurement.angleDegrees
+      : null;
 
   return (
     <group>
@@ -345,7 +350,7 @@ export function WireMeasurementOverlay3D({
         />
       ))}
 
-      {angleGuide && measurement.angleDegrees !== null && (
+      {angleGuide && visibleAngleDegrees !== null && (
         <>
           <Line
             points={angleGuide.firstAxis.map(toThree)}
@@ -390,7 +395,7 @@ export function WireMeasurementOverlay3D({
             style={{ pointerEvents: "none" }}
           >
             <span className="whitespace-nowrap rounded border border-white/50 bg-black/85 px-1.5 py-0.5 font-mono text-[10px] font-bold text-white shadow">
-              {measurement.angleDegrees.toFixed(1)}° acute
+              {visibleAngleDegrees.toFixed(1)}° acute
             </span>
           </Html>
         </>
