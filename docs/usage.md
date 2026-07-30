@@ -8,6 +8,7 @@ Everything you can do once AntennaSim is running: the antenna templates it ships
 
 - [Antenna Templates](#antenna-templates)
 - [Features](#features)
+- [Measuring Wire Spacing](#measuring-wire-spacing)
 - [Keyboard Shortcuts](#keyboard-shortcuts)
 
 ---
@@ -61,6 +62,7 @@ Every template includes configurable parameters (frequency, height, element leng
 - **Pattern slice** -- animated cutting plane sweeping through the radiation pattern
 - **Ground reflection** -- ghost mirror showing antenna image below ground plane
 - **Hover measurements** -- tooltip follows cursor over any 3D object showing gain, wire dimensions, current magnitude, or field strength
+- **Wire measurement tool** -- select any two wires to see their closest spacing, signed X/Y/Z offsets, and angle in either the Simulator or Wire Editor
 - **Auto-framing** -- camera automatically fits to antenna bounding box on load and template change
 - **3D orientation gizmo** -- interactive axis cube in the viewport corner; click any face/edge/corner to snap to that camera angle
 - **Compass rose** for spatial orientation
@@ -125,6 +127,25 @@ Every template includes configurable parameters (frequency, height, element leng
 - **Keyboard shortcuts** -- 17 bindings for fast workflow (press `?` to see them all)
 
 </details>
+
+---
+
+## Measuring Wire Spacing
+
+The **Measure** button is in the bottom-right corner of both the Simulator and
+Wire Editor viewports. It works with a mouse or touchscreen:
+
+1. Select **Measure** to enter measurement mode.
+2. Click or tap the first wire, shown in amber.
+3. Click or tap the second wire, shown in blue.
+4. Read the shortest distance, wire angle, and signed NEC2 axis offsets in the
+   measurement panel. X points east, Y north, and Z up.
+
+The white dashed guide connects the closest points on the two finite wires.
+Red, green, and blue guides show the X, Y, and Z components of that spacing.
+An angle of 0° means the wires are parallel and 90° means they are
+perpendicular. Select another wire to begin a new measurement, use **Clear** to
+keep measuring from scratch, or select **Measure** again to close the tool.
 
 ---
 

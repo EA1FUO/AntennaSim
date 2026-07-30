@@ -17,6 +17,8 @@ import { resolveTransmissionLines } from "../components/three/transmissionLineVi
 import { ErrorBoundary } from "../components/common/ErrorBoundary";
 import { KeyboardShortcutsPanel } from "../components/common/KeyboardShortcutsPanel";
 import { ViewToggleToolbar } from "../components/three/ViewToggleToolbar";
+import { WireMeasurementTool } from "../components/three/WireMeasurementTool";
+import { useWireMeasurement } from "../components/three/useWireMeasurement";
 import { Navbar } from "../components/layout/Navbar";
 import { StatusBar } from "../components/layout/StatusBar";
 import { TemplatePicker } from "../components/editors/TemplatePicker";
@@ -81,10 +83,18 @@ export function SimulatorPage() {
   // UI store
   const viewToggles = useUIStore((s) => s.viewToggles);
   const toggleView = useUIStore((s) => s.toggleView);
+  const setViewToggle = useUIStore((s) => s.setViewToggle);
   const mobileTab = useUIStore((s) => s.mobileTab);
   const setMobileTab = useUIStore((s) => s.setMobileTab);
   const matching = useUIStore((s) => s.matching);
   const setMatching = useUIStore((s) => s.setMatching);
+  const {
+    active: measurementActive,
+    selectedTags: measurementSelectedTags,
+    toggle: toggleWireMeasurement,
+    selectWire: selectMeasurementWire,
+    clear: clearWireMeasurement,
+  } = useWireMeasurement();
 
   // Clear stale results on page entry (prevents cross-page state leaks)
   // and whenever antenna geometry or ground changes.
@@ -105,6 +115,11 @@ export function SimulatorPage() {
     (key: keyof ViewToggles) => toggleView(key),
     [toggleView]
   );
+
+  const handleMeasurementToggle = useCallback(() => {
+    if (!measurementActive) setViewToggle("wires", true);
+    toggleWireMeasurement();
+  }, [measurementActive, setViewToggle, toggleWireMeasurement]);
 
   // Pattern resolution
   const [patternStep, setPatternStep] = useState(5);
@@ -339,15 +354,25 @@ export function SimulatorPage() {
               patternData={patternData}
               currents={currents}
               nearField={nearField}
+              measurementActive={measurementActive}
+              measurementSelectedTags={measurementSelectedTags}
+              onMeasurementWireSelect={selectMeasurementWire}
             />
           </ErrorBoundary>
 
           {/* Overlays */}
           <ViewToggleToolbar toggles={viewToggles} onToggle={handleToggle} />
+          <WireMeasurementTool
+            wires={wireData}
+            active={measurementActive}
+            selectedTags={measurementSelectedTags}
+            onToggle={handleMeasurementToggle}
+            onClear={clearWireMeasurement}
+          />
 
           {/* Color scale legend (when pattern is visible) */}
           {(viewToggles.pattern || viewToggles.volumetric) && patternData && (
-            <div className="absolute bottom-2 right-2 z-10">
+            <div className="absolute top-2 left-1/2 z-10 -translate-x-1/2">
               <ColorScale minLabel="Min" maxLabel="Max" unit="dBi" />
             </div>
           )}
@@ -355,9 +380,11 @@ export function SimulatorPage() {
           {/* Pattern frequency slider — bottom-right above dBi legend on mobile, centered on desktop */}
           {simStatus === "success" && result && result.frequency_data.length > 1 && (
             <>
-              <div className="absolute bottom-8 right-2 z-10 w-36 lg:hidden">
-                <PatternFrequencySlider compact />
-              </div>
+              {!measurementActive && (
+                <div className="absolute bottom-14 left-1/2 z-10 w-36 -translate-x-1/2 lg:hidden">
+                  <PatternFrequencySlider compact />
+                </div>
+              )}
               <div className="hidden lg:block absolute bottom-2 left-1/2 -translate-x-1/2 z-10 w-64">
                 <PatternFrequencySlider />
               </div>

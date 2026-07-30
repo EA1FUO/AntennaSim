@@ -16,6 +16,8 @@ import { MAX_FREQUENCY_MHZ, MIN_FREQUENCY_MHZ } from "../engine/limits";
 import { EditorScene } from "../components/three/EditorScene";
 import { ErrorBoundary } from "../components/common/ErrorBoundary";
 import { ViewToggleToolbar } from "../components/three/ViewToggleToolbar";
+import { WireMeasurementTool } from "../components/three/WireMeasurementTool";
+import { useWireMeasurement } from "../components/three/useWireMeasurement";
 import { Navbar } from "../components/layout/Navbar";
 import { EditorToolbar } from "../components/editors/EditorToolbar";
 import { EndpointConnectionControls } from "../components/editors/EndpointConnectionControls";
@@ -133,12 +135,20 @@ export function EditorPage() {
   // UI store
   const viewToggles = useUIStore((s) => s.viewToggles);
   const toggleView = useUIStore((s) => s.toggleView);
+  const setViewToggle = useUIStore((s) => s.setViewToggle);
   const matching = useUIStore((s) => s.matching);
   const setMatching = useUIStore((s) => s.setMatching);
   const imperial = useUIStore((s) => s.imperial);
   const metricLengthUnit = useUIStore((s) => s.metricLengthUnit);
   const imperialLengthUnit = useUIStore((s) => s.imperialLengthUnit);
   const setLengthUnit = useUIStore((s) => s.setLengthUnit);
+  const {
+    active: measurementActive,
+    selectedTags: measurementSelectedTags,
+    toggle: toggleWireMeasurement,
+    selectWire: selectMeasurementWire,
+    clear: clearWireMeasurement,
+  } = useWireMeasurement();
 
   // Right panel tab state: editor tools vs simulation results
   const [rightPanelTab, setRightPanelTab] = useState<"editor" | "results">("editor");
@@ -193,6 +203,7 @@ export function EditorPage() {
       else if (e.key === "a" && !e.ctrlKey && !e.metaKey) setMode("add");
       else if ((e.key === "m" || e.key === "M") && !e.ctrlKey && !e.metaKey) setMode("move");
       else if (e.key === "Escape") {
+        if (measurementActive) toggleWireMeasurement();
         deselectAll();
         clearEndpointSelection();
         setMode("select");
@@ -224,7 +235,7 @@ export function EditorPage() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [setMode, deselectAll, clearEndpointSelection, snapSelectedEndpoints, toggleSelectedJunction, deleteSelected, undo, redo, selectAll, copySelected, paste, duplicateSelected]);
+  }, [setMode, deselectAll, clearEndpointSelection, snapSelectedEndpoints, toggleSelectedJunction, deleteSelected, undo, redo, selectAll, copySelected, paste, duplicateSelected, measurementActive, toggleWireMeasurement]);
 
   // Clear stale results on page entry (prevents cross-page state leaks)
   // and whenever antenna geometry or config changes.
@@ -237,6 +248,15 @@ export function EditorPage() {
     (key: keyof ViewToggles) => toggleView(key),
     [toggleView]
   );
+
+  const handleMeasurementToggle = useCallback(() => {
+    if (!measurementActive) {
+      setMode("select");
+      clearEndpointSelection();
+      setViewToggle("wires", true);
+    }
+    toggleWireMeasurement();
+  }, [measurementActive, toggleWireMeasurement, setMode, clearEndpointSelection, setViewToggle]);
 
   const handleRunSimulation = useCallback(() => {
     if (wires.length === 0 || excitations.length === 0) return;
@@ -454,26 +474,43 @@ export function EditorPage() {
         {/* === CENTER: 3D VIEWPORT === */}
         <main className="flex-1 relative min-w-0 min-h-0">
           <ErrorBoundary label="3D Viewport">
-            <EditorScene viewToggles={viewToggles} patternData={patternData} currents={currentData} nearField={nearFieldData} />
+            <EditorScene
+              viewToggles={viewToggles}
+              patternData={patternData}
+              currents={currentData}
+              nearField={nearFieldData}
+              measurementActive={measurementActive}
+              measurementSelectedTags={measurementSelectedTags}
+              onMeasurementWireSelect={selectMeasurementWire}
+            />
           </ErrorBoundary>
 
           <EndpointConnectionControls />
 
           {/* Overlays */}
           <ViewToggleToolbar toggles={viewToggles} onToggle={handleToggle} />
+          <WireMeasurementTool
+            wires={wireGeometry}
+            active={measurementActive}
+            selectedTags={measurementSelectedTags}
+            onToggle={handleMeasurementToggle}
+            onClear={clearWireMeasurement}
+          />
 
           {/* Mode indicator */}
           <div className="absolute top-2 left-2 z-10">
             <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-md px-2 py-1 text-[10px] font-mono text-text-secondary">
               Mode:{" "}
-              <span className="text-accent font-bold uppercase">{mode}</span>
-              {mode === "add" && (
+              <span className="text-accent font-bold uppercase">
+                {measurementActive ? "measure" : mode}
+              </span>
+              {!measurementActive && mode === "add" && (
                 <span className="text-text-secondary ml-1">
                   <span className="hidden sm:inline">(click empty space or a wire end to start)</span>
                   <span className="sm:hidden">(tap space or an end)</span>
                 </span>
               )}
-              {mode === "move" && (
+              {!measurementActive && mode === "move" && (
                 <span className="text-text-secondary ml-1">
                   <span className="hidden lg:inline">(X/Y/Z = lock axis, Shift+X/Y/Z = exclude axis)</span>
                   <span className="lg:hidden">{verticalDrag ? "(vertical)" : "(drag to move)"}</span>
@@ -484,7 +521,7 @@ export function EditorPage() {
 
           {/* Color scale */}
           {(viewToggles.pattern || viewToggles.volumetric) && patternData && (
-            <div className="absolute bottom-2 right-2 z-10">
+            <div className="absolute top-2 left-1/2 z-10 -translate-x-1/2">
               <ColorScale minLabel="Min" maxLabel="Max" unit="dBi" />
             </div>
           )}
@@ -492,9 +529,11 @@ export function EditorPage() {
           {/* Pattern frequency slider — bottom-right above dBi legend on mobile, centered on desktop */}
           {simStatus === "success" && simResult && simResult.frequency_data.length > 1 && (
             <>
-              <div className="absolute bottom-8 right-2 z-10 w-36 lg:hidden">
-                <PatternFrequencySlider compact />
-              </div>
+              {!measurementActive && (
+                <div className="absolute bottom-14 left-1/2 z-10 w-36 -translate-x-1/2 lg:hidden">
+                  <PatternFrequencySlider compact />
+                </div>
+              )}
               <div className="hidden lg:block absolute bottom-2 left-1/2 -translate-x-1/2 z-10 w-56">
                 <PatternFrequencySlider />
               </div>
