@@ -125,16 +125,73 @@ describe("Round-trip serialization", () => {
   });
 
   it("editor project survives JSON round-trip", () => {
-    const original = makeEditorProject();
-    const json = JSON.stringify(original);
-    const parsed = validateProjectFile(JSON.parse(json));
+  const original = createEditorProject(
+    [
+      {
+        tag: 1,
+        segments: 21,
+        x1: -5,
+        y1: 0,
+        z1: 10,
+        x2: 5,
+        y2: 0,
+        z2: 10,
+        radius: 0.001,
+      },
+    ],
+    [
+      {
+        wire_tag: 1,
+        segment: 11,
+        voltage_real: 1,
+        voltage_imag: 0,
+      },
+    ],
+    [
+      {
+        load_type: 4,
+        wire_tag: 1,
+        segment_start: 11,
+        segment_end: 11,
+        param1: 50,
+        param2: 0,
+        param3: 0,
+      },
+    ],
+    [
+      {
+        wire_tag1: 1,
+        segment1: 11,
+        wire_tag2: 1,
+        segment2: 21,
+        impedance: 450,
+        length: 0.25,
+      },
+    ],
+    { type: "average" },
+    { start_mhz: 14.0, stop_mhz: 14.35, steps: 15 },
+    14.1,
+  );
 
-    expect(parsed.mode).toBe("editor");
-    expect(parsed.editor!.wires).toHaveLength(1);
-    expect(parsed.editor!.wires[0]!.tag).toBe(1);
-    expect(parsed.editor!.excitations[0]!.segment).toBe(11);
-    expect(parsed.editor!.frequencyRange.start_mhz).toBe(14.0);
-  });
+  const json = JSON.stringify(original);
+  const parsed = validateProjectFile(JSON.parse(json));
+
+  expect(parsed.mode).toBe("editor");
+  expect(parsed.editor!.wires).toHaveLength(1);
+  expect(parsed.editor!.wires[0]!.tag).toBe(1);
+  expect(parsed.editor!.excitations[0]!.segment).toBe(11);
+  expect(parsed.editor!.frequencyRange.start_mhz).toBe(14.0);
+
+  // Regression test: loads must survive save/load
+  expect(parsed.editor!.loads).toHaveLength(1);
+  expect(parsed.editor!.loads[0]!.load_type).toBe(4);
+  expect(parsed.editor!.loads[0]!.param1).toBe(50);
+
+  // Regression test: transmission lines must survive save/load
+  expect(parsed.editor!.transmissionLines).toHaveLength(1);
+  expect(parsed.editor!.transmissionLines[0]!.impedance).toBe(450);
+  expect(parsed.editor!.transmissionLines[0]!.length).toBeCloseTo(0.25);
+});
 });
 
 // ---------------------------------------------------------------------------
