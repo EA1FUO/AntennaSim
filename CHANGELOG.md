@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - Added tested geometry primitives for closest-point wire spacing, per-axis offsets, and orientation-independent wire angles
+- Added shared mouse/touch wire selection, selected-wire highlights, and 3D closest-point axis guides to both viewport renderers
 
 ## [1.4.1] - 2026-07-30
 

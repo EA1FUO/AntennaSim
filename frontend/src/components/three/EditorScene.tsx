@@ -30,6 +30,7 @@ import type { VisualScale } from "./visualScale";
 import { createVisualScale } from "./visualScale";
 import { RadiationSlice } from "./RadiationSlice";
 import { SceneRaycaster } from "./SceneRaycaster";
+import { WireMeasurementOverlay3D } from "./WireMeasurementOverlay3D";
 import { NonRadiatingLines } from "./NonRadiatingLines";
 import { resolveTransmissionLines } from "./transmissionLineViz";
 import type { ViewToggles } from "./types";
@@ -44,6 +45,9 @@ interface EditorSceneProps {
   currents?: SegmentCurrent[] | null;
   nearField?: NearFieldResult | null;
   tooltipRef?: RefObject<HTMLDivElement | null>;
+  measurementActive?: boolean;
+  measurementSelectedTags?: readonly number[];
+  onMeasurementWireSelect?: (tag: number) => void;
 }
 
 /** Ground plane for raycasting (XZ plane at y=0 in Three.js = z=0 in NEC2) */
@@ -134,6 +138,9 @@ function EditorSceneContent({
   currents,
   nearField,
   tooltipRef,
+  measurementActive = false,
+  measurementSelectedTags = [],
+  onMeasurementWireSelect,
 }: EditorSceneProps) {
   const theme = useUIStore((s) => s.theme);
   const accurateFeedpoint = useUIStore((s) => s.accurateFeedpoint);
@@ -317,6 +324,8 @@ function EditorSceneContent({
   /** Handle clicking on empty space */
   const handleBackgroundClick = useCallback(
     (event: ThreeEvent<MouseEvent>) => {
+      if (measurementActive) return;
+
       if (mode === "select") {
         deselectAll();
         clearEndpointSelection();
@@ -335,13 +344,13 @@ function EditorSceneContent({
         }
       }
     },
-    [mode, addStart, deselectAll, clearEndpointSelection, completeWire, raycastToGround]
+    [measurementActive, mode, addStart, deselectAll, clearEndpointSelection, completeWire, raycastToGround]
   );
 
   /** Handle mouse move for ghost wire preview and drag operations */
   const handlePointerMove = useCallback(
     (event: ThreeEvent<PointerEvent>) => {
-      if (mode === "add" && addStart) {
+      if (!measurementActive && mode === "add" && addStart) {
         const pos = raycastToGround(event);
         if (pos) setGhostEnd(pos);
       }
@@ -476,7 +485,7 @@ function EditorSceneContent({
         }
       }
     },
-    [mode, addStart, isDragging, wires, selectedTags, verticalDrag, raycastToGround, raycastCameraPlane, moveEndpoint, moveWire, moveSelected]
+    [measurementActive, mode, addStart, isDragging, wires, selectedTags, verticalDrag, raycastToGround, raycastCameraPlane, moveEndpoint, moveWire, moveSelected]
   );
 
   const handlePointerUp = useCallback(() => {
@@ -709,8 +718,25 @@ function EditorSceneContent({
             onSegmentPick={handleSegmentPick}
             tooltipRef={tooltipRef}
             dimmed={wiresDimmed}
+            measurementActive={measurementActive}
+            measurementOrder={
+              measurementSelectedTags[0] === wire.tag
+                ? 1
+                : measurementSelectedTags[1] === wire.tag
+                  ? 2
+                  : undefined
+            }
+            onMeasurementSelect={onMeasurementWireSelect}
           />
         ))}
+
+      {measurementActive && (
+        <WireMeasurementOverlay3D
+          wires={wireDataList}
+          selectedTags={measurementSelectedTags}
+          visualScale={visualScale}
+        />
+      )}
 
       {/* Transmission-line feeders drawn as dashed (non-radiating) lines */}
       {viewToggles.wires && feederSegments.length > 0 && (
@@ -790,7 +816,15 @@ function EditorSceneContent({
   );
 }
 
-export function EditorScene({ viewToggles, patternData, currents, nearField }: EditorSceneProps) {
+export function EditorScene({
+  viewToggles,
+  patternData,
+  currents,
+  nearField,
+  measurementActive = false,
+  measurementSelectedTags = [],
+  onMeasurementWireSelect,
+}: EditorSceneProps) {
   const theme = useUIStore((s) => s.theme);
   const isPicking = useEditorStore((s) => s.pickingExcitationForTag) !== null;
   const sceneBg = theme === "dark" ? "#0A0A0F" : "#E8E8ED";
@@ -814,13 +848,25 @@ export function EditorScene({ viewToggles, patternData, currents, nearField }: E
     <Canvas
       gl={glConfig}
       camera={{ position: [15, 12, 15], fov: 50, near: 0.1, far: 500 }}
-      style={{ background: sceneBg, cursor: isPicking ? "crosshair" : undefined }}
+      style={{
+        background: sceneBg,
+        cursor: measurementActive || isPicking ? "crosshair" : undefined,
+      }}
     >
       {/* Scene background as Three.js Color so it appears in screenshots */}
       <color attach="background" args={[sceneBg]} />
       <Suspense fallback={null}>
-        <EditorSceneContent viewToggles={viewToggles} patternData={patternData} currents={currents} nearField={nearField} tooltipRef={tooltipRef} />
-        <SceneRaycaster tooltipRef={tooltipRef} />
+        <EditorSceneContent
+          viewToggles={viewToggles}
+          patternData={patternData}
+          currents={currents}
+          nearField={nearField}
+          tooltipRef={tooltipRef}
+          measurementActive={measurementActive}
+          measurementSelectedTags={measurementSelectedTags}
+          onMeasurementWireSelect={onMeasurementWireSelect}
+        />
+        {!measurementActive && <SceneRaycaster tooltipRef={tooltipRef} />}
       </Suspense>
     </Canvas>
     <div

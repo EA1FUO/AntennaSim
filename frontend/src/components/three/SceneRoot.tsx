@@ -18,6 +18,7 @@ import { NearFieldPlane } from "./NearFieldPlane";
 import { CurrentFlowParticles } from "./CurrentFlowParticles";
 import { RadiationSlice } from "./RadiationSlice";
 import { SceneRaycaster } from "./SceneRaycaster";
+import { WireMeasurementOverlay3D } from "./WireMeasurementOverlay3D";
 import type { WireData, FeedpointData, ViewToggles } from "./types";
 import type { PatternData, SegmentCurrent, NearFieldResult } from "../../api/nec";
 import { useUIStore } from "../../stores/uiStore";
@@ -35,6 +36,9 @@ interface SceneRootProps {
   currents?: SegmentCurrent[] | null;
   /** V2: Near-field visualization data */
   nearField?: NearFieldResult | null;
+  measurementActive?: boolean;
+  measurementSelectedTags?: readonly number[];
+  onMeasurementWireSelect?: (tag: number) => void;
 }
 
 export function SceneRoot({
@@ -45,6 +49,9 @@ export function SceneRoot({
   patternData,
   currents,
   nearField,
+  measurementActive = false,
+  measurementSelectedTags = [],
+  onMeasurementWireSelect,
 }: SceneRootProps) {
   const theme = useUIStore((s) => s.theme);
   const sceneBg = theme === "dark" ? "#0A0A0F" : "#E8E8ED";
@@ -91,7 +98,7 @@ export function SceneRoot({
     <Canvas
       gl={glConfig}
       camera={{ position: [15, 12, 15], fov: 50, near: 0.1, far: 500 }}
-      style={{ background: sceneBg }}
+      style={{ background: sceneBg, cursor: measurementActive ? "crosshair" : undefined }}
     >
       {/* Scene background as Three.js Color so it appears in screenshots */}
       <color attach="background" args={[sceneBg]} />
@@ -127,8 +134,26 @@ export function SceneRoot({
               wire={wire}
               visualScale={visualScale}
               dimmed={wiresDimmed}
+              measurementOrder={
+                measurementSelectedTags[0] === wire.tag
+                  ? 1
+                  : measurementSelectedTags[1] === wire.tag
+                    ? 2
+                    : undefined
+              }
+              onMeasurementSelect={
+                measurementActive ? onMeasurementWireSelect : undefined
+              }
             />
           ))}
+
+        {measurementActive && (
+          <WireMeasurementOverlay3D
+            wires={wires}
+            selectedTags={measurementSelectedTags}
+            visualScale={visualScale}
+          />
+        )}
 
         {/* Wire junction spheres */}
         {viewToggles.wires && (
@@ -209,7 +234,7 @@ export function SceneRoot({
         <PostProcessing />
 
         {/* 3D hover measurement raycaster */}
-        <SceneRaycaster tooltipRef={tooltipRef} />
+        {!measurementActive && <SceneRaycaster tooltipRef={tooltipRef} />}
       </Suspense>
     </Canvas>
     <div

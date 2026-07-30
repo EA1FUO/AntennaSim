@@ -1,6 +1,7 @@
-import { useMemo, useRef, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { TubeGeometry, LineCurve3, Vector3, MeshStandardMaterial } from "three";
 import type { Mesh } from "three";
+import type { ThreeEvent } from "@react-three/fiber";
 import type { WireData } from "./types";
 import { getWireColor } from "./types";
 import { useUIStore } from "../../stores/uiStore";
@@ -11,6 +12,9 @@ interface AntennaModelProps {
   visualScale: VisualScale;
   /** When true, wire becomes semi-transparent so current overlays show through */
   dimmed?: boolean;
+  /** Selection order while the wire measurement tool is active. */
+  measurementOrder?: 1 | 2;
+  onMeasurementSelect?: (tag: number) => void;
 }
 
 /**
@@ -20,11 +24,17 @@ interface AntennaModelProps {
  *
  * Includes end cap spheres at both endpoints for clean termination.
  */
-export function AntennaModel({ wire, visualScale, dimmed = false }: AntennaModelProps) {
+export function AntennaModel({
+  wire,
+  visualScale,
+  dimmed = false,
+  measurementOrder,
+  onMeasurementSelect,
+}: AntennaModelProps) {
   const theme = useUIStore((s) => s.theme);
   const isDark = theme === "dark";
 
-  const { geometry, material, endCapPositions } = useMemo(() => {
+  const { geometry, material, endCapPositions, measurementHitGeometry } = useMemo(() => {
     // NEC2: X=east, Y=north, Z=up -> Three.js: X=east, Y=up, Z=south
     const start = new Vector3(wire.x1, wire.z1, -wire.y1);
     const end = new Vector3(wire.x2, wire.z2, -wire.y2);
@@ -33,20 +43,41 @@ export function AntennaModel({ wire, visualScale, dimmed = false }: AntennaModel
 
     const curve = new LineCurve3(start, end);
     const tubeGeo = new TubeGeometry(curve, Math.max(2, wire.segments), visualRadius, 8, false);
+    const hitGeometry = onMeasurementSelect
+      ? new TubeGeometry(
+          curve,
+          Math.max(2, wire.segments),
+          Math.max(visualRadius * 4, visualScale.markerRadius * 0.75),
+          6,
+          false,
+        )
+      : null;
 
-    const color = getWireColor(wire.tag);
+    const color =
+      measurementOrder === 1
+        ? "#F59E0B"
+        : measurementOrder === 2
+          ? "#3B82F6"
+          : getWireColor(wire.tag);
     const mat = new MeshStandardMaterial({
       color,
       metalness: isDark ? 0.85 : 0.4,
       roughness: isDark ? 0.25 : 0.45,
+      emissive: measurementOrder ? color : "#000000",
+      emissiveIntensity: measurementOrder ? 0.65 : 0,
       transparent: dimmed,
       opacity: dimmed ? 0.15 : 1,
       depthWrite: !dimmed,
     });
 
     const caps: [Vector3, Vector3] = [start, end];
-    return { geometry: tubeGeo, material: mat, endCapPositions: caps };
-  }, [wire, visualScale, dimmed, isDark]);
+    return {
+      geometry: tubeGeo,
+      material: mat,
+      endCapPositions: caps,
+      measurementHitGeometry: hitGeometry,
+    };
+  }, [wire, visualScale, dimmed, isDark, measurementOrder, onMeasurementSelect]);
 
   const capRadius = visualScale.capRadius(wire.radius);
 
@@ -68,15 +99,38 @@ export function AntennaModel({ wire, visualScale, dimmed = false }: AntennaModel
     }
   }, [wire]);
 
+  const handleMeasurementClick = useCallback(
+    (event: ThreeEvent<MouseEvent>) => {
+      if (!onMeasurementSelect) return;
+      event.stopPropagation();
+      onMeasurementSelect(wire.tag);
+    },
+    [onMeasurementSelect, wire.tag],
+  );
+
+  const displayColor =
+    measurementOrder === 1
+      ? "#F59E0B"
+      : measurementOrder === 2
+        ? "#3B82F6"
+        : getWireColor(wire.tag);
+
   return (
-    <group>
+    <group onClick={onMeasurementSelect ? handleMeasurementClick : undefined}>
       <mesh ref={meshRef} geometry={geometry} material={material} />
+      {measurementHitGeometry && (
+        <mesh geometry={measurementHitGeometry}>
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+        </mesh>
+      )}
       {/* End caps - small spheres */}
       {endCapPositions.map((pos, i) => (
         <mesh key={i} position={pos}>
           <sphereGeometry args={[capRadius, 8, 8]} />
           <meshStandardMaterial
-            color={getWireColor(wire.tag)}
+            color={displayColor}
+            emissive={measurementOrder ? displayColor : "#000000"}
+            emissiveIntensity={measurementOrder ? 0.65 : 0}
             metalness={isDark ? 0.85 : 0.4}
             roughness={isDark ? 0.25 : 0.45}
             transparent={dimmed}
