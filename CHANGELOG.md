@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Made closest-point calculations scale-invariant so millimetre-scale crossing and spacing measurements remain accurate (#76)
 - Extracted tested angle-guide and endpoint-label geometry while preventing measurement interactions from rebuilding or leaking Three.js wire resources (#76)
 - Isolated Wire Editor shortcuts and excitation picking during measurement mode so editing commands cannot mutate geometry unexpectedly (#76)
+- Improved measurement panel accessibility with a labelled section, focused live-result announcements, associated help controls, and more legible mobile text (#76)
 
 ## [1.4.1] - 2026-07-30
 

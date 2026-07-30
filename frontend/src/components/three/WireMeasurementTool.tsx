@@ -109,17 +109,19 @@ export function WireMeasurementTool({
   return (
     <div className="absolute bottom-2 right-2 z-20 flex max-w-[calc(100%-1rem)] flex-col items-end gap-2 pointer-events-none">
       {active && (
-        <div
+        <section
           className="pointer-events-auto max-h-[55vh] w-[min(18rem,calc(100vw-1rem))] overflow-y-auto rounded-lg border border-border bg-surface/95 p-3 shadow-xl backdrop-blur-md"
-          role="status"
-          aria-live="polite"
+          aria-labelledby="wire-measurement-title"
         >
           <div className="flex items-start justify-between gap-2">
             <div>
-              <h3 className="text-xs font-semibold text-text-primary">
+              <h3
+                id="wire-measurement-title"
+                className="text-sm font-semibold text-text-primary"
+              >
                 Wire measurement
               </h3>
-              <p className="mt-0.5 text-[10px] leading-relaxed text-text-secondary">
+              <p className="mt-0.5 text-[11px] leading-relaxed text-text-secondary">
                 {instruction}
               </p>
             </div>
@@ -130,6 +132,7 @@ export function WireMeasurementTool({
                 className="flex h-11 w-11 items-center justify-center rounded-md border border-border text-xs font-bold text-text-secondary transition-colors hover:border-accent/50 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
                 aria-label="How to use wire measurement"
                 aria-expanded={helpOpen}
+                aria-controls="wire-measurement-help"
                 title="How to use wire measurement"
               >
                 ?
@@ -138,7 +141,7 @@ export function WireMeasurementTool({
                 <button
                   type="button"
                   onClick={onClear}
-                  className="min-h-11 rounded-md border border-border px-2 text-[10px] text-text-secondary transition-colors hover:border-accent/50 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+                  className="min-h-11 rounded-md border border-border px-2 text-xs text-text-secondary transition-colors hover:border-accent/50 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
                 >
                   Clear
                 </button>
@@ -147,7 +150,10 @@ export function WireMeasurementTool({
           </div>
 
           {helpOpen && (
-            <div className="mt-2 rounded-md border border-accent/30 bg-accent/10 p-2 text-[10px] leading-relaxed text-text-secondary">
+            <div
+              id="wire-measurement-help"
+              className="mt-2 rounded-md border border-accent/30 bg-accent/10 p-2 text-[11px] leading-relaxed text-text-secondary"
+            >
               Select two wires, then choose the point pair to measure. A/B
               labels identify each wire endpoint. The signed offset runs from
               wire 1 to wire 2 in NEC2 X (east), Y (north), and Z (up). The
@@ -159,7 +165,7 @@ export function WireMeasurementTool({
 
           {measurement && firstWire && secondWire && (
             <div className="mt-2.5 space-y-2">
-              <div className="flex items-center gap-2 text-[10px]">
+              <div className="flex items-center gap-2 text-[11px]">
                 <span className="rounded bg-amber-500/20 px-1.5 py-0.5 font-mono text-amber-400">
                   1 · Wire #{firstWire.tag}
                 </span>
@@ -169,7 +175,7 @@ export function WireMeasurementTool({
                 </span>
               </div>
 
-              <label className="block text-[9px] font-semibold uppercase tracking-wider text-text-secondary">
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
                 Measure points
                 <select
                   value={pointMode}
@@ -191,7 +197,7 @@ export function WireMeasurementTool({
 
               <div className="grid grid-cols-2 gap-1.5">
                 <div className="rounded-md bg-background/80 p-2">
-                  <div className="text-[9px] uppercase tracking-wider text-text-secondary">
+                  <div className="text-[10px] uppercase tracking-wider text-text-secondary">
                     {pointModeLabel}
                   </div>
                   <div className="mt-0.5 font-mono text-sm font-bold text-text-primary">
@@ -199,7 +205,7 @@ export function WireMeasurementTool({
                   </div>
                 </div>
                 <div className="rounded-md bg-background/80 p-2">
-                  <div className="text-[9px] uppercase tracking-wider text-text-secondary">
+                  <div className="text-[10px] uppercase tracking-wider text-text-secondary">
                     Acute axis angle
                   </div>
                   <div className="mt-0.5 font-mono text-sm font-bold text-text-primary">
@@ -210,23 +216,36 @@ export function WireMeasurementTool({
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-1.5 font-mono text-[10px]">
+              <div className="grid grid-cols-3 gap-1.5 font-mono text-[11px]">
                 <div className="rounded-md border border-red-500/30 bg-red-500/10 p-1.5 text-red-400">
-                  <div className="text-[9px] font-semibold">ΔX · EAST</div>
+                  <div className="text-[10px] font-semibold">ΔX · EAST</div>
                   <div>{formatOffset(measurement.delta.x, unit)}</div>
                 </div>
                 <div className="rounded-md border border-green-500/30 bg-green-500/10 p-1.5 text-green-400">
-                  <div className="text-[9px] font-semibold">ΔY · NORTH</div>
+                  <div className="text-[10px] font-semibold">ΔY · NORTH</div>
                   <div>{formatOffset(measurement.delta.y, unit)}</div>
                 </div>
                 <div className="rounded-md border border-blue-500/30 bg-blue-500/10 p-1.5 text-blue-400">
-                  <div className="text-[9px] font-semibold">ΔZ · UP</div>
+                  <div className="text-[10px] font-semibold">ΔZ · UP</div>
                   <div>{formatOffset(measurement.delta.z, unit)}</div>
                 </div>
               </div>
             </div>
           )}
-        </div>
+
+          <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+            {measurement
+              ? `${pointModeLabel}: ${formatDistance(measurement.distance, unit)}. Acute axis angle: ${
+                  measurement.angleDegrees === null
+                    ? "not available"
+                    : `${measurement.angleDegrees.toFixed(1)} degrees`
+                }. Delta X east: ${formatOffset(measurement.delta.x, unit)}. Delta Y north: ${formatOffset(
+                  measurement.delta.y,
+                  unit,
+                )}. Delta Z up: ${formatOffset(measurement.delta.z, unit)}.`
+              : instruction}
+          </p>
+        </section>
       )}
 
       <button
