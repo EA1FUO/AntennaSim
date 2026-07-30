@@ -32,8 +32,8 @@ interface AngleGuide {
 
 interface EndpointLabelData {
   point: MeasurementPoint;
-  labels: string[];
-  color: string;
+  labels: Array<{ text: string; color: string }>;
+  markerColor: string;
 }
 
 /** NEC2 (Z=up) to Three.js (Y=up). */
@@ -134,13 +134,13 @@ function createAngleGuide(
 
 function EndpointLabel({
   point,
-  label,
-  color,
+  labels,
+  markerColor,
   markerRadius,
 }: {
   point: MeasurementPoint;
-  label: string;
-  color: string;
+  labels: Array<{ text: string; color: string }>;
+  markerColor: string;
   markerRadius: number;
 }) {
   return (
@@ -148,18 +148,37 @@ function EndpointLabel({
       <mesh renderOrder={22}>
         <sphereGeometry args={[markerRadius * 0.6, 10, 10]} />
         <meshBasicMaterial
-          color={color}
+          color={markerColor}
           transparent
           opacity={0.7}
           depthTest={false}
         />
       </mesh>
-      <Html center sprite zIndexRange={[20, 0]} style={{ pointerEvents: "none" }}>
+      <Html
+        center
+        sprite
+        zIndexRange={[20, 0]}
+        style={{
+          pointerEvents: "none",
+          overflow: "visible",
+          whiteSpace: "nowrap",
+          width: "max-content",
+        }}
+      >
         <span
-          style={{ borderColor: color, color }}
-          className="rounded border bg-black/80 px-1 py-0.5 font-mono text-[9px] font-bold leading-none shadow"
+          style={{ borderColor: markerColor }}
+          className="inline-flex w-max -translate-y-4 items-center whitespace-nowrap rounded-full border bg-black/90 px-1.5 py-1 font-mono text-[10px] font-bold leading-none shadow-lg backdrop-blur-sm"
         >
-          {label}
+          {labels.map((label, index) => (
+            <span key={label.text} className="inline-flex items-center">
+              {index > 0 && (
+                <span className="mx-1 text-white/60" aria-hidden="true">
+                  ·
+                </span>
+              )}
+              <span style={{ color: label.color }}>{label.text}</span>
+            </span>
+          ))}
         </span>
       </Html>
     </group>
@@ -210,26 +229,26 @@ export function WireMeasurementOverlay3D({
 
   const endpointLabels = useMemo((): EndpointLabelData[] => {
     if (!firstWire || !secondWire) return [];
-    const candidates: Array<EndpointLabelData & { labels: [string] }> = [
+    const candidates: EndpointLabelData[] = [
       {
         point: { x: firstWire.x1, y: firstWire.y1, z: firstWire.z1 },
-        labels: ["1A"],
-        color: "#F59E0B",
+        labels: [{ text: "1A", color: "#F59E0B" }],
+        markerColor: "#F59E0B",
       },
       {
         point: { x: firstWire.x2, y: firstWire.y2, z: firstWire.z2 },
-        labels: ["1B"],
-        color: "#F59E0B",
+        labels: [{ text: "1B", color: "#F59E0B" }],
+        markerColor: "#F59E0B",
       },
       {
         point: { x: secondWire.x1, y: secondWire.y1, z: secondWire.z1 },
-        labels: ["2A"],
-        color: "#3B82F6",
+        labels: [{ text: "2A", color: "#3B82F6" }],
+        markerColor: "#3B82F6",
       },
       {
         point: { x: secondWire.x2, y: secondWire.y2, z: secondWire.z2 },
-        labels: ["2B"],
-        color: "#3B82F6",
+        labels: [{ text: "2B", color: "#3B82F6" }],
+        markerColor: "#3B82F6",
       },
     ];
     const groups: EndpointLabelData[] = [];
@@ -240,8 +259,10 @@ export function WireMeasurementOverlay3D({
           distanceSquared(group.point, candidate.point) <= toleranceSquared,
       );
       if (existing) {
-        existing.labels.push(candidate.labels[0]);
-        if (existing.color !== candidate.color) existing.color = "#FFFFFF";
+        existing.labels.push(...candidate.labels);
+        if (existing.markerColor !== candidate.markerColor) {
+          existing.markerColor = "#FFFFFF";
+        }
       } else {
         groups.push({ ...candidate, labels: [...candidate.labels] });
       }
@@ -285,10 +306,10 @@ export function WireMeasurementOverlay3D({
     <group>
       {endpointLabels.map((endpoint) => (
         <EndpointLabel
-          key={endpoint.labels.join("-")}
+          key={endpoint.labels.map((label) => label.text).join("-")}
           point={endpoint.point}
-          label={endpoint.labels.join(" · ")}
-          color={endpoint.color}
+          labels={endpoint.labels}
+          markerColor={endpoint.markerColor}
           markerRadius={markerRadius}
         />
       ))}

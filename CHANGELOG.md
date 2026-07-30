@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Fixed
 
 - Kept the angle guide anchored at the wires' closest approach when switching endpoint measurement modes, including at shared fan-antenna feed points (#76)
+- Prevented viewport endpoint badges from clipping or wrapping and preserved each wire's color when labels share a point (#76)
 
 ## [1.4.1] - 2026-07-30
 
