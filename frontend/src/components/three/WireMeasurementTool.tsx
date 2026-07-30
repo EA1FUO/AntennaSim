@@ -151,8 +151,9 @@ export function WireMeasurementTool({
               Select two wires, then choose the point pair to measure. A/B
               labels identify each wire endpoint. The signed offset runs from
               wire 1 to wire 2 in NEC2 X (east), Y (north), and Z (up). The
-              white arc shows the smaller angle between the two wire axes:
-              0° is parallel and 90° is perpendicular.
+              white arc stays at the wires&apos; closest approach and shows the
+              smaller angle between their axes: 0° is parallel and 90° is
+              perpendicular.
             </div>
           )}
 

@@ -183,17 +183,29 @@ export function WireMeasurementOverlay3D({
     [firstWire, secondWire, pointMode],
   );
 
+  // The wire angle does not depend on the selected distance endpoints. Keep
+  // its visual reference at the wires' closest approach so switching point
+  // modes cannot move the arc away from the geometry it explains. For fan
+  // antennas this naturally anchors the angle at the shared feed point.
+  const angleReferenceMeasurement = useMemo(
+    () =>
+      firstWire && secondWire
+        ? measureWires(firstWire, secondWire, "closest")
+        : null,
+    [firstWire, secondWire],
+  );
+
   const angleGuide = useMemo(
     () =>
-      firstWire && secondWire && measurement
+      firstWire && secondWire && angleReferenceMeasurement
         ? createAngleGuide(
             firstWire,
             secondWire,
-            measurement,
+            angleReferenceMeasurement,
             visualScale.span,
           )
         : null,
-    [firstWire, secondWire, measurement, visualScale.span],
+    [firstWire, secondWire, angleReferenceMeasurement, visualScale.span],
   );
 
   const endpointLabels = useMemo((): EndpointLabelData[] => {

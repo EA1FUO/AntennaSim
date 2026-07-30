@@ -146,11 +146,12 @@ Wire Editor viewports. It works with a mouse or touchscreen:
 The endpoint labels identify wire 1 as **1A/1B** and wire 2 as **2A/2B**. The
 white dashed guide connects the active point pair; red, green, and blue guides
 show its X, Y, and Z components. The dashed amber and blue lines extend the two
-wire axes through the measurement location, and the white arc marks the smaller
-angle reported by the panel. An angle of 0° means the axes are parallel and 90°
-means they are perpendicular. Select another wire to begin a new measurement,
-use **Clear** to keep measuring from scratch, or select **Measure** again to
-close the tool.
+wire axes through their closest approach, and the white arc marks the smaller
+angle reported by the panel. This angle guide stays at the shared feed point of
+a fan antenna even when a different endpoint pair is being measured. An angle
+of 0° means the axes are parallel and 90° means they are perpendicular. Select
+another wire to begin a new measurement, use **Clear** to keep measuring from
+scratch, or select **Measure** again to close the tool.
 
 ---
 
