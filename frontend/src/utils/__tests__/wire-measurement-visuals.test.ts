@@ -43,6 +43,23 @@ describe("createWireAngleGuide", () => {
 
     expect(guide).toBeNull();
   });
+
+  it("flips a reversed wire direction to depict the acute axis angle", () => {
+    const guide = createWireAngleGuide(
+      wire([0, 0, 0], [2, 0, 0]),
+      wire([0, 0, 0], [-1, -1, 0]),
+      2,
+    );
+
+    expect(guide).not.toBeNull();
+    expect(guide!.angleDegrees).toBeCloseTo(45);
+    const secondAxisDirection = {
+      x: guide!.secondAxis[1].x - guide!.secondAxis[0].x,
+      y: guide!.secondAxis[1].y - guide!.secondAxis[0].y,
+    };
+    expect(secondAxisDirection.x).toBeGreaterThan(0);
+    expect(secondAxisDirection.y).toBeGreaterThan(0);
+  });
 });
 
 describe("createWireEndpointLabels", () => {
@@ -70,6 +87,23 @@ describe("createWireEndpointLabels", () => {
     );
 
     expect(labels).toHaveLength(4);
+  });
+
+  it("groups all labels when both selected wires are the same point", () => {
+    const labels = createWireEndpointLabels(
+      wire([1, 2, 3], [1, 2, 3]),
+      wire([1, 2, 3], [1, 2, 3]),
+      1e-7,
+    );
+
+    expect(labels).toHaveLength(1);
+    expect(labels[0]!.labels.map((label) => label.text)).toEqual([
+      "1A",
+      "1B",
+      "2A",
+      "2B",
+    ]);
+    expect(labels[0]!.markerColor).toBe("#FFFFFF");
   });
 });
 

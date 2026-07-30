@@ -106,6 +106,60 @@ describe("measureWires", () => {
     expect(result.angleDegrees).toBeNull();
   });
 
+  it("handles two point-like wires", () => {
+    const result = measureWires(
+      wire([1, 2, 3], [1, 2, 3]),
+      wire([4, 6, 3], [4, 6, 3]),
+    );
+
+    expect(result.firstPoint).toEqual({ x: 1, y: 2, z: 3 });
+    expect(result.secondPoint).toEqual({ x: 4, y: 6, z: 3 });
+    expect(result.delta).toEqual({ x: 3, y: 4, z: 0 });
+    expect(result.distance).toBeCloseTo(5);
+    expect(result.angleDegrees).toBeNull();
+  });
+
+  it("projects onto the first wire when the second wire is point-like", () => {
+    const result = measureWires(
+      wire([0, 0, 0], [2, 0, 0]),
+      wire([1, 1, 0], [1, 1, 0]),
+    );
+
+    expect(result.firstPoint).toEqual({ x: 1, y: 0, z: 0 });
+    expect(result.secondPoint).toEqual({ x: 1, y: 1, z: 0 });
+    expect(result.distance).toBeCloseTo(1);
+    expect(result.angleDegrees).toBeNull();
+  });
+
+  it("chooses facing endpoints for disjoint collinear wires", () => {
+    const forward = measureWires(
+      wire([0, 0, 0], [0, 1, 0]),
+      wire([0, 2, 0], [0, 3, 0]),
+    );
+    const reversed = measureWires(
+      wire([0, 0, 0], [0, 1, 0]),
+      wire([0, 3, 0], [0, 2, 0]),
+    );
+
+    expect(forward.firstPoint).toEqual({ x: 0, y: 1, z: 0 });
+    expect(forward.secondPoint).toEqual({ x: 0, y: 2, z: 0 });
+    expect(reversed.firstPoint).toEqual(forward.firstPoint);
+    expect(reversed.secondPoint).toEqual(forward.secondPoint);
+    expect(forward.distance).toBeCloseTo(1);
+    expect(reversed.distance).toBeCloseTo(1);
+  });
+
+  it("clamps an oblique closest approach before the first wire start", () => {
+    const result = measureWires(
+      wire([0, 0, 0], [0, 1, 0]),
+      wire([1, 0, 0], [2, 1, 0]),
+    );
+
+    expect(result.firstPoint).toEqual({ x: 0, y: 0, z: 0 });
+    expect(result.secondPoint).toEqual({ x: 1, y: 0, z: 0 });
+    expect(result.distance).toBeCloseTo(1);
+  });
+
   it("measures the farthest endpoint pair", () => {
     const result = measureWires(
       wire([0, 0, 0], [2, 0, 0]),

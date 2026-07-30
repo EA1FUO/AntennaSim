@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Isolated Wire Editor shortcuts and excitation picking during measurement mode so editing commands cannot mutate geometry unexpectedly (#76)
 - Improved measurement panel accessibility with a labelled section, focused live-result announcements, associated help controls, and more legible mobile text (#76)
 - Hid decorative 3D endpoint and angle annotations from assistive technology so the structured measurement summary remains authoritative (#76)
+- Added regression coverage for point-like wires, collinear and oblique endpoint clamping, reversed angle axes, and fully coincident endpoint labels (#76)
 
 ## [1.4.1] - 2026-07-30
 
