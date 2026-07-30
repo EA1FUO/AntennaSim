@@ -45,7 +45,8 @@ export interface WireMeasurement {
   angleDegrees: number | null;
 }
 
-const EPSILON = 1e-12;
+/** Dimensionless tolerance for deciding whether two segment directions are parallel. */
+const PARALLEL_RELATIVE_EPSILON = 1e-12;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -100,11 +101,11 @@ function closestPointsOnSegments(
   const firstLengthSquared = lengthSquared(firstDirection);
   const secondLengthSquared = lengthSquared(secondDirection);
 
-  if (firstLengthSquared <= EPSILON && secondLengthSquared <= EPSILON) {
+  if (firstLengthSquared === 0 && secondLengthSquared === 0) {
     return [firstStart, secondStart];
   }
 
-  if (firstLengthSquared <= EPSILON) {
+  if (firstLengthSquared === 0) {
     const secondParameter = clamp(
       dot(secondDirection, betweenStarts) / secondLengthSquared,
       0,
@@ -113,7 +114,7 @@ function closestPointsOnSegments(
     return [firstStart, addScaled(secondStart, secondDirection, secondParameter)];
   }
 
-  if (secondLengthSquared <= EPSILON) {
+  if (secondLengthSquared === 0) {
     const firstParameter = clamp(
       -dot(firstDirection, betweenStarts) / firstLengthSquared,
       0,
@@ -133,7 +134,13 @@ function closestPointsOnSegments(
   let secondNumerator = denominator;
   let secondDenominator = denominator;
 
-  if (denominator <= EPSILON) {
+  // The denominator has units of length^4, so an absolute epsilon would make
+  // the result depend on antenna scale. Compare it with the product of the
+  // two squared lengths to obtain a dimensionless parallel test.
+  if (
+    denominator <=
+    PARALLEL_RELATIVE_EPSILON * firstLengthSquared * secondLengthSquared
+  ) {
     // Nearly parallel: anchor the first point and solve on the second wire.
     firstNumerator = 0;
     firstDenominator = 1;
@@ -180,11 +187,11 @@ function closestPointsOnSegments(
   }
 
   const firstParameter =
-    Math.abs(firstNumerator) <= EPSILON
+    firstNumerator === 0
       ? 0
       : firstNumerator / firstDenominator;
   const secondParameter =
-    Math.abs(secondNumerator) <= EPSILON
+    secondNumerator === 0
       ? 0
       : secondNumerator / secondDenominator;
 
@@ -194,8 +201,9 @@ function closestPointsOnSegments(
   ];
 }
 
-function cleanNearZero(value: number): number {
-  return Math.abs(value) <= EPSILON ? 0 : value;
+function cleanNearZero(value: number, coordinateScale: number): number {
+  const floatingPointNoise = Number.EPSILON * Math.max(1, coordinateScale) * 8;
+  return Math.abs(value) <= floatingPointNoise ? 0 : value;
 }
 
 interface PointPair {
@@ -294,17 +302,25 @@ export function measureWires(
   );
 
   const rawDelta = subtract(secondPoint, firstPoint);
+  const coordinateScale = Math.max(
+    Math.abs(firstPoint.x),
+    Math.abs(firstPoint.y),
+    Math.abs(firstPoint.z),
+    Math.abs(secondPoint.x),
+    Math.abs(secondPoint.y),
+    Math.abs(secondPoint.z),
+  );
   const delta = {
-    x: cleanNearZero(rawDelta.x),
-    y: cleanNearZero(rawDelta.y),
-    z: cleanNearZero(rawDelta.z),
+    x: cleanNearZero(rawDelta.x, coordinateScale),
+    y: cleanNearZero(rawDelta.y, coordinateScale),
+    z: cleanNearZero(rawDelta.z, coordinateScale),
   };
-  const distance = Math.sqrt(lengthSquared(delta));
+  const distance = Math.sqrt(lengthSquared(rawDelta));
 
   const firstLengthSquared = lengthSquared(firstDirection);
   const secondLengthSquared = lengthSquared(secondDirection);
   let angleDegrees: number | null = null;
-  if (firstLengthSquared > EPSILON && secondLengthSquared > EPSILON) {
+  if (firstLengthSquared > 0 && secondLengthSquared > 0) {
     // Wires have no intrinsic forward direction, so use the acute angle.
     const cosine = clamp(
       Math.abs(dot(firstDirection, secondDirection)) /

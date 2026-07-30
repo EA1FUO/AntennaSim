@@ -43,6 +43,28 @@ describe("measureWires", () => {
     expect(result.angleDegrees).toBeCloseTo(90);
   });
 
+  it("keeps closest-point results invariant at millimetre scale", () => {
+    const result = measureWires(
+      wire([-0.0005, 0, 0], [0.0005, 0, 0]),
+      wire([0, -0.0005, 0], [0, 0.0005, 0]),
+    );
+
+    expect(result.distance).toBeCloseTo(0, 12);
+    expect(result.firstPoint).toEqual({ x: 0, y: 0, z: 0 });
+    expect(result.secondPoint).toEqual({ x: 0, y: 0, z: 0 });
+    expect(result.angleDegrees).toBeCloseTo(90);
+  });
+
+  it("preserves sub-millimetre spacing instead of cleaning it to zero", () => {
+    const result = measureWires(
+      wire([-0.0005, 0, 0], [0.0005, 0, 0]),
+      wire([-0.0005, 0.000001, 0], [0.0005, 0.000001, 0]),
+    );
+
+    expect(result.distance).toBeCloseTo(0.000001, 12);
+    expect(result.delta).toEqual({ x: 0, y: 0.000001, z: 0 });
+  });
+
   it("measures the closest points of skew wires", () => {
     const result = measureWires(
       wire([0, 0, 0], [2, 0, 0]),
