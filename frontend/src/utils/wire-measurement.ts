@@ -18,14 +18,28 @@ export interface MeasurableWire {
   z2: number;
 }
 
+export type WireMeasurementPointMode =
+  | "closest"
+  | "farthest"
+  | "start-start"
+  | "start-end"
+  | "end-start"
+  | "end-end";
+
+export type WireEndpoint = "start" | "end";
+
 export interface WireMeasurement {
-  /** Closest point on the first selected wire. */
+  /** Measured point on the first selected wire. */
   firstPoint: MeasurementPoint;
-  /** Closest point on the second selected wire. */
+  /** Measured point on the second selected wire. */
   secondPoint: MeasurementPoint;
+  /** Endpoint used by an explicit or farthest measurement, if any. */
+  firstEndpoint: WireEndpoint | null;
+  /** Endpoint used by an explicit or farthest measurement, if any. */
+  secondEndpoint: WireEndpoint | null;
   /** Signed offset from firstPoint to secondPoint in NEC2 coordinates. */
   delta: MeasurementPoint;
-  /** Shortest distance between the two finite wire segments. */
+  /** Distance between the selected point pair. */
   distance: number;
   /** Acute angle between the wire axes, or null for a zero-length wire. */
   angleDegrees: number | null;
@@ -184,20 +198,99 @@ function cleanNearZero(value: number): number {
   return Math.abs(value) <= EPSILON ? 0 : value;
 }
 
-/** Calculate closest spacing, axis offsets, and angle for two wires. */
+interface PointPair {
+  firstPoint: MeasurementPoint;
+  secondPoint: MeasurementPoint;
+  firstEndpoint: WireEndpoint | null;
+  secondEndpoint: WireEndpoint | null;
+}
+
+function endpointPair(
+  firstEndpoints: [MeasurementPoint, MeasurementPoint],
+  secondEndpoints: [MeasurementPoint, MeasurementPoint],
+  firstEndpoint: WireEndpoint,
+  secondEndpoint: WireEndpoint,
+): PointPair {
+  return {
+    firstPoint: firstEndpoints[firstEndpoint === "start" ? 0 : 1],
+    secondPoint: secondEndpoints[secondEndpoint === "start" ? 0 : 1],
+    firstEndpoint,
+    secondEndpoint,
+  };
+}
+
+function resolvePointPair(
+  firstEndpoints: [MeasurementPoint, MeasurementPoint],
+  secondEndpoints: [MeasurementPoint, MeasurementPoint],
+  mode: WireMeasurementPointMode,
+): PointPair {
+  if (mode === "closest") {
+    const [firstPoint, secondPoint] = closestPointsOnSegments(
+      firstEndpoints[0],
+      firstEndpoints[1],
+      secondEndpoints[0],
+      secondEndpoints[1],
+    );
+    return {
+      firstPoint,
+      secondPoint,
+      firstEndpoint: null,
+      secondEndpoint: null,
+    };
+  }
+
+  const pairs: PointPair[] = [
+    endpointPair(firstEndpoints, secondEndpoints, "start", "start"),
+    endpointPair(firstEndpoints, secondEndpoints, "start", "end"),
+    endpointPair(firstEndpoints, secondEndpoints, "end", "start"),
+    endpointPair(firstEndpoints, secondEndpoints, "end", "end"),
+  ];
+
+  if (mode === "farthest") {
+    return pairs.reduce((farthest, candidate) => {
+      const farthestDistance = lengthSquared(
+        subtract(farthest.secondPoint, farthest.firstPoint),
+      );
+      const candidateDistance = lengthSquared(
+        subtract(candidate.secondPoint, candidate.firstPoint),
+      );
+      return candidateDistance > farthestDistance ? candidate : farthest;
+    });
+  }
+
+  const [firstEndpoint, secondEndpoint] = mode.split("-") as [
+    WireEndpoint,
+    WireEndpoint,
+  ];
+  return endpointPair(
+    firstEndpoints,
+    secondEndpoints,
+    firstEndpoint,
+    secondEndpoint,
+  );
+}
+
+/** Calculate point spacing, axis offsets, and angle for two wires. */
 export function measureWires(
   firstWire: MeasurableWire,
   secondWire: MeasurableWire,
+  pointMode: WireMeasurementPointMode = "closest",
 ): WireMeasurement {
-  const [firstStart, firstEnd] = wireEndpoints(firstWire);
-  const [secondStart, secondEnd] = wireEndpoints(secondWire);
+  const firstEndpoints = wireEndpoints(firstWire);
+  const secondEndpoints = wireEndpoints(secondWire);
+  const [firstStart, firstEnd] = firstEndpoints;
+  const [secondStart, secondEnd] = secondEndpoints;
   const firstDirection = subtract(firstEnd, firstStart);
   const secondDirection = subtract(secondEnd, secondStart);
-  const [firstPoint, secondPoint] = closestPointsOnSegments(
-    firstStart,
-    firstEnd,
-    secondStart,
-    secondEnd,
+  const {
+    firstPoint,
+    secondPoint,
+    firstEndpoint,
+    secondEndpoint,
+  } = resolvePointPair(
+    firstEndpoints,
+    secondEndpoints,
+    pointMode,
   );
 
   const rawDelta = subtract(secondPoint, firstPoint);
@@ -225,6 +318,8 @@ export function measureWires(
   return {
     firstPoint,
     secondPoint,
+    firstEndpoint,
+    secondEndpoint,
     delta,
     distance,
     angleDegrees,

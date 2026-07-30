@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added tested geometry primitives for closest-point wire spacing, per-axis offsets, and orientation-independent wire angles
 - Added shared mouse/touch wire selection, selected-wire highlights, and 3D closest-point axis guides to both viewport renderers
 - Added a responsive Measure control to the Simulator and Wire Editor with unit-aware results, clear instructions, and built-in usage help (#76)
+- Added closest, farthest, and explicit endpoint-pair measurement modes with labeled endpoints and an in-scene acute-angle arc for unambiguous wire comparisons (#76)
 
 ## [1.4.1] - 2026-07-30
 

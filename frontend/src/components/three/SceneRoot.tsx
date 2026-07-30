@@ -23,6 +23,7 @@ import type { WireData, FeedpointData, ViewToggles } from "./types";
 import type { PatternData, SegmentCurrent, NearFieldResult } from "../../api/nec";
 import { useUIStore } from "../../stores/uiStore";
 import { createVisualScale } from "./visualScale";
+import type { WireMeasurementPointMode } from "../../utils/wire-measurement";
 
 interface SceneRootProps {
   wires: WireData[];
@@ -38,6 +39,7 @@ interface SceneRootProps {
   nearField?: NearFieldResult | null;
   measurementActive?: boolean;
   measurementSelectedTags?: readonly number[];
+  measurementPointMode?: WireMeasurementPointMode;
   onMeasurementWireSelect?: (tag: number) => void;
 }
 
@@ -51,6 +53,7 @@ export function SceneRoot({
   nearField,
   measurementActive = false,
   measurementSelectedTags = [],
+  measurementPointMode = "closest",
   onMeasurementWireSelect,
 }: SceneRootProps) {
   const theme = useUIStore((s) => s.theme);
@@ -151,6 +154,7 @@ export function SceneRoot({
           <WireMeasurementOverlay3D
             wires={wires}
             selectedTags={measurementSelectedTags}
+            pointMode={measurementPointMode}
             visualScale={visualScale}
           />
         )}

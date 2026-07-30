@@ -5,15 +5,30 @@ import {
   type LengthUnit,
 } from "../../utils/units";
 import { measureWires } from "../../utils/wire-measurement";
+import type { WireMeasurementPointMode } from "../../utils/wire-measurement";
 import type { WireData } from "./types";
 
 interface WireMeasurementToolProps {
   wires: WireData[];
   active: boolean;
   selectedTags: readonly number[];
+  pointMode: WireMeasurementPointMode;
   onToggle: () => void;
+  onPointModeChange: (mode: WireMeasurementPointMode) => void;
   onClear: () => void;
 }
+
+const POINT_MODE_OPTIONS: Array<{
+  value: WireMeasurementPointMode;
+  label: string;
+}> = [
+  { value: "closest", label: "Closest points" },
+  { value: "farthest", label: "Farthest endpoints" },
+  { value: "start-start", label: "1A to 2A" },
+  { value: "start-end", label: "1A to 2B" },
+  { value: "end-start", label: "1B to 2A" },
+  { value: "end-end", label: "1B to 2B" },
+];
 
 const UNIT_DECIMALS: Record<LengthUnit, number> = {
   m: 3,
@@ -57,7 +72,9 @@ export function WireMeasurementTool({
   wires,
   active,
   selectedTags,
+  pointMode,
   onToggle,
+  onPointModeChange,
   onClear,
 }: WireMeasurementToolProps) {
   const [helpOpen, setHelpOpen] = useState(false);
@@ -70,9 +87,15 @@ export function WireMeasurementTool({
   const secondWire = wires.find((wire) => wire.tag === selectedTags[1]);
   const measurement = useMemo(
     () =>
-      firstWire && secondWire ? measureWires(firstWire, secondWire) : null,
-    [firstWire, secondWire],
+      firstWire && secondWire
+        ? measureWires(firstWire, secondWire, pointMode)
+        : null,
+    [firstWire, secondWire, pointMode],
   );
+
+  const pointModeLabel =
+    POINT_MODE_OPTIONS.find((option) => option.value === pointMode)?.label ??
+    "Measured points";
 
   const instruction =
     wires.length < 2
@@ -125,11 +148,11 @@ export function WireMeasurementTool({
 
           {helpOpen && (
             <div className="mt-2 rounded-md border border-accent/30 bg-accent/10 p-2 text-[10px] leading-relaxed text-text-secondary">
-              Select two wires. The tool finds their closest points, shows the
-              shortest spacing, and breaks the signed offset from the first
-              selection to the second into NEC2 X (east), Y (north), and Z
-              (up). The angle is 0° for parallel wires and 90° for
-              perpendicular wires.
+              Select two wires, then choose the point pair to measure. A/B
+              labels identify each wire endpoint. The signed offset runs from
+              wire 1 to wire 2 in NEC2 X (east), Y (north), and Z (up). The
+              white arc shows the smaller angle between the two wire axes:
+              0° is parallel and 90° is perpendicular.
             </div>
           )}
 
@@ -145,10 +168,30 @@ export function WireMeasurementTool({
                 </span>
               </div>
 
+              <label className="block text-[9px] font-semibold uppercase tracking-wider text-text-secondary">
+                Measure points
+                <select
+                  value={pointMode}
+                  onChange={(event) =>
+                    onPointModeChange(
+                      event.target.value as WireMeasurementPointMode,
+                    )
+                  }
+                  className="mt-1 min-h-11 w-full rounded-md border border-border bg-background px-2 text-xs font-normal normal-case tracking-normal text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+                  aria-label="Points used for wire measurement"
+                >
+                  {POINT_MODE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
               <div className="grid grid-cols-2 gap-1.5">
                 <div className="rounded-md bg-background/80 p-2">
                   <div className="text-[9px] uppercase tracking-wider text-text-secondary">
-                    Closest distance
+                    {pointModeLabel}
                   </div>
                   <div className="mt-0.5 font-mono text-sm font-bold text-text-primary">
                     {formatDistance(measurement.distance, unit)}
@@ -156,7 +199,7 @@ export function WireMeasurementTool({
                 </div>
                 <div className="rounded-md bg-background/80 p-2">
                   <div className="text-[9px] uppercase tracking-wider text-text-secondary">
-                    Wire angle
+                    Acute axis angle
                   </div>
                   <div className="mt-0.5 font-mono text-sm font-bold text-text-primary">
                     {measurement.angleDegrees === null

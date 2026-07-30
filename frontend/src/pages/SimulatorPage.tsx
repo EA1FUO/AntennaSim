@@ -91,8 +91,10 @@ export function SimulatorPage() {
   const {
     active: measurementActive,
     selectedTags: measurementSelectedTags,
+    pointMode: measurementPointMode,
     toggle: toggleWireMeasurement,
     selectWire: selectMeasurementWire,
+    setPointMode: setMeasurementPointMode,
     clear: clearWireMeasurement,
   } = useWireMeasurement();
 
@@ -356,6 +358,7 @@ export function SimulatorPage() {
               nearField={nearField}
               measurementActive={measurementActive}
               measurementSelectedTags={measurementSelectedTags}
+              measurementPointMode={measurementPointMode}
               onMeasurementWireSelect={selectMeasurementWire}
             />
           </ErrorBoundary>
@@ -366,7 +369,9 @@ export function SimulatorPage() {
             wires={wireData}
             active={measurementActive}
             selectedTags={measurementSelectedTags}
+            pointMode={measurementPointMode}
             onToggle={handleMeasurementToggle}
+            onPointModeChange={setMeasurementPointMode}
             onClear={clearWireMeasurement}
           />
 

@@ -1,11 +1,14 @@
 import { useCallback, useState } from "react";
 import { advanceWireMeasurementSelection } from "../../utils/wire-measurement";
+import type { WireMeasurementPointMode } from "../../utils/wire-measurement";
 
 export interface WireMeasurementController {
   active: boolean;
   selectedTags: readonly number[];
+  pointMode: WireMeasurementPointMode;
   toggle: () => void;
   selectWire: (tag: number) => void;
+  setPointMode: (mode: WireMeasurementPointMode) => void;
   clear: () => void;
 }
 
@@ -13,6 +16,8 @@ export interface WireMeasurementController {
 export function useWireMeasurement(): WireMeasurementController {
   const [active, setActive] = useState(false);
   const [selectedTags, setSelectedTags] = useState<number[]>([]);
+  const [pointMode, setPointMode] =
+    useState<WireMeasurementPointMode>("closest");
 
   const toggle = useCallback(() => {
     setActive((current) => !current);
@@ -27,5 +32,13 @@ export function useWireMeasurement(): WireMeasurementController {
 
   const clear = useCallback(() => setSelectedTags([]), []);
 
-  return { active, selectedTags, toggle, selectWire, clear };
+  return {
+    active,
+    selectedTags,
+    pointMode,
+    toggle,
+    selectWire,
+    setPointMode,
+    clear,
+  };
 }

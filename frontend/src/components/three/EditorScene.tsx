@@ -38,6 +38,7 @@ import type { PatternData, SegmentCurrent, NearFieldResult } from "../../api/nec
 import { useUIStore } from "../../stores/uiStore";
 import { useEditorStore, snap } from "../../stores/editorStore";
 import { findEndpointJunction, sameEndpoint, type EndpointRef } from "../../utils/editor-junctions";
+import type { WireMeasurementPointMode } from "../../utils/wire-measurement";
 
 interface EditorSceneProps {
   viewToggles: ViewToggles;
@@ -47,6 +48,7 @@ interface EditorSceneProps {
   tooltipRef?: RefObject<HTMLDivElement | null>;
   measurementActive?: boolean;
   measurementSelectedTags?: readonly number[];
+  measurementPointMode?: WireMeasurementPointMode;
   onMeasurementWireSelect?: (tag: number) => void;
 }
 
@@ -140,6 +142,7 @@ function EditorSceneContent({
   tooltipRef,
   measurementActive = false,
   measurementSelectedTags = [],
+  measurementPointMode = "closest",
   onMeasurementWireSelect,
 }: EditorSceneProps) {
   const theme = useUIStore((s) => s.theme);
@@ -734,6 +737,7 @@ function EditorSceneContent({
         <WireMeasurementOverlay3D
           wires={wireDataList}
           selectedTags={measurementSelectedTags}
+          pointMode={measurementPointMode}
           visualScale={visualScale}
         />
       )}
@@ -823,6 +827,7 @@ export function EditorScene({
   nearField,
   measurementActive = false,
   measurementSelectedTags = [],
+  measurementPointMode = "closest",
   onMeasurementWireSelect,
 }: EditorSceneProps) {
   const theme = useUIStore((s) => s.theme);
@@ -864,6 +869,7 @@ export function EditorScene({
           tooltipRef={tooltipRef}
           measurementActive={measurementActive}
           measurementSelectedTags={measurementSelectedTags}
+          measurementPointMode={measurementPointMode}
           onMeasurementWireSelect={onMeasurementWireSelect}
         />
         {!measurementActive && <SceneRaycaster tooltipRef={tooltipRef} />}

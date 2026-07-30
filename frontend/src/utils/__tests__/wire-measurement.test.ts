@@ -86,6 +86,36 @@ describe("measureWires", () => {
     expect(result.distance).toBeCloseTo(2);
     expect(result.angleDegrees).toBeNull();
   });
+
+  it("measures the farthest endpoint pair", () => {
+    const result = measureWires(
+      wire([0, 0, 0], [2, 0, 0]),
+      wire([0, 1, 0], [5, 1, 0]),
+      "farthest",
+    );
+
+    expect(result.firstPoint).toEqual({ x: 0, y: 0, z: 0 });
+    expect(result.secondPoint).toEqual({ x: 5, y: 1, z: 0 });
+    expect(result.firstEndpoint).toBe("start");
+    expect(result.secondEndpoint).toBe("end");
+    expect(result.distance).toBeCloseTo(Math.sqrt(26));
+  });
+
+  it.each([
+    ["start-start", { x: 0, y: 0, z: 0 }, { x: 10, y: 0, z: 0 }],
+    ["start-end", { x: 0, y: 0, z: 0 }, { x: 20, y: 0, z: 0 }],
+    ["end-start", { x: 2, y: 0, z: 0 }, { x: 10, y: 0, z: 0 }],
+    ["end-end", { x: 2, y: 0, z: 0 }, { x: 20, y: 0, z: 0 }],
+  ] as const)("measures the %s endpoint pair", (mode, firstPoint, secondPoint) => {
+    const result = measureWires(
+      wire([0, 0, 0], [2, 0, 0]),
+      wire([10, 0, 0], [20, 0, 0]),
+      mode,
+    );
+
+    expect(result.firstPoint).toEqual(firstPoint);
+    expect(result.secondPoint).toEqual(secondPoint);
+  });
 });
 
 describe("advanceWireMeasurementSelection", () => {

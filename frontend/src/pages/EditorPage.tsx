@@ -145,8 +145,10 @@ export function EditorPage() {
   const {
     active: measurementActive,
     selectedTags: measurementSelectedTags,
+    pointMode: measurementPointMode,
     toggle: toggleWireMeasurement,
     selectWire: selectMeasurementWire,
+    setPointMode: setMeasurementPointMode,
     clear: clearWireMeasurement,
   } = useWireMeasurement();
 
@@ -481,6 +483,7 @@ export function EditorPage() {
               nearField={nearFieldData}
               measurementActive={measurementActive}
               measurementSelectedTags={measurementSelectedTags}
+              measurementPointMode={measurementPointMode}
               onMeasurementWireSelect={selectMeasurementWire}
             />
           </ErrorBoundary>
@@ -493,7 +496,9 @@ export function EditorPage() {
             wires={wireGeometry}
             active={measurementActive}
             selectedTags={measurementSelectedTags}
+            pointMode={measurementPointMode}
             onToggle={handleMeasurementToggle}
+            onPointModeChange={setMeasurementPointMode}
             onClear={clearWireMeasurement}
           />
 
