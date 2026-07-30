@@ -175,6 +175,7 @@ export function SceneRaycaster({ tooltipRef }: SceneRaycasterProps) {
   // Attach/cleanup DOM events on the canvas element
   useEffect(() => {
     const el = gl.domElement;
+    const tooltip = tooltipRef.current;
     el.addEventListener("pointermove", handlePointerMove, { passive: true });
     el.addEventListener("pointerleave", handlePointerLeave);
 
@@ -182,8 +183,9 @@ export function SceneRaycaster({ tooltipRef }: SceneRaycasterProps) {
       el.removeEventListener("pointermove", handlePointerMove);
       el.removeEventListener("pointerleave", handlePointerLeave);
       if (pendingIdleRef.current) cancelIdleCallback(pendingIdleRef.current);
+      if (tooltip) renderTooltipDOM(tooltip, null, 0, 0);
     };
-  }, [gl.domElement, handlePointerMove, handlePointerLeave]);
+  }, [gl.domElement, handlePointerMove, handlePointerLeave, tooltipRef]);
 
   return null; // Renders nothing — purely side-effect component
 }

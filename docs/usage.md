@@ -8,6 +8,7 @@ Everything you can do once AntennaSim is running: the antenna templates it ships
 
 - [Antenna Templates](#antenna-templates)
 - [Features](#features)
+- [Measuring Wire Spacing](#measuring-wire-spacing)
 - [Keyboard Shortcuts](#keyboard-shortcuts)
 
 ---
@@ -61,6 +62,7 @@ Every template includes configurable parameters (frequency, height, element leng
 - **Pattern slice** -- animated cutting plane sweeping through the radiation pattern
 - **Ground reflection** -- ghost mirror showing antenna image below ground plane
 - **Hover measurements** -- tooltip follows cursor over any 3D object showing gain, wire dimensions, current magnitude, or field strength
+- **Wire measurement tool** -- select any two wires to compare their closest points, farthest endpoints, or a specific endpoint pair, with signed X/Y/Z offsets and a visual angle guide in either viewport
 - **Auto-framing** -- camera automatically fits to antenna bounding box on load and template change
 - **3D orientation gizmo** -- interactive axis cube in the viewport corner; click any face/edge/corner to snap to that camera angle
 - **Compass rose** for spatial orientation
@@ -125,6 +127,33 @@ Every template includes configurable parameters (frequency, height, element leng
 - **Keyboard shortcuts** -- 17 bindings for fast workflow (press `?` to see them all)
 
 </details>
+
+---
+
+## Measuring Wire Spacing
+
+The **Measure** button is in the bottom-right corner of both the Simulator and
+Wire Editor viewports. It works with a mouse or touchscreen:
+
+1. Select **Measure** to enter measurement mode.
+2. Click or tap the first wire, shown in amber.
+3. Click or tap the second wire, shown in blue.
+4. Choose **Closest points**, **Farthest endpoints**, or a specific A/B endpoint
+   pair from **Measure points**.
+5. Read the distance, wire angle, and signed NEC2 axis offsets in the
+   measurement panel. X points east, Y north, and Z up.
+
+The endpoint labels identify wire 1 as **1A/1B** and wire 2 as **2A/2B**. The
+white dashed guide connects the active point pair; red, green, and blue guides
+show its X, Y, and Z components. The dashed amber and blue lines extend the two
+wire axes through their closest approach, and the white arc marks the smaller
+angle reported by the panel. This angle guide stays at the shared feed point of
+a fan antenna even when a different endpoint pair is being measured. An angle
+of 0° means the axes are parallel and 90° means they are perpendicular. The
+viewport omits the angle guide when the displayed angle is 0.0° to keep
+parallel-wire measurements uncluttered. Select another wire to begin a new
+measurement, use **Clear** to keep measuring from scratch, or select **Measure**
+again to close the tool.
 
 ---
 

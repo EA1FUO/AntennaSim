@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-07-31
+
+### Added
+
+- Added tested geometry primitives for closest-point wire spacing, per-axis offsets, and orientation-independent wire angles
+- Added shared mouse/touch wire selection, selected-wire highlights, and 3D closest-point axis guides to both viewport renderers
+- Added a responsive Measure control to the Simulator and Wire Editor with unit-aware results, clear instructions, and built-in usage help (#76)
+- Added closest, farthest, and explicit endpoint-pair measurement modes with labeled endpoints and an in-scene acute-angle arc for unambiguous wire comparisons (#76)
+
+### Fixed
+
+- Kept the angle guide anchored at the wires' closest approach when switching endpoint measurement modes, including at shared fan-antenna feed points (#76)
+- Prevented viewport endpoint badges from clipping or wrapping and preserved each wire's color when labels share a point (#76)
+- Hid the in-scene angle guide for parallel wires while retaining the numeric 0.0° result in the measurement panel (#76)
+- Made closest-point calculations scale-invariant so millimetre-scale crossing and spacing measurements remain accurate (#76)
+- Extracted tested angle-guide and endpoint-label geometry while avoiding unnecessary hit-target rebuilding and explicitly disposing replaced Three.js resources (#76)
+- Isolated Wire Editor shortcuts and excitation picking during measurement mode so editing commands cannot mutate geometry unexpectedly (#76)
+- Improved measurement panel accessibility with a labelled section, focused live-result announcements, associated help controls, and more legible mobile text (#76)
+- Hid decorative 3D endpoint and angle annotations from assistive technology so the structured measurement summary remains authoritative (#76)
+- Added regression coverage for point-like wires, collinear and oblique endpoint clamping, reversed angle axes, and fully coincident endpoint labels (#76)
+
 ## [1.4.1] - 2026-07-30
 
 ### Added
@@ -389,6 +410,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 This was the initial public release -- a complete rewrite of the original prototype into a production-quality application with React 19, TypeScript, FastAPI, and Docker.
 
+[1.4.2]: https://github.com/EA1FUO/AntennaSim/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/EA1FUO/AntennaSim/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/EA1FUO/AntennaSim/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/EA1FUO/AntennaSim/compare/v1.3.0...v1.3.1
