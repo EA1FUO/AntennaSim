@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-07-31
+
 ### Added
 
 - Added tested geometry primitives for closest-point wire spacing, per-axis offsets, and orientation-independent wire angles
@@ -408,6 +410,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 This was the initial public release -- a complete rewrite of the original prototype into a production-quality application with React 19, TypeScript, FastAPI, and Docker.
 
+[1.4.2]: https://github.com/EA1FUO/AntennaSim/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/EA1FUO/AntennaSim/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/EA1FUO/AntennaSim/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/EA1FUO/AntennaSim/compare/v1.3.0...v1.3.1
