@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Added tested geometry primitives for closest-point wire spacing, per-axis offsets, and orientation-independent wire angles
+
 ## [1.4.1] - 2026-07-30
 
 ### Added
