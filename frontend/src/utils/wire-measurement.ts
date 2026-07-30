@@ -341,15 +341,3 @@ export function measureWires(
     angleDegrees,
   };
 }
-
-/** Advance the tap/click selection used by the measurement tool. */
-export function advanceWireMeasurementSelection(
-  selectedTags: readonly number[],
-  tag: number,
-): number[] {
-  if (selectedTags.length === 0) return [tag];
-  if (selectedTags.length === 1) {
-    return selectedTags[0] === tag ? [] : [selectedTags[0]!, tag];
-  }
-  return [tag];
-}

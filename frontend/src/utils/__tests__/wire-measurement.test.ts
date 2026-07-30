@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  advanceWireMeasurementSelection,
-  measureWires,
-} from "../wire-measurement";
+import { measureWires } from "../wire-measurement";
 import type { MeasurableWire } from "../wire-measurement";
 
 function wire(
@@ -137,14 +134,5 @@ describe("measureWires", () => {
 
     expect(result.firstPoint).toEqual(firstPoint);
     expect(result.secondPoint).toEqual(secondPoint);
-  });
-});
-
-describe("advanceWireMeasurementSelection", () => {
-  it("selects two wires, deselects the first, and starts over after a result", () => {
-    expect(advanceWireMeasurementSelection([], 3)).toEqual([3]);
-    expect(advanceWireMeasurementSelection([3], 3)).toEqual([]);
-    expect(advanceWireMeasurementSelection([3], 7)).toEqual([3, 7]);
-    expect(advanceWireMeasurementSelection([3, 7], 9)).toEqual([9]);
   });
 });

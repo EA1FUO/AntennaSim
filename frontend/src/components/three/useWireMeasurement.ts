@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { advanceWireMeasurementSelection } from "../../utils/wire-measurement";
+import { advanceWireMeasurementSelection } from "../../utils/wire-measurement-interaction";
 import type { WireMeasurementPointMode } from "../../utils/wire-measurement";
 
 export interface WireMeasurementController {

@@ -18,6 +18,7 @@ import { ErrorBoundary } from "../components/common/ErrorBoundary";
 import { ViewToggleToolbar } from "../components/three/ViewToggleToolbar";
 import { WireMeasurementTool } from "../components/three/WireMeasurementTool";
 import { useWireMeasurement } from "../components/three/useWireMeasurement";
+import { resolveWireMeasurementKeyboardAction } from "../utils/wire-measurement-interaction";
 import { Navbar } from "../components/layout/Navbar";
 import { EditorToolbar } from "../components/editors/EditorToolbar";
 import { EndpointConnectionControls } from "../components/editors/EndpointConnectionControls";
@@ -116,6 +117,9 @@ export function EditorPage() {
   const setWires = useEditorStore((s) => s.setWires);
   const addLoad = useEditorStore((s) => s.addLoad);
   const addTransmissionLine = useEditorStore((s) => s.addTransmissionLine);
+  const setPickingExcitationForTag = useEditorStore(
+    (s) => s.setPickingExcitationForTag,
+  );
 
   // Simulation store
   const simStatus = useSimulationStore((s) => s.status);
@@ -195,6 +199,18 @@ export function EditorPage() {
       )
         return;
 
+      const measurementKeyboardAction =
+        resolveWireMeasurementKeyboardAction(measurementActive, e.key);
+      if (measurementKeyboardAction === "exit-measurement") {
+        e.preventDefault();
+        toggleWireMeasurement();
+        deselectAll();
+        clearEndpointSelection();
+        setMode("select");
+        return;
+      }
+      if (measurementKeyboardAction === "ignore") return;
+
       if ((e.key === "s" || e.key === "S") && !e.ctrlKey && !e.metaKey && !e.altKey) {
         e.preventDefault();
         snapSelectedEndpoints(e.shiftKey);
@@ -205,7 +221,6 @@ export function EditorPage() {
       else if (e.key === "a" && !e.ctrlKey && !e.metaKey) setMode("add");
       else if ((e.key === "m" || e.key === "M") && !e.ctrlKey && !e.metaKey) setMode("move");
       else if (e.key === "Escape") {
-        if (measurementActive) toggleWireMeasurement();
         deselectAll();
         clearEndpointSelection();
         setMode("select");
@@ -255,10 +270,11 @@ export function EditorPage() {
     if (!measurementActive) {
       setMode("select");
       clearEndpointSelection();
+      setPickingExcitationForTag(null);
       setViewToggle("wires", true);
     }
     toggleWireMeasurement();
-  }, [measurementActive, toggleWireMeasurement, setMode, clearEndpointSelection, setViewToggle]);
+  }, [measurementActive, toggleWireMeasurement, setMode, clearEndpointSelection, setPickingExcitationForTag, setViewToggle]);
 
   const handleRunSimulation = useCallback(() => {
     if (wires.length === 0 || excitations.length === 0) return;
