@@ -9,7 +9,7 @@
  * - Feedpoint marker overlay
  */
 
-import { useMemo, useCallback, useState, useRef } from "react";
+import { useMemo, useCallback, useEffect, useState, useRef } from "react";
 import {
   TubeGeometry,
   LineCurve3,
@@ -131,11 +131,10 @@ export function EditorAntennaModel({
   const [hoveredSegment, setHoveredSegment] = useState<number | null>(null);
   const lastPointerEvent = useRef<{ clientX: number; clientY: number } | null>(null);
 
-  const { geometry, material, start, end, measurementHitGeometry } = useMemo(() => {
+  const { geometry, start, end } = useMemo(() => {
     // NEC2: X=east, Y=north, Z=up -> Three.js: X=east, Y=up, Z=south
     const s = new Vector3(wire.x1, wire.z1, -wire.y1);
     const e = new Vector3(wire.x2, wire.z2, -wire.y2);
-
     const visualRadius = visualScale.wireRadius(wire.radius);
     const curve = new LineCurve3(s, e);
     const tubeGeo = new TubeGeometry(
@@ -145,16 +144,28 @@ export function EditorAntennaModel({
       8,
       false
     );
-    const hitGeometry = measurementActive
+
+    return { geometry: tubeGeo, start: s, end: e };
+  }, [wire, visualScale]);
+
+  const measurementHitGeometry = useMemo(
+    () =>
+      measurementActive
       ? new TubeGeometry(
-          curve,
-          Math.max(2, wire.segments),
-          Math.max(visualRadius * 4, visualScale.markerRadius * 0.75),
+          new LineCurve3(start, end),
+          2,
+          Math.max(
+            visualScale.wireRadius(wire.radius) * 4,
+            visualScale.markerRadius * 0.75,
+          ),
           6,
           false,
         )
-      : null;
+        : null,
+    [measurementActive, start, end, visualScale, wire.radius],
+  );
 
+  const material = useMemo(() => {
     const color =
       measurementOrder === 1
         ? "#F59E0B"
@@ -174,15 +185,15 @@ export function EditorAntennaModel({
       opacity: dimmed ? 0.15 : 1,
       depthWrite: !dimmed,
     });
+    return mat;
+  }, [wire.tag, isSelected, dimmed, isDark, measurementOrder]);
 
-    return {
-      geometry: tubeGeo,
-      material: mat,
-      start: s,
-      end: e,
-      measurementHitGeometry: hitGeometry,
-    };
-  }, [wire, visualScale, isSelected, dimmed, isDark, measurementActive, measurementOrder]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  useEffect(
+    () => () => measurementHitGeometry?.dispose(),
+    [measurementHitGeometry],
+  );
+  useEffect(() => () => material.dispose(), [material]);
 
   // Selection outline
   const outlineGeometry = useMemo(() => {
@@ -215,6 +226,10 @@ export function EditorAntennaModel({
       opacity: 0.9,
     });
   }, [hasFeedpoint]);
+
+  useEffect(() => () => outlineGeometry?.dispose(), [outlineGeometry]);
+  useEffect(() => () => outlineMaterial?.dispose(), [outlineMaterial]);
+  useEffect(() => () => feedpointMat?.dispose(), [feedpointMat]);
 
   const feedpointPosition = useMemo((): [number, number, number] => {
     if (feedSegment && wire.segments > 0) {

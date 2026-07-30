@@ -5,9 +5,14 @@ import type { VisualScale } from "./visualScale";
 import { measureWires } from "../../utils/wire-measurement";
 import type {
   MeasurementPoint,
-  WireMeasurement,
   WireMeasurementPointMode,
 } from "../../utils/wire-measurement";
+import {
+  createWireAngleGuide,
+  createWireEndpointLabels,
+  shouldShowWireAngleGuide,
+  type WireEndpointLabel,
+} from "../../utils/wire-measurement-visuals";
 
 interface WireMeasurementOverlay3DProps {
   wires: WireData[];
@@ -23,113 +28,9 @@ interface AxisLeg {
   color: string;
 }
 
-interface AngleGuide {
-  firstAxis: [MeasurementPoint, MeasurementPoint];
-  secondAxis: [MeasurementPoint, MeasurementPoint];
-  arc: MeasurementPoint[];
-  labelPoint: MeasurementPoint;
-}
-
-interface EndpointLabelData {
-  point: MeasurementPoint;
-  labels: Array<{ text: string; color: string }>;
-  markerColor: string;
-}
-
 /** NEC2 (Z=up) to Three.js (Y=up). */
 function toThree(point: MeasurementPoint): [number, number, number] {
   return [point.x, point.z, -point.y];
-}
-
-function add(a: MeasurementPoint, b: MeasurementPoint): MeasurementPoint {
-  return { x: a.x + b.x, y: a.y + b.y, z: a.z + b.z };
-}
-
-function scale(point: MeasurementPoint, amount: number): MeasurementPoint {
-  return { x: point.x * amount, y: point.y * amount, z: point.z * amount };
-}
-
-function dot(a: MeasurementPoint, b: MeasurementPoint): number {
-  return a.x * b.x + a.y * b.y + a.z * b.z;
-}
-
-function normalize(point: MeasurementPoint): MeasurementPoint | null {
-  const length = Math.sqrt(dot(point, point));
-  return length > 1e-12 ? scale(point, 1 / length) : null;
-}
-
-function midpoint(a: MeasurementPoint, b: MeasurementPoint): MeasurementPoint {
-  return scale(add(a, b), 0.5);
-}
-
-function distanceSquared(a: MeasurementPoint, b: MeasurementPoint): number {
-  const dx = a.x - b.x;
-  const dy = a.y - b.y;
-  const dz = a.z - b.z;
-  return dx * dx + dy * dy + dz * dz;
-}
-
-function createAngleGuide(
-  firstWire: WireData,
-  secondWire: WireData,
-  measurement: WireMeasurement,
-  span: number,
-): AngleGuide | null {
-  const firstDirection = normalize({
-    x: firstWire.x2 - firstWire.x1,
-    y: firstWire.y2 - firstWire.y1,
-    z: firstWire.z2 - firstWire.z1,
-  });
-  let secondDirection = normalize({
-    x: secondWire.x2 - secondWire.x1,
-    y: secondWire.y2 - secondWire.y1,
-    z: secondWire.z2 - secondWire.z1,
-  });
-  if (!firstDirection || !secondDirection) return null;
-
-  // Wire axes have no forward direction. Flip the second axis so the guide
-  // depicts the same acute angle reported in the panel.
-  if (dot(firstDirection, secondDirection) < 0) {
-    secondDirection = scale(secondDirection, -1);
-  }
-
-  const anchor = midpoint(measurement.firstPoint, measurement.secondPoint);
-  const armLength = span * 0.14;
-  const arcRadius = span * 0.075;
-  const firstAxis: [MeasurementPoint, MeasurementPoint] = [
-    add(anchor, scale(firstDirection, -armLength)),
-    add(anchor, scale(firstDirection, armLength)),
-  ];
-  const secondAxis: [MeasurementPoint, MeasurementPoint] = [
-    add(anchor, scale(secondDirection, -armLength)),
-    add(anchor, scale(secondDirection, armLength)),
-  ];
-
-  const angleRadians =
-    measurement.angleDegrees === null
-      ? 0
-      : (measurement.angleDegrees * Math.PI) / 180;
-  const steps = Math.max(2, Math.ceil(angleRadians / (Math.PI / 36)));
-  const arc: MeasurementPoint[] = [];
-  for (let index = 0; index <= steps; index += 1) {
-    const progress = index / steps;
-    const blended = normalize(
-      add(
-        scale(firstDirection, 1 - progress),
-        scale(secondDirection, progress),
-      ),
-    );
-    if (blended) arc.push(add(anchor, scale(blended, arcRadius)));
-  }
-
-  const labelDirection =
-    normalize(add(firstDirection, secondDirection)) ?? firstDirection;
-  return {
-    firstAxis,
-    secondAxis,
-    arc,
-    labelPoint: add(anchor, scale(labelDirection, arcRadius * 1.35)),
-  };
 }
 
 function EndpointLabel({
@@ -139,7 +40,7 @@ function EndpointLabel({
   markerRadius,
 }: {
   point: MeasurementPoint;
-  labels: Array<{ text: string; color: string }>;
+  labels: WireEndpointLabel["labels"];
   markerColor: string;
   markerRadius: number;
 }) {
@@ -202,72 +103,22 @@ export function WireMeasurementOverlay3D({
     [firstWire, secondWire, pointMode],
   );
 
-  // The wire angle does not depend on the selected distance endpoints. Keep
-  // its visual reference at the wires' closest approach so switching point
-  // modes cannot move the arc away from the geometry it explains. For fan
-  // antennas this naturally anchors the angle at the shared feed point.
-  const angleReferenceMeasurement = useMemo(
-    () =>
-      firstWire && secondWire
-        ? measureWires(firstWire, secondWire, "closest")
-        : null,
-    [firstWire, secondWire],
-  );
-
   const angleGuide = useMemo(
     () =>
-      firstWire && secondWire && angleReferenceMeasurement
-        ? createAngleGuide(
-            firstWire,
-            secondWire,
-            angleReferenceMeasurement,
-            visualScale.span,
-          )
+      firstWire && secondWire
+        ? createWireAngleGuide(firstWire, secondWire, visualScale.span)
         : null,
-    [firstWire, secondWire, angleReferenceMeasurement, visualScale.span],
+    [firstWire, secondWire, visualScale.span],
   );
 
-  const endpointLabels = useMemo((): EndpointLabelData[] => {
-    if (!firstWire || !secondWire) return [];
-    const candidates: EndpointLabelData[] = [
-      {
-        point: { x: firstWire.x1, y: firstWire.y1, z: firstWire.z1 },
-        labels: [{ text: "1A", color: "#F59E0B" }],
-        markerColor: "#F59E0B",
-      },
-      {
-        point: { x: firstWire.x2, y: firstWire.y2, z: firstWire.z2 },
-        labels: [{ text: "1B", color: "#F59E0B" }],
-        markerColor: "#F59E0B",
-      },
-      {
-        point: { x: secondWire.x1, y: secondWire.y1, z: secondWire.z1 },
-        labels: [{ text: "2A", color: "#3B82F6" }],
-        markerColor: "#3B82F6",
-      },
-      {
-        point: { x: secondWire.x2, y: secondWire.y2, z: secondWire.z2 },
-        labels: [{ text: "2B", color: "#3B82F6" }],
-        markerColor: "#3B82F6",
-      },
-    ];
-    const groups: EndpointLabelData[] = [];
-    const toleranceSquared = (visualScale.span * 1e-7) ** 2;
-    for (const candidate of candidates) {
-      const existing = groups.find(
-        (group) =>
-          distanceSquared(group.point, candidate.point) <= toleranceSquared,
-      );
-      if (existing) {
-        existing.labels.push(...candidate.labels);
-        if (existing.markerColor !== candidate.markerColor) {
-          existing.markerColor = "#FFFFFF";
-        }
-      } else {
-        groups.push({ ...candidate, labels: [...candidate.labels] });
-      }
-    }
-    return groups;
+  const endpointLabels = useMemo((): WireEndpointLabel[] => {
+    return firstWire && secondWire
+      ? createWireEndpointLabels(
+          firstWire,
+          secondWire,
+          visualScale.span * 1e-7,
+        )
+      : [];
   }, [firstWire, secondWire, visualScale.span]);
 
   const axisLegs = useMemo((): AxisLeg[] => {
@@ -302,9 +153,8 @@ export function WireMeasurementOverlay3D({
     visualScale.span * 0.008,
   );
   const visibleAngleDegrees =
-    measurement.angleDegrees !== null &&
-    Math.round(measurement.angleDegrees * 10) > 0
-      ? measurement.angleDegrees
+    angleGuide && shouldShowWireAngleGuide(angleGuide.angleDegrees)
+      ? angleGuide.angleDegrees
       : null;
 
   return (

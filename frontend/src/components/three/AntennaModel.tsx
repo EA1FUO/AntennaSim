@@ -34,25 +34,39 @@ export function AntennaModel({
   const theme = useUIStore((s) => s.theme);
   const isDark = theme === "dark";
 
-  const { geometry, material, endCapPositions, measurementHitGeometry } = useMemo(() => {
+  const { geometry, endCapPositions } = useMemo(() => {
     // NEC2: X=east, Y=north, Z=up -> Three.js: X=east, Y=up, Z=south
     const start = new Vector3(wire.x1, wire.z1, -wire.y1);
     const end = new Vector3(wire.x2, wire.z2, -wire.y2);
-
     const visualRadius = visualScale.wireRadius(wire.radius);
-
     const curve = new LineCurve3(start, end);
     const tubeGeo = new TubeGeometry(curve, Math.max(2, wire.segments), visualRadius, 8, false);
-    const hitGeometry = onMeasurementSelect
+
+    return {
+      geometry: tubeGeo,
+      endCapPositions: [start, end] as [Vector3, Vector3],
+    };
+  }, [wire, visualScale]);
+
+  const measurementEnabled = onMeasurementSelect !== undefined;
+  const measurementHitGeometry = useMemo(
+    () =>
+      measurementEnabled
       ? new TubeGeometry(
-          curve,
-          Math.max(2, wire.segments),
-          Math.max(visualRadius * 4, visualScale.markerRadius * 0.75),
+          new LineCurve3(endCapPositions[0], endCapPositions[1]),
+          2,
+          Math.max(
+            visualScale.wireRadius(wire.radius) * 4,
+            visualScale.markerRadius * 0.75,
+          ),
           6,
           false,
         )
-      : null;
+        : null,
+    [measurementEnabled, endCapPositions, visualScale, wire.radius],
+  );
 
+  const material = useMemo(() => {
     const color =
       measurementOrder === 1
         ? "#F59E0B"
@@ -69,15 +83,15 @@ export function AntennaModel({
       opacity: dimmed ? 0.15 : 1,
       depthWrite: !dimmed,
     });
+    return mat;
+  }, [wire.tag, dimmed, isDark, measurementOrder]);
 
-    const caps: [Vector3, Vector3] = [start, end];
-    return {
-      geometry: tubeGeo,
-      material: mat,
-      endCapPositions: caps,
-      measurementHitGeometry: hitGeometry,
-    };
-  }, [wire, visualScale, dimmed, isDark, measurementOrder, onMeasurementSelect]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  useEffect(
+    () => () => measurementHitGeometry?.dispose(),
+    [measurementHitGeometry],
+  );
+  useEffect(() => () => material.dispose(), [material]);
 
   const capRadius = visualScale.capRadius(wire.radius);
 
