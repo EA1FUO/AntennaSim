@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-07-30
+
+### Added
+
+- Added Touchstone `.s1p` export for using simulated frequency sweeps in VNA and external RF analysis software
+
 ## [1.4.0] - 2026-07-19
 
 ### Added
@@ -383,6 +389,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 This was the initial public release -- a complete rewrite of the original prototype into a production-quality application with React 19, TypeScript, FastAPI, and Docker.
 
+[1.4.1]: https://github.com/EA1FUO/AntennaSim/compare/v1.4.0...v1.4.1
+[1.4.0]: https://github.com/EA1FUO/AntennaSim/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/EA1FUO/AntennaSim/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/EA1FUO/AntennaSim/compare/v1.2.2...v1.3.0
 [1.2.2]: https://github.com/EA1FUO/AntennaSim/compare/v1.2.1...v1.2.2
