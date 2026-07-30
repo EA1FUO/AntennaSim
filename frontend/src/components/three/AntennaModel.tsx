@@ -52,16 +52,16 @@ export function AntennaModel({
   const measurementHitGeometry = useMemo(
     () =>
       measurementEnabled
-      ? new TubeGeometry(
-          new LineCurve3(endCapPositions[0], endCapPositions[1]),
-          2,
-          Math.max(
-            visualScale.wireRadius(wire.radius) * 4,
-            visualScale.markerRadius * 0.75,
-          ),
-          6,
-          false,
-        )
+        ? new TubeGeometry(
+            new LineCurve3(endCapPositions[0], endCapPositions[1]),
+            2,
+            Math.max(
+              visualScale.wireRadius(wire.radius) * 4,
+              visualScale.markerRadius * 0.75,
+            ),
+            6,
+            false,
+          )
         : null,
     [measurementEnabled, endCapPositions, visualScale, wire.radius],
   );

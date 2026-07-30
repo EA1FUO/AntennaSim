@@ -20,9 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Prevented viewport endpoint badges from clipping or wrapping and preserved each wire's color when labels share a point (#76)
 - Hid the in-scene angle guide for parallel wires while retaining the numeric 0.0° result in the measurement panel (#76)
 - Made closest-point calculations scale-invariant so millimetre-scale crossing and spacing measurements remain accurate (#76)
-- Extracted tested angle-guide and endpoint-label geometry while preventing measurement interactions from rebuilding or leaking Three.js wire resources (#76)
+- Extracted tested angle-guide and endpoint-label geometry while avoiding unnecessary hit-target rebuilding and explicitly disposing replaced Three.js resources (#76)
 - Isolated Wire Editor shortcuts and excitation picking during measurement mode so editing commands cannot mutate geometry unexpectedly (#76)
 - Improved measurement panel accessibility with a labelled section, focused live-result announcements, associated help controls, and more legible mobile text (#76)
+- Hid decorative 3D endpoint and angle annotations from assistive technology so the structured measurement summary remains authoritative (#76)
 
 ## [1.4.1] - 2026-07-30
 

@@ -151,16 +151,16 @@ export function EditorAntennaModel({
   const measurementHitGeometry = useMemo(
     () =>
       measurementActive
-      ? new TubeGeometry(
-          new LineCurve3(start, end),
-          2,
-          Math.max(
-            visualScale.wireRadius(wire.radius) * 4,
-            visualScale.markerRadius * 0.75,
-          ),
-          6,
-          false,
-        )
+        ? new TubeGeometry(
+            new LineCurve3(start, end),
+            2,
+            Math.max(
+              visualScale.wireRadius(wire.radius) * 4,
+              visualScale.markerRadius * 0.75,
+            ),
+            6,
+            false,
+          )
         : null,
     [measurementActive, start, end, visualScale, wire.radius],
   );

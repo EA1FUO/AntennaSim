@@ -58,6 +58,7 @@ function EndpointLabel({
       <Html
         center
         sprite
+        aria-hidden="true"
         zIndexRange={[20, 0]}
         style={{
           pointerEvents: "none",
@@ -241,6 +242,7 @@ export function WireMeasurementOverlay3D({
             position={toThree(angleGuide.labelPoint)}
             center
             sprite
+            aria-hidden="true"
             zIndexRange={[20, 0]}
             style={{ pointerEvents: "none" }}
           >
