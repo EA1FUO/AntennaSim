@@ -152,12 +152,12 @@ interface EditorState {
   clearAll: () => void;
   /** Set all wires at once (e.g. from import) */
   setWires: (
-  wires: EditorWire[],
-  excitations?: Excitation[],
-  junctions?: EditorJunction[],
-  loads?: LumpedLoad[],
-  transmissionLines?: TransmissionLine[],
-) => void;
+    wires: EditorWire[],
+    excitations?: Excitation[],
+    junctions?: EditorJunction[],
+    loads?: LumpedLoad[],
+    transmissionLines?: TransmissionLine[],
+  ) => void;
 
   // ---- Selection ----
   /** Select a single wire (deselects others unless additive) */
@@ -647,8 +647,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     // Recompute segments if geometry changed and not manually overridden
     if (!updated.segmentsManual &&
-        (updates.x1 !== undefined || updates.y1 !== undefined || updates.z1 !== undefined ||
-         updates.x2 !== undefined || updates.y2 !== undefined || updates.z2 !== undefined)) {
+      (updates.x1 !== undefined || updates.y1 !== undefined || updates.z1 !== undefined ||
+        updates.x2 !== undefined || updates.y2 !== undefined || updates.z2 !== undefined)) {
       updated.segments = computeSegments(updated, state.designFrequencyMhz);
     }
 
@@ -1216,12 +1216,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   setWires: (
-  wires,
-  excitations,
-  junctions = [],
-  loads = [],
-  transmissionLines = [],
-) => {
+    wires,
+    excitations,
+    junctions = [],
+    loads = [],
+    transmissionLines = [],
+  ) => {
     const state = get();
     const maxTag = wires.reduce((max, w) => Math.max(max, w.tag), 0);
     const newWires = wires.map((w) => ({ ...w }));
@@ -1230,11 +1230,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const fixedExcitations = fixExcitations(rawExcitations, newWires);
     set({
       ...pushUndo(state),
-		wires: newWires,
-		excitations: fixedExcitations,
-		loads: loads.map((l) => ({ ...l })),
-		transmissionLines: transmissionLines.map((tl) => ({ ...tl })),
-		selectedTags: new Set(),
+      wires: newWires,
+      excitations: fixedExcitations,
+      loads: loads.map((l) => ({ ...l })),
+      transmissionLines: transmissionLines.map((tl) => ({ ...tl })),
+      selectedTags: new Set(),
       selectedEndpoints: [],
       junctions: junctions.map((junction) => ({
         ...junction,
@@ -1322,9 +1322,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     const initialRefs: EndpointRef[] = preserveLength
       ? [
-          { wireTag: source.wireTag, endpoint: "start" },
-          { wireTag: source.wireTag, endpoint: "end" },
-        ]
+        { wireTag: source.wireTag, endpoint: "start" },
+        { wireTag: source.wireTag, endpoint: "end" },
+      ]
       : [source];
     const refs = expandJunctionEndpoints(initialRefs, state.junctions);
     if (refs.some((ref) => sameEndpoint(ref, target))) {

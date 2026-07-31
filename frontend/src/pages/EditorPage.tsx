@@ -53,7 +53,11 @@ import { templates } from "../templates";
 import { getDefaultParams } from "../templates/types";
 import type { ProjectFile } from "../utils/project-file";
 import type { AntennaTemplate, FrequencyRange } from "../templates/types";
-import { bandToSegment, hasBandSegment, removeBandSegment } from "../utils/ham-bands";
+import {
+  bandToSegment,
+  hasBandSegment,
+  removeBandSegment,
+} from "../utils/ham-bands";
 import type { HamBand } from "../utils/ham-bands";
 import type { ViewToggles } from "../components/three/types";
 
@@ -66,7 +70,12 @@ const MOBILE_SEGMENTS = [
   { key: "results", label: "Results" },
 ];
 
-type MobileEditorTab = "wires" | "properties" | "settings" | "tools" | "results";
+type MobileEditorTab =
+  | "wires"
+  | "properties"
+  | "settings"
+  | "tools"
+  | "results";
 
 const HEIGHT_UNIT_DECIMALS: Record<LengthUnit, number> = {
   m: 3,
@@ -96,9 +105,13 @@ export function EditorPage() {
   const snapSize = useEditorStore((s) => s.snapSize);
   const setSnapSize = useEditorStore((s) => s.setSnapSize);
   const selectedTags = useEditorStore((s) => s.selectedTags);
-  const clearEndpointSelection = useEditorStore((s) => s.clearEndpointSelection);
+  const clearEndpointSelection = useEditorStore(
+    (s) => s.clearEndpointSelection,
+  );
   const snapSelectedEndpoints = useEditorStore((s) => s.snapSelectedEndpoints);
-  const toggleSelectedJunction = useEditorStore((s) => s.toggleSelectedJunction);
+  const toggleSelectedJunction = useEditorStore(
+    (s) => s.toggleSelectedJunction,
+  );
   const undo = useEditorStore((s) => s.undo);
   const redo = useEditorStore((s) => s.redo);
   const deselectAll = useEditorStore((s) => s.deselectAll);
@@ -122,7 +135,7 @@ export function EditorPage() {
   const simulateAdvanced = useSimulationStore((s) => s.simulateAdvanced);
   const resetSimulation = useSimulationStore((s) => s.reset);
   const selectedFreqResult = useSimulationStore((s) =>
-    s.getSelectedFrequencyResult()
+    s.getSelectedFrequencyResult(),
   );
 
   // V2 features from editor store
@@ -141,7 +154,9 @@ export function EditorPage() {
   const setLengthUnit = useUIStore((s) => s.setLengthUnit);
 
   // Right panel tab state: editor tools vs simulation results
-  const [rightPanelTab, setRightPanelTab] = useState<"editor" | "results">("editor");
+  const [rightPanelTab, setRightPanelTab] = useState<"editor" | "results">(
+    "editor",
+  );
 
   // Editor section dropdown: replaces 6 individual accordion toggles
   type EditorSection = "wires" | "templates" | "tools" | "settings";
@@ -153,9 +168,11 @@ export function EditorPage() {
   const [toolsOptimizerOpen, setToolsOptimizerOpen] = useState(false);
 
   // Template loader state
-  const [selectedTemplate, setSelectedTemplate] = useState<AntennaTemplate>(templates[0]!);
+  const [selectedTemplate, setSelectedTemplate] = useState<AntennaTemplate>(
+    templates[0]!,
+  );
   const [templateParams, setTemplateParams] = useState<Record<string, number>>(
-    () => getDefaultParams(templates[0]!)
+    () => getDefaultParams(templates[0]!),
   );
 
   // Pattern resolution
@@ -183,15 +200,27 @@ export function EditorPage() {
       )
         return;
 
-      if ((e.key === "s" || e.key === "S") && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (
+        (e.key === "s" || e.key === "S") &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey
+      ) {
         e.preventDefault();
         snapSelectedEndpoints(e.shiftKey);
-      } else if ((e.key === "j" || e.key === "J") && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      } else if (
+        (e.key === "j" || e.key === "J") &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey
+      ) {
         e.preventDefault();
         toggleSelectedJunction();
-      } else if ((e.key === "v" || e.key === "V") && !e.ctrlKey && !e.metaKey) setMode("select");
+      } else if ((e.key === "v" || e.key === "V") && !e.ctrlKey && !e.metaKey)
+        setMode("select");
       else if (e.key === "a" && !e.ctrlKey && !e.metaKey) setMode("add");
-      else if ((e.key === "m" || e.key === "M") && !e.ctrlKey && !e.metaKey) setMode("move");
+      else if ((e.key === "m" || e.key === "M") && !e.ctrlKey && !e.metaKey)
+        setMode("move");
       else if (e.key === "Escape") {
         deselectAll();
         clearEndpointSelection();
@@ -224,7 +253,20 @@ export function EditorPage() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [setMode, deselectAll, clearEndpointSelection, snapSelectedEndpoints, toggleSelectedJunction, deleteSelected, undo, redo, selectAll, copySelected, paste, duplicateSelected]);
+  }, [
+    setMode,
+    deselectAll,
+    clearEndpointSelection,
+    snapSelectedEndpoints,
+    toggleSelectedJunction,
+    deleteSelected,
+    undo,
+    redo,
+    selectAll,
+    copySelected,
+    paste,
+    duplicateSelected,
+  ]);
 
   // Clear stale results on page entry (prevents cross-page state leaks)
   // and whenever antenna geometry or config changes.
@@ -235,7 +277,7 @@ export function EditorPage() {
   // Handlers
   const handleToggle = useCallback(
     (key: keyof ViewToggles) => toggleView(key),
-    [toggleView]
+    [toggleView],
   );
 
   const handleRunSimulation = useCallback(() => {
@@ -246,9 +288,11 @@ export function EditorPage() {
       excitations,
       ground,
       frequency: frequencyRange,
-      frequencySegments: frequencySegments.length > 0 ? frequencySegments : undefined,
+      frequencySegments:
+        frequencySegments.length > 0 ? frequencySegments : undefined,
       loads: loads.length > 0 ? loads : undefined,
-      transmission_lines: transmissionLines.length > 0 ? transmissionLines : undefined,
+      transmission_lines:
+        transmissionLines.length > 0 ? transmissionLines : undefined,
       compute_currents: computeCurrents,
       near_field: {
         plane: "horizontal",
@@ -258,7 +302,19 @@ export function EditorPage() {
       },
       pattern_step: patternStep,
     });
-  }, [wires, excitations, ground, frequencyRange, frequencySegments, loads, transmissionLines, computeCurrents, patternStep, simulateAdvanced, getWireGeometry]);
+  }, [
+    wires,
+    excitations,
+    ground,
+    frequencyRange,
+    frequencySegments,
+    loads,
+    transmissionLines,
+    computeCurrents,
+    patternStep,
+    simulateAdvanced,
+    getWireGeometry,
+  ]);
 
   // Template loader handlers
   const handleTemplateSelect = useCallback((t: AntennaTemplate) => {
@@ -266,16 +322,21 @@ export function EditorPage() {
     setTemplateParams(getDefaultParams(t));
   }, []);
 
-  const handleTemplateParamChange = useCallback((key: string, value: number) => {
-    setTemplateParams((prev) => ({ ...prev, [key]: value }));
-  }, []);
+  const handleTemplateParamChange = useCallback(
+    (key: string, value: number) => {
+      setTemplateParams((prev) => ({ ...prev, [key]: value }));
+    },
+    [],
+  );
 
   const handleLoadTemplate = useCallback(() => {
     const geom = selectedTemplate.generateGeometry(templateParams);
     const rawExc = selectedTemplate.generateExcitation(templateParams, geom);
     const excitations = Array.isArray(rawExc) ? rawExc : [rawExc];
-    const templateLoads = selectedTemplate.generateLoads?.(templateParams, geom) ?? [];
-    const templateTLs = selectedTemplate.generateTransmissionLines?.(templateParams, geom) ?? [];
+    const templateLoads =
+      selectedTemplate.generateLoads?.(templateParams, geom) ?? [];
+    const templateTLs =
+      selectedTemplate.generateTransmissionLines?.(templateParams, geom) ?? [];
     const freqRange = selectedTemplate.defaultFrequencyRange(templateParams);
     const freqParam = templateParams.frequency ?? templateParams.freq ?? 14.15;
 
@@ -283,7 +344,7 @@ export function EditorPage() {
     clearAll();
     setWires(
       geom.map((w) => ({ ...w, selected: false })),
-      excitations
+      excitations,
     );
 
     // Carry over any template loads / transmission lines
@@ -296,11 +357,29 @@ export function EditorPage() {
 
     // Set ground and matching from template defaults
     setGround(selectedTemplate.defaultGround);
-    setMatching(selectedTemplate.defaultMatching ?? { type: "none", ratio: 1, feedlineZ0: 50 });
+    setMatching(
+      selectedTemplate.defaultMatching ?? {
+        type: "none",
+        ratio: 1,
+        feedlineZ0: 50,
+      },
+    );
 
     // Switch to wires section after loading
     setEditorSection("wires");
-  }, [selectedTemplate, templateParams, clearAll, setWires, addLoad, addTransmissionLine, setDesignFrequency, setFrequencyRange, setGround, setMatching, setEditorSection]);
+  }, [
+    selectedTemplate,
+    templateParams,
+    clearAll,
+    setWires,
+    addLoad,
+    addTransmissionLine,
+    setDesignFrequency,
+    setFrequencyRange,
+    setGround,
+    setMatching,
+    setEditorSection,
+  ]);
 
   const handleBandSelect = useCallback(
     (range: FrequencyRange, _band: HamBand) => {
@@ -309,7 +388,7 @@ export function EditorPage() {
       const center = (range.start_mhz + range.stop_mhz) / 2;
       setDesignFrequency(center);
     },
-    [setFrequencySegments, setFrequencyRange, setDesignFrequency]
+    [setFrequencySegments, setFrequencyRange, setDesignFrequency],
   );
 
   const handleToggleBand = useCallback(
@@ -319,49 +398,61 @@ export function EditorPage() {
       } else {
         setFrequencySegments(
           [...frequencySegments, bandToSegment(band)].sort(
-            (a, b) => a.start_mhz - b.start_mhz
-          )
+            (a, b) => a.start_mhz - b.start_mhz,
+          ),
         );
       }
     },
-    [frequencySegments, setFrequencySegments]
+    [frequencySegments, setFrequencySegments],
   );
 
   const handleProjectSave = useCallback((): ProjectFile => {
     const wireGeometry = getWireGeometry();
     return createEditorProject(
-	wireGeometry,
-	excitations,
-	loads,
-	transmissionLines,
-	ground,
-	frequencyRange,
-	designFrequencyMhz,
-	junctions,
-	simResult ?? null,
-	);
-  }, [getWireGeometry, excitations, loads, transmissionLines, ground, frequencyRange, designFrequencyMhz, junctions, simResult]);
+      wireGeometry,
+      excitations,
+      loads,
+      transmissionLines,
+      ground,
+      frequencyRange,
+      designFrequencyMhz,
+      junctions,
+      simResult ?? null,
+    );
+  }, [
+    getWireGeometry,
+    excitations,
+    loads,
+    transmissionLines,
+    ground,
+    frequencyRange,
+    designFrequencyMhz,
+    junctions,
+    simResult,
+  ]);
 
   const handleProjectLoad = useCallback(
     (project: ProjectFile) => {
       if (project.mode !== "editor" || !project.editor) {
-        alert("This project was saved from the Simulator. Open it there instead.");
+        alert(
+          "This project was saved from the Simulator. Open it there instead.",
+        );
         return;
       }
       const ed = project.editor;
       clearAll();
       setWires(
-	  ed.wires.map((w) => ({ ...w, selected: false })),
-	  ed.excitations,
-	  ed.junctions,
-	  ed.loads ?? [],
-	  ed.transmissionLines ?? [],
-	);
+        ed.wires.map((w) => ({ ...w, selected: false })),
+        ed.excitations,
+        ed.junctions,
+        ed.loads ?? [],
+        ed.transmissionLines ?? [],
+      );
       setGround(ed.ground);
       setFrequencyRange(ed.frequencyRange);
       setDesignFrequency(ed.designFrequencyMhz);
     },
-    [clearAll, setWires, setGround, setFrequencyRange, setDesignFrequency]
+    [clearAll, setWires, setGround, setFrequencyRange, setDesignFrequency],
   );
 
   const isLoading = simStatus === "loading";
@@ -374,8 +465,14 @@ export function EditorPage() {
     return getWireGeometry();
   }, [wires, getWireGeometry]);
   const validation = useMemo(
-    () => validateSimulationRequest(wireGeometry, excitations, ground, frequencyRange),
-    [wireGeometry, excitations, ground, frequencyRange]
+    () =>
+      validateSimulationRequest(
+        wireGeometry,
+        excitations,
+        ground,
+        frequencyRange,
+      ),
+    [wireGeometry, excitations, ground, frequencyRange],
   );
 
   const patternData = selectedFreqResult?.pattern ?? null;
@@ -409,14 +506,13 @@ export function EditorPage() {
     ? imperialLengthUnit
     : metricLengthUnit;
   const heightUnitDecimals = HEIGHT_UNIT_DECIMALS[activeHeightUnit];
-  const antennaHeightValue = metersToLengthUnit(
-    antennaMinZ,
-    activeHeightUnit,
-  );
+  const antennaHeightValue = metersToLengthUnit(antennaMinZ, activeHeightUnit);
   const antennaHeightDescription = `Lowest point: ${metersToLengthUnit(
     antennaMinZ,
     activeHeightUnit,
-  ).toFixed(heightUnitDecimals)}${activeHeightUnit}, highest: ${metersToLengthUnit(
+  ).toFixed(
+    heightUnitDecimals,
+  )}${activeHeightUnit}, highest: ${metersToLengthUnit(
     antennaMaxZ,
     activeHeightUnit,
   ).toFixed(heightUnitDecimals)}${activeHeightUnit}`;
@@ -429,7 +525,7 @@ export function EditorPage() {
         moveAllWiresZ(dz);
       }
     },
-    [antennaMinZ, moveAllWiresZ]
+    [antennaMinZ, moveAllWiresZ],
   );
 
   const handleDisplayedHeightChange = useCallback(
@@ -438,9 +534,12 @@ export function EditorPage() {
     [activeHeightUnit, handleHeightChange],
   );
 
-  const handleHeightUnitChange = useCallback((unit: string) => {
-    setLengthUnit(unit as LengthUnit);
-  }, [setLengthUnit]);
+  const handleHeightUnitChange = useCallback(
+    (unit: string) => {
+      setLengthUnit(unit as LengthUnit);
+    },
+    [setLengthUnit],
+  );
 
   return (
     <div className="flex flex-col h-dvh bg-background">
@@ -456,7 +555,12 @@ export function EditorPage() {
         {/* === CENTER: 3D VIEWPORT === */}
         <main className="flex-1 relative min-w-0 min-h-0">
           <ErrorBoundary label="3D Viewport">
-            <EditorScene viewToggles={viewToggles} patternData={patternData} currents={currentData} nearField={nearFieldData} />
+            <EditorScene
+              viewToggles={viewToggles}
+              patternData={patternData}
+              currents={currentData}
+              nearField={nearFieldData}
+            />
           </ErrorBoundary>
 
           <EndpointConnectionControls />
@@ -471,14 +575,20 @@ export function EditorPage() {
               <span className="text-accent font-bold uppercase">{mode}</span>
               {mode === "add" && (
                 <span className="text-text-secondary ml-1">
-                  <span className="hidden sm:inline">(click empty space or a wire end to start)</span>
+                  <span className="hidden sm:inline">
+                    (click empty space or a wire end to start)
+                  </span>
                   <span className="sm:hidden">(tap space or an end)</span>
                 </span>
               )}
               {mode === "move" && (
                 <span className="text-text-secondary ml-1">
-                  <span className="hidden lg:inline">(X/Y/Z = lock axis, Shift+X/Y/Z = exclude axis)</span>
-                  <span className="lg:hidden">{verticalDrag ? "(vertical)" : "(drag to move)"}</span>
+                  <span className="hidden lg:inline">
+                    (X/Y/Z = lock axis, Shift+X/Y/Z = exclude axis)
+                  </span>
+                  <span className="lg:hidden">
+                    {verticalDrag ? "(vertical)" : "(drag to move)"}
+                  </span>
                 </span>
               )}
             </div>
@@ -492,24 +602,31 @@ export function EditorPage() {
           )}
 
           {/* Pattern frequency slider — bottom-right above dBi legend on mobile, centered on desktop */}
-          {simStatus === "success" && simResult && simResult.frequency_data.length > 1 && (
-            <>
-              <div className="absolute bottom-8 right-2 z-10 w-36 lg:hidden">
-                <PatternFrequencySlider compact />
-              </div>
-              <div className="hidden lg:block absolute bottom-2 left-1/2 -translate-x-1/2 z-10 w-56">
-                <PatternFrequencySlider />
-              </div>
-            </>
-          )}
+          {simStatus === "success" &&
+            simResult &&
+            simResult.frequency_data.length > 1 && (
+              <>
+                <div className="absolute bottom-8 right-2 z-10 w-36 lg:hidden">
+                  <PatternFrequencySlider compact />
+                </div>
+                <div className="hidden lg:block absolute bottom-2 left-1/2 -translate-x-1/2 z-10 w-56">
+                  <PatternFrequencySlider />
+                </div>
+              </>
+            )}
 
           {/* Empty-state hint */}
           {wires.length === 0 && (
             <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
               <div className="bg-surface/90 backdrop-blur-sm border border-border rounded-lg px-4 py-3 max-w-[240px] text-center pointer-events-auto">
-                <p className="text-sm text-text-primary font-medium mb-1">No wires yet</p>
+                <p className="text-sm text-text-primary font-medium mb-1">
+                  No wires yet
+                </p>
                 <p className="text-xs text-text-secondary leading-relaxed">
-                  Switch to <span className="text-accent font-medium">Add</span> mode and click the viewport to place wires, or go to <span className="text-accent font-medium">Tools</span> to import a file or load a template.
+                  Switch to <span className="text-accent font-medium">Add</span>{" "}
+                  mode and click the viewport to place wires, or go to{" "}
+                  <span className="text-accent font-medium">Tools</span> to
+                  import a file or load a template.
                 </p>
               </div>
             </div>
@@ -545,7 +662,6 @@ export function EditorPage() {
               </button>
             )}
           </div>
-
         </main>
 
         {/* === RIGHT PANEL (desktop only) === */}
@@ -572,7 +688,9 @@ export function EditorPage() {
               <div className="px-2 py-1.5 border-b border-border shrink-0">
                 <select
                   value={editorSection}
-                  onChange={(e) => setEditorSection(e.target.value as EditorSection)}
+                  onChange={(e) =>
+                    setEditorSection(e.target.value as EditorSection)
+                  }
                   className="w-full bg-background text-text-primary text-xs font-medium px-2 py-1 rounded border border-border focus:border-accent/50 outline-none"
                 >
                   <option value="wires">Wires ({wires.length})</option>
@@ -592,7 +710,10 @@ export function EditorPage() {
                     </div>
                     <div className="border-t border-border">
                       <div className="px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
-                        Properties {selectedTags.size > 0 ? `(${selectedTags.size} selected)` : ""}
+                        Properties{" "}
+                        {selectedTags.size > 0
+                          ? `(${selectedTags.size} selected)`
+                          : ""}
                       </div>
                       <div className="min-h-[150px] overflow-y-auto">
                         <WirePropertiesPanel />
@@ -637,7 +758,17 @@ export function EditorPage() {
                       className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover transition-colors"
                     >
                       <span>Import / Export</span>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${toolsImportOpen ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className={`transition-transform ${toolsImportOpen ? "rotate-180" : ""}`}
+                      >
+                        <path d="M6 9l6 6 6-6" />
+                      </svg>
                     </button>
                     {toolsImportOpen && (
                       <div className="px-2 pb-2 pt-1 min-h-[150px]">
@@ -651,7 +782,17 @@ export function EditorPage() {
                       className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover transition-colors border-t border-border"
                     >
                       <span>Compare</span>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${toolsCompareOpen ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className={`transition-transform ${toolsCompareOpen ? "rotate-180" : ""}`}
+                      >
+                        <path d="M6 9l6 6 6-6" />
+                      </svg>
                     </button>
                     {toolsCompareOpen && (
                       <div className="px-2 pb-2 pt-1 min-h-[150px]">
@@ -665,7 +806,17 @@ export function EditorPage() {
                       className="flex items-center justify-between w-full px-2 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover transition-colors border-t border-border"
                     >
                       <span>Optimizer</span>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${toolsOptimizerOpen ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className={`transition-transform ${toolsOptimizerOpen ? "rotate-180" : ""}`}
+                      >
+                        <path d="M6 9l6 6 6-6" />
+                      </svg>
                     </button>
                     {toolsOptimizerOpen && (
                       <div className="px-2 pb-2 pt-1 min-h-[150px]">
@@ -685,7 +836,9 @@ export function EditorPage() {
                       </label>
                       <select
                         value={snapSize}
-                        onChange={(e) => setSnapSize(parseFloat(e.target.value))}
+                        onChange={(e) =>
+                          setSnapSize(parseFloat(e.target.value))
+                        }
                         className="w-full bg-background text-text-primary text-[10px] font-mono px-1.5 py-1 rounded border border-border outline-none"
                       >
                         <option value="0">Off</option>
@@ -710,7 +863,9 @@ export function EditorPage() {
                       </label>
                       <select
                         value={patternStep}
-                        onChange={(e) => setPatternStep(parseInt(e.target.value, 10))}
+                        onChange={(e) =>
+                          setPatternStep(parseInt(e.target.value, 10))
+                        }
                         className="w-full bg-background text-text-primary text-[10px] font-mono px-1.5 py-1 rounded border border-border outline-none"
                       >
                         <option value="1">1° (very fine)</option>
@@ -826,17 +981,73 @@ export function EditorPage() {
           </div>
           {/* Quick operations bar */}
           <div className="flex items-center gap-1">
-            <button onClick={undo} className="px-2 py-1 text-[11px] rounded border border-border text-text-secondary hover:bg-surface-hover" title="Undo">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 10h13a4 4 0 010 8H7" /><path d="M3 10l4-4M3 10l4 4" /></svg>
+            <button
+              onClick={undo}
+              className="px-2 py-1 text-[11px] rounded border border-border text-text-secondary hover:bg-surface-hover"
+              title="Undo"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M3 10h13a4 4 0 010 8H7" />
+                <path d="M3 10l4-4M3 10l4 4" />
+              </svg>
             </button>
-            <button onClick={redo} className="px-2 py-1 text-[11px] rounded border border-border text-text-secondary hover:bg-surface-hover" title="Redo">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10H8a4 4 0 000 8h10" /><path d="M21 10l-4-4M21 10l-4 4" /></svg>
+            <button
+              onClick={redo}
+              className="px-2 py-1 text-[11px] rounded border border-border text-text-secondary hover:bg-surface-hover"
+              title="Redo"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M21 10H8a4 4 0 000 8h10" />
+                <path d="M21 10l-4-4M21 10l-4 4" />
+              </svg>
             </button>
-            <button onClick={deleteSelected} disabled={selectedTags.size === 0} className="px-2 py-1 text-[11px] rounded border border-border text-text-secondary hover:bg-surface-hover disabled:opacity-30" title="Delete selected">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6l-1 14H6L5 6M8 6V4h8v2" /></svg>
+            <button
+              onClick={deleteSelected}
+              disabled={selectedTags.size === 0}
+              className="px-2 py-1 text-[11px] rounded border border-border text-text-secondary hover:bg-surface-hover disabled:opacity-30"
+              title="Delete selected"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M3 6h18M19 6l-1 14H6L5 6M8 6V4h8v2" />
+              </svg>
             </button>
-            <button onClick={selectAll} className="px-2 py-1 text-[11px] rounded border border-border text-text-secondary hover:bg-surface-hover" title="Select all">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 12l2 2 4-4" /></svg>
+            <button
+              onClick={selectAll}
+              className="px-2 py-1 text-[11px] rounded border border-border text-text-secondary hover:bg-surface-hover"
+              title="Select all"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <path d="M9 12l2 2 4-4" />
+              </svg>
             </button>
             <div className="flex-1" />
             <span className="text-[11px] text-text-secondary font-mono">
@@ -900,9 +1111,14 @@ export function EditorPage() {
               <BalunEditor matching={matching} onChange={setMatching} />
               {/* Snap size */}
               <div>
-                <label className="text-[11px] text-text-secondary font-semibold uppercase tracking-wider block mb-1">Snap Size</label>
-                <select value={snapSize} onChange={(e) => setSnapSize(parseFloat(e.target.value))}
-                  className="w-full bg-background text-text-primary text-xs font-mono px-1.5 py-1.5 rounded border border-border outline-none">
+                <label className="text-[11px] text-text-secondary font-semibold uppercase tracking-wider block mb-1">
+                  Snap Size
+                </label>
+                <select
+                  value={snapSize}
+                  onChange={(e) => setSnapSize(parseFloat(e.target.value))}
+                  className="w-full bg-background text-text-primary text-xs font-mono px-1.5 py-1.5 rounded border border-border outline-none"
+                >
                   <option value="0">Off</option>
                   <option value="0.001">0.001 m (1 mm)</option>
                   <option value="0.005">0.005 m (5 mm)</option>
@@ -916,9 +1132,14 @@ export function EditorPage() {
               </div>
               {/* Pattern resolution */}
               <div>
-                <label className="text-[11px] text-text-secondary font-semibold uppercase tracking-wider block mb-1">Pattern Resolution</label>
-                <select value={patternStep} onChange={(e) => setPatternStep(parseInt(e.target.value, 10))}
-                  className="w-full bg-background text-text-primary text-xs font-mono px-1.5 py-1.5 rounded border border-border outline-none">
+                <label className="text-[11px] text-text-secondary font-semibold uppercase tracking-wider block mb-1">
+                  Pattern Resolution
+                </label>
+                <select
+                  value={patternStep}
+                  onChange={(e) => setPatternStep(parseInt(e.target.value, 10))}
+                  className="w-full bg-background text-text-primary text-xs font-mono px-1.5 py-1.5 rounded border border-border outline-none"
+                >
                   <option value="1">1 deg (very fine)</option>
                   <option value="2">2 deg (fine)</option>
                   <option value="5">5 deg (standard)</option>
@@ -932,32 +1153,55 @@ export function EditorPage() {
             <div className="space-y-3">
               {/* Templates */}
               <div>
-                <h4 className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider mb-1.5">Load Template</h4>
-                <TemplatePicker selectedId={selectedTemplate.id} onSelect={handleTemplateSelect} />
+                <h4 className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
+                  Load Template
+                </h4>
+                <TemplatePicker
+                  selectedId={selectedTemplate.id}
+                  onSelect={handleTemplateSelect}
+                />
                 <div className="mt-2">
-                  <ParameterPanel parameters={selectedTemplate.parameters} values={templateParams} onParamChange={handleTemplateParamChange} />
+                  <ParameterPanel
+                    parameters={selectedTemplate.parameters}
+                    values={templateParams}
+                    onParamChange={handleTemplateParamChange}
+                  />
                 </div>
                 {wires.length > 0 && (
-                  <p className="text-[11px] text-swr-warning leading-tight mt-1.5">Replaces all current wires.</p>
+                  <p className="text-[11px] text-swr-warning leading-tight mt-1.5">
+                    Replaces all current wires.
+                  </p>
                 )}
-                <Button onClick={handleLoadTemplate} className="w-full mt-2" size="sm">Load into Editor</Button>
+                <Button
+                  onClick={handleLoadTemplate}
+                  className="w-full mt-2"
+                  size="sm"
+                >
+                  Load into Editor
+                </Button>
               </div>
               <div className="border-t border-border" />
               {/* Import/Export */}
               <div>
-                <h4 className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider mb-1.5">Import / Export</h4>
+                <h4 className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
+                  Import / Export
+                </h4>
                 <ImportExportPanel />
               </div>
               <div className="border-t border-border" />
               {/* Compare */}
               <div>
-                <h4 className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider mb-1.5">Compare</h4>
+                <h4 className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
+                  Compare
+                </h4>
                 <CompareOverlay />
               </div>
               <div className="border-t border-border" />
               {/* Optimizer */}
               <div>
-                <h4 className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider mb-1.5">Optimizer</h4>
+                <h4 className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
+                  Optimizer
+                </h4>
                 <OptimizerPanel />
               </div>
             </div>
@@ -979,18 +1223,15 @@ export function EditorPage() {
               Height: {antennaMinZ.toFixed(3)}–{antennaMaxZ.toFixed(3)}m
             </span>
           )}
-          <span>
-            Snap: {snapSize > 0 ? `${snapSize}m` : "Off"}
-          </span>
+          <span>Snap: {snapSize > 0 ? `${snapSize}m` : "Off"}</span>
         </div>
         <div className="flex items-center gap-3">
           <span>
-            Design: {designFrequencyMhz} MHz | Sweep: {frequencyRange.start_mhz}–{frequencyRange.stop_mhz} MHz
+            Design: {designFrequencyMhz} MHz | Sweep: {frequencyRange.start_mhz}
+            –{frequencyRange.stop_mhz} MHz
           </span>
           {selectedTags.size > 0 && (
-            <span className="text-accent">
-              {selectedTags.size} selected
-            </span>
+            <span className="text-accent">{selectedTags.size} selected</span>
           )}
         </div>
       </div>
